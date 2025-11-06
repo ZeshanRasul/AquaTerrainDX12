@@ -64,7 +64,7 @@ void Window::Init(const WindowProps& props)
 	wr.bottom = m_Data.Height + wr.top;
 	AdjustWindowRect(&wr, WS_CAPTION | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU, FALSE);
 
-	const wchar_t* pWindowName = L"Windows Framework Window";
+	const wchar_t* pWindowName = L"Nocte Engine";
 
 	HWND m_Hwnd = CreateWindowEx(
 		0, WindowClass::GetName(),

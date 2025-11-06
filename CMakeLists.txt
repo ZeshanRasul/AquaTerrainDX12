@@ -22,10 +22,16 @@ option(BUILD_WIN32_SUBSYSTEM "Build as a Win32 GUI app (no console window)" ON)
 
 # Collect source files recursively
 file(GLOB APP_SOURCES
+    "include/*.h"
+    "include/*.cpp"
     "src/*.cpp"
     "src/*.h"
     "src/Events/*.cpp"
     "src/Events/*.h"
+    "src/Renderer/*.cpp"
+    "src/Renderer/*.h"
+    "src/Utils/*.cpp"
+    "src/Utils/*.h"
 )
 
 # Executable type: WIN32 removes the console window on Windows
@@ -34,6 +40,11 @@ if(BUILD_WIN32_SUBSYSTEM)
 else()
     add_executable(${PROJECT_NAME} ${APP_SOURCES})
 endif()
+
+target_include_directories(${PROJECT_NAME}
+    PUBLIC 
+        "${CMAKE_SOURCE_DIR}/include"
+)
 
 # Output directories (bin per configuration)
 set_target_properties(${PROJECT_NAME} PROPERTIES
@@ -45,7 +56,8 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 
 # Preprocessor defines
 target_compile_definitions(${PROJECT_NAME} PRIVATE
-    UNICODE _UNICODE
+    UNICODE 
+    _UNICODE
     WIN32_LEAN_AND_MEAN
     NOMINMAX
 )
@@ -53,11 +65,10 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 # Compiler warnings and useful flags for MSVC
 if(MSVC)
     target_compile_options(${PROJECT_NAME} PRIVATE
-        /W4            # warnings
-        /permissive-   # standards-conformance
-        /Zc:__cplusplus
-        /Zc:preprocessor
-        /EHsc          # exceptions: extern "C" safe
+        /WX-
+        /permissive
+        /Zi
+        /Zc:wchar_t
         /MP            # parallel build
     )
 endif()
