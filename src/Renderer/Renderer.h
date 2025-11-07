@@ -20,6 +20,11 @@ private:
 	void CheckMSAAQuality();
 	void CreateCommandObjects();
 	void CreateSwapChain(HWND& hwnd);
+	void CreateRtvAndDsvDescriptorHeaps();
+	D3D12_CPU_DESCRIPTOR_HANDLE CurrentBackBufferView() const;
+	D3D12_CPU_DESCRIPTOR_HANDLE DepthStencilView() const;
+
+
 
 	Microsoft::WRL::ComPtr<ID3D12Device> m_Device;
 	Microsoft::WRL::ComPtr<IDXGIAdapter> m_WarpAdapter;
@@ -32,8 +37,12 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12CommandAllocator> m_CommandAllocator;
 	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> m_CommandList;
 
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_RtvHeap;;
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_DsvHeap;
+
 	Microsoft::WRL::ComPtr<IDXGISwapChain> m_SwapChain;
-	UINT m_SwapChainBufferCount = 2;
+	static const int SwapChainBufferCount = 2;
+	int m_CurrentBackBuffer = 0;
 
 	UINT m_RtvDescriptorSize = 0;
 	UINT m_DsvDescriptorSize = 0;

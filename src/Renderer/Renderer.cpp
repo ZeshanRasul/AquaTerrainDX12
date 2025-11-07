@@ -25,9 +25,11 @@ bool Renderer::InitializeD3D12(HWND& windowHandle)
 
 	CreateCommandObjects();
 
-//	m_BackBufferFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
+	m_BackBufferFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
 
 	CreateSwapChain(windowHandle);
+
+	CreateRtvAndDsvDescriptorHeaps();
 
 	return true;
 }
@@ -107,11 +109,40 @@ void Renderer::CreateSwapChain(HWND& windowHandle)
 	swapChainDesc.SampleDesc.Count = 1;
 	swapChainDesc.SampleDesc.Quality =  0;
 	swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	swapChainDesc.BufferCount = m_SwapChainBufferCount;
+	swapChainDesc.BufferCount = SwapChainBufferCount;
 	swapChainDesc.OutputWindow = m_Hwnd;
 	swapChainDesc.Windowed = true;
 	swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 	swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
 
 	ThrowIfFailed(m_DxgiFactory->CreateSwapChain(m_CommandQueue.Get(), &swapChainDesc, m_SwapChain.GetAddressOf()));
+}
+
+void Renderer::CreateRtvAndDsvDescriptorHeaps()
+{
+	D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc;
+	rtvHeapDesc.NumDescriptors = SwapChainBufferCount;
+	rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+	rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+	rtvHeapDesc.NodeMask = 0;
+
+	ThrowIfFailed(m_Device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(m_RtvHeap.GetAddressOf())));
+
+	D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc;
+	dsvHeapDesc.NumDescriptors = 1;
+	dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+	dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+	dsvHeapDesc.NodeMask = 0;
+
+	ThrowIfFailed(m_Device->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(m_DsvHeap.GetAddressOf())));
+}
+
+D3D12_CPU_DESCRIPTOR_HANDLE Renderer::CurrentBackBufferView() const
+{
+	return CD3DX12_CPU_DESCRIPTOR_HANDLE(m_RtvHeap->GetCPUDescriptorHandleForHeapStart(), m_CurrentBackBuffer, m_RtvDescriptorSize);
+}
+
+D3D12_CPU_DESCRIPTOR_HANDLE Renderer::DepthStencilView() const
+{
+	return m_DsvHeap->GetCPUDescriptorHandleForHeapStart();
 }
