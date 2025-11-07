@@ -6,7 +6,7 @@
 
 class Renderer {
 public:
-	Renderer(HWND& windowHandle);
+	Renderer(HWND& windowHandle, UINT width, UINT height);
 	~Renderer() = default;
 
 	bool InitializeD3D12(HWND& windowHandle);
@@ -23,8 +23,8 @@ private:
 	void CreateRtvAndDsvDescriptorHeaps();
 	D3D12_CPU_DESCRIPTOR_HANDLE CurrentBackBufferView() const;
 	D3D12_CPU_DESCRIPTOR_HANDLE DepthStencilView() const;
-
-
+	void CreateRenderTargetView();
+	void CreateDepthStencilView();
 
 	Microsoft::WRL::ComPtr<ID3D12Device> m_Device;
 	Microsoft::WRL::ComPtr<IDXGIAdapter> m_WarpAdapter;
@@ -42,6 +42,8 @@ private:
 
 	Microsoft::WRL::ComPtr<IDXGISwapChain> m_SwapChain;
 	static const int SwapChainBufferCount = 2;
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_SwapChainBuffer[SwapChainBufferCount];
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_DepthStencilBuffer;
 	int m_CurrentBackBuffer = 0;
 
 	UINT m_RtvDescriptorSize = 0;
@@ -52,8 +54,10 @@ private:
 	bool m_MsaaState = false;
 
 	DXGI_FORMAT m_BackBufferFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
-
+	DXGI_FORMAT m_DepthStencilFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 	HWND& m_Hwnd;
+	UINT m_ClientWidth;
+	UINT m_ClientHeight;
 
 
 };

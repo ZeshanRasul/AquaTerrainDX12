@@ -1,7 +1,9 @@
 #include "Renderer.h"
 
-Renderer::Renderer(HWND& windowHandle)
-	:m_Hwnd(windowHandle)
+Renderer::Renderer(HWND& windowHandle, UINT width, UINT height)
+	:m_Hwnd(windowHandle),
+	m_ClientWidth(width),
+	m_ClientHeight(height)
 {
 	m_Hwnd = windowHandle;
 	InitializeD3D12(m_Hwnd);
@@ -30,6 +32,10 @@ bool Renderer::InitializeD3D12(HWND& windowHandle)
 	CreateSwapChain(windowHandle);
 
 	CreateRtvAndDsvDescriptorHeaps();
+
+	CreateRenderTargetView();
+
+	CreateDepthStencilView();
 
 	return true;
 }
@@ -145,4 +151,45 @@ D3D12_CPU_DESCRIPTOR_HANDLE Renderer::CurrentBackBufferView() const
 D3D12_CPU_DESCRIPTOR_HANDLE Renderer::DepthStencilView() const
 {
 	return m_DsvHeap->GetCPUDescriptorHandleForHeapStart();
+}
+
+void Renderer::CreateRenderTargetView()
+{
+	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHeapHandle(m_RtvHeap->GetCPUDescriptorHandleForHeapStart());
+
+	for (UINT i = 0; i < SwapChainBufferCount; i++)
+	{
+		ThrowIfFailed(m_SwapChain->GetBuffer(i, IID_PPV_ARGS(&m_SwapChainBuffer[i])));
+
+		m_Device->CreateRenderTargetView(m_SwapChainBuffer[i].Get(), nullptr, rtvHeapHandle);
+
+		rtvHeapHandle.Offset(m_RtvDescriptorSize);
+	}
+}
+
+void Renderer::CreateDepthStencilView()
+{
+	D3D12_RESOURCE_DESC depthStencilDesc;
+	depthStencilDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+	depthStencilDesc.Alignment = 0;
+	depthStencilDesc.Width = m_ClientWidth;
+	depthStencilDesc.Height = m_ClientHeight;
+	depthStencilDesc.DepthOrArraySize = 1;
+	depthStencilDesc.MipLevels = 1;
+	depthStencilDesc.Format = m_DepthStencilFormat;
+	depthStencilDesc.SampleDesc.Count = 1;
+	depthStencilDesc.SampleDesc.Quality = 0;
+	depthStencilDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+	depthStencilDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+
+	D3D12_CLEAR_VALUE optClear;
+	optClear.Format = m_DepthStencilFormat;
+	optClear.DepthStencil.Depth = 1.0f;
+	optClear.DepthStencil.Stencil = 0;
+
+	ThrowIfFailed(m_Device->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT), D3D12_HEAP_FLAG_NONE, &depthStencilDesc, D3D12_RESOURCE_STATE_COMMON, &optClear, IID_PPV_ARGS(m_DepthStencilBuffer.GetAddressOf())));
+	
+	m_Device->CreateDepthStencilView(m_DepthStencilBuffer.Get(), nullptr, DepthStencilView());
+
+	m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_DepthStencilBuffer.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE));
 }
