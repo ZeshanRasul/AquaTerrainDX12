@@ -1,10 +1,11 @@
 #pragma once
 #include <memory>
+#include <Windows.h>
 
 #include "Events/Event.h"
 #include "Events/ApplicationEvent.h"
 #include "Window.h"
-
+#include "Renderer/Renderer.h"
 
 class Application
 {
@@ -20,11 +21,13 @@ public:
 
 	inline Window& GetWindow() { return *m_Window; }
 
+	inline HWND GetHWND() { return m_Window->GetWindowHandle(); }
 
 private:
 	bool m_Running = true;
 	bool OnWindowClose(WindowCloseEvent& event);
 
 	std::unique_ptr<Window> m_Window;
+	std::unique_ptr<Renderer> m_Renderer;
 	static Application* s_Instance;
 };

@@ -56,6 +56,7 @@ public:
 	static std::optional<int> ProcessMessages();
 
 	inline virtual void* GetNativeWindow() const { return m_Window; }
+	inline HWND GetWindowHandle() const { return m_Hwnd; }
 
 private:
 	struct WindowData
