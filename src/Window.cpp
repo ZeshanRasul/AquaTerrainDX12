@@ -66,7 +66,7 @@ void Window::Init(const WindowProps& props)
 
 	const wchar_t* pWindowName = L"Nocte Engine";
 
-	HWND m_Hwnd = CreateWindowEx(
+	m_Hwnd = CreateWindowEx(
 		0, WindowClass::GetName(),
 		pWindowName,
 		WS_CAPTION | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU,

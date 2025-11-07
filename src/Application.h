@@ -28,6 +28,8 @@ private:
 	bool OnWindowClose(WindowCloseEvent& event);
 
 	std::unique_ptr<Window> m_Window;
+	HWND m_Hwnd;
+
 	std::unique_ptr<Renderer> m_Renderer;
 	static Application* s_Instance;
 };

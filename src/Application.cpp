@@ -13,7 +13,9 @@ Application::Application()
 	m_Window = std::unique_ptr<Window>(new Window());
 	m_Window->SetEventCallback(BIND_EVENT_FN(Application::OnEvent));
 	
-	m_Renderer = std::unique_ptr<Renderer>(new Renderer(GetHWND()));
+	m_Hwnd = m_Window->GetWindowHandle();
+
+	m_Renderer = std::unique_ptr<Renderer>(new Renderer(m_Hwnd));
 };
 
 Application::~Application()
