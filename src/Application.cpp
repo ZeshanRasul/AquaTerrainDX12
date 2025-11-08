@@ -1,5 +1,5 @@
-#include "Application.h"
 #include <assert.h>
+#include "Application.h"
 
 #define BIND_EVENT_FN(x) std::bind(&x, this, std::placeholders::_1)
 

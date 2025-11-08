@@ -37,6 +37,9 @@ bool Renderer::InitializeD3D12(HWND& windowHandle)
 
 	CreateDepthStencilView();
 
+	CreateVertexBuffer();
+	CreateVertexBufferView();
+
 	return true;
 }
 
@@ -233,6 +236,23 @@ void Renderer::CreateDepthStencilView()
 	m_Device->CreateDepthStencilView(m_DepthStencilBuffer.Get(), nullptr, DepthStencilView());
 
 	m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_DepthStencilBuffer.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE));
+}
+
+void Renderer::CreateVertexBuffer()
+{
+	const UINT64 vbByteSize = 8 * sizeof(Vertex);
+
+	m_vertexBufferGPU = d3dUtil::CreateDefaultBuffer(m_Device.Get(), m_CommandList.Get(), &vertices, vbByteSize, m_vertexBufferUploader);
+}
+
+void Renderer::CreateVertexBufferView()
+{
+	m_vbView.BufferLocation = m_vertexBufferGPU->GetGPUVirtualAddress();
+	m_vbView.StrideInBytes = sizeof(Vertex);
+	m_vbView.SizeInBytes = 8 * sizeof(Vertex);
+
+	D3D12_VERTEX_BUFFER_VIEW vertexBuffers[1] = { m_vbView };
+	m_CommandList->IASetVertexBuffers(0, 1, vertexBuffers);
 }
 
 void Renderer::FlushCommandQueue()

@@ -1,8 +1,10 @@
 #pragma once
 #include "../Utils/d3dUtil.h"
-#pragma comment(lib,"d3dcompiler.lib")
-#pragma comment(lib, "D3D12.lib")
-#pragma comment(lib, "dxgi.lib")
+
+
+using namespace DirectX;
+
+
 
 class Renderer {
 public:
@@ -26,6 +28,9 @@ private:
 	D3D12_CPU_DESCRIPTOR_HANDLE DepthStencilView() const;
 	void CreateRenderTargetView();
 	void CreateDepthStencilView();
+
+	void CreateVertexBuffer();
+	void CreateVertexBufferView();
 
 	void FlushCommandQueue();
 
@@ -53,6 +58,10 @@ private:
 
 	D3D12_RECT m_ScissorRect;
 
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_vertexBufferGPU = nullptr;
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_vertexBufferUploader = nullptr;
+	D3D12_VERTEX_BUFFER_VIEW m_vbView;
+
 	UINT m_RtvDescriptorSize = 0;
 	UINT m_DsvDescriptorSize = 0;
 	UINT m_CbvSrvDescriptorSize = 0;
@@ -68,5 +77,21 @@ private:
 	UINT m_ClientWidth;
 	UINT m_ClientHeight;
 
+	struct Vertex
+	{
+		DirectX::XMFLOAT3 Pos;
+		DirectX::XMFLOAT4 Color;
+	};
 
+	std::array<Vertex, 8> vertices =
+	{
+		Vertex({ XMFLOAT3(-1.0f, -1.0f, -1.0f), XMFLOAT4(Colors::White) }),
+		Vertex({ XMFLOAT3(-1.0f, +1.0f, -1.0f), XMFLOAT4(Colors::Black) }),
+		Vertex({ XMFLOAT3(+1.0f, +1.0f, -1.0f), XMFLOAT4(Colors::Red) }),
+		Vertex({ XMFLOAT3(+1.0f, -1.0f, -1.0f), XMFLOAT4(Colors::Green) }),
+		Vertex({ XMFLOAT3(-1.0f, -1.0f, +1.0f), XMFLOAT4(Colors::Blue) }),
+		Vertex({ XMFLOAT3(-1.0f, +1.0f, +1.0f), XMFLOAT4(Colors::Yellow) }),
+		Vertex({ XMFLOAT3(+1.0f, +1.0f, +1.0f), XMFLOAT4(Colors::Cyan) }),
+		Vertex({ XMFLOAT3(+1.0f, -1.0f, +1.0f), XMFLOAT4(Colors::Magenta) })
+	};
 };

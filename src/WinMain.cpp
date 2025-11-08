@@ -1,4 +1,3 @@
-#pragma once
 #include <Windows.h>
 #include "Application.h"
 

@@ -67,6 +67,7 @@ if(MSVC)
     target_compile_options(${PROJECT_NAME} PRIVATE
         /WX-
         /permissive
+        /Zi
         /Zc:wchar_t
         /MP            # parallel build
     )
