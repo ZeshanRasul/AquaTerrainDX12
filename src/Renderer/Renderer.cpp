@@ -43,7 +43,28 @@ bool Renderer::InitializeD3D12(HWND& windowHandle)
 	CreateIndexBuffer();
 	CreateIndexBufferView();
 
+	CreateConstantBuffer();
+
 	return true;
+}
+
+void Renderer::Update()
+{
+	XMVECTOR pos = XMVectorSet(0.0f, 0.0f, 3.0f, 1.0f);
+	XMVECTOR target = XMVectorZero();
+	XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+
+	XMMATRIX view = XMMatrixLookAtLH(pos, target, up);
+	XMStoreFloat4x4(&m_View, view);
+
+	XMMATRIX world = XMLoadFloat4x4(&m_World);
+	XMMATRIX proj = XMLoadFloat4x4(&m_Proj);
+
+	XMMATRIX worldViewProj = world * view * proj;
+
+	ObjectConstants objConstants;
+	XMStoreFloat4x4(&objConstants.WorldViewProj, XMMatrixTranspose(worldViewProj));
+	m_ObjectCB->CopyData(0, objConstants);
 }
 
 void Renderer::Draw()
@@ -67,7 +88,7 @@ void Renderer::Draw()
 	m_ScissorRect = { 0, 0, static_cast<long>(m_ClientWidth), static_cast<long>(m_ClientHeight) };
 	m_CommandList->RSSetScissorRects(1, &m_ScissorRect);
 
-	const float clearColor[4] = {0.690196097f, 0.768627524f, 0.870588303f, 1.f};
+	const float clearColor[4] = { 0.690196097f, 0.768627524f, 0.870588303f, 1.f };
 
 	m_CommandList->ClearRenderTargetView(CurrentBackBufferView(), clearColor, 0, nullptr);
 	m_CommandList->ClearDepthStencilView(DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
@@ -78,7 +99,7 @@ void Renderer::Draw()
 
 	ThrowIfFailed(m_CommandList->Close());
 
-	ID3D12CommandList* cmdLists[] = {m_CommandList.Get()};
+	ID3D12CommandList* cmdLists[] = { m_CommandList.Get() };
 	m_CommandQueue->ExecuteCommandLists(_countof(cmdLists), cmdLists);
 
 	ThrowIfFailed(m_SwapChain->Present(0, 0));
@@ -160,7 +181,7 @@ void Renderer::CreateSwapChain(HWND& windowHandle)
 	swapChainDesc.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
 	swapChainDesc.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
 	swapChainDesc.SampleDesc.Count = 1;
-	swapChainDesc.SampleDesc.Quality =  0;
+	swapChainDesc.SampleDesc.Quality = 0;
 	swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 	swapChainDesc.BufferCount = SwapChainBufferCount;
 	swapChainDesc.OutputWindow = m_Hwnd;
@@ -235,7 +256,7 @@ void Renderer::CreateDepthStencilView()
 	optClear.DepthStencil.Stencil = 0;
 
 	ThrowIfFailed(m_Device->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT), D3D12_HEAP_FLAG_NONE, &depthStencilDesc, D3D12_RESOURCE_STATE_COMMON, &optClear, IID_PPV_ARGS(m_DepthStencilBuffer.GetAddressOf())));
-	
+
 	m_Device->CreateDepthStencilView(m_DepthStencilBuffer.Get(), nullptr, DepthStencilView());
 
 	m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_DepthStencilBuffer.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE));
@@ -263,6 +284,42 @@ void Renderer::CreateIndexBufferView()
 	D3D12_INDEX_BUFFER_VIEW indexBuffers[1] = { m_IbView };
 	m_CommandList->IASetIndexBuffer(indexBuffers);
 }
+
+
+
+void Renderer::CreateCbvDescriptorHeap()
+{
+	D3D12_DESCRIPTOR_HEAP_DESC cbvHeapDesc;
+}
+
+void Renderer::CreateConstantBuffer()
+{
+	m_ObjectCB = std::make_unique<UploadBuffer<ObjectConstants>>(m_Device.Get(), 1, true);
+
+	UINT objCBByteSize = d3dUtil::CalcConstantBufferByteSize(sizeof(ObjectConstants));
+
+	D3D12_GPU_VIRTUAL_ADDRESS cBufAddress = m_ObjectCB->Resource()->GetGPUVirtualAddress();
+
+	int boxCBufIndex = 0;
+	cBufAddress += boxCBufIndex * objCBByteSize;
+
+	D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc;
+	cbvDesc.BufferLocation = cBufAddress;
+	cbvDesc.SizeInBytes = d3dUtil::CalcConstantBufferByteSize(sizeof(ObjectConstants));
+
+	m_Device->CreateConstantBufferView(&cbvDesc, m_CbvHeap->GetCPUDescriptorHandleForHeapStart());
+}
+
+void Renderer::BuildShadersAndInputLayout()
+{
+	m_InputLayoutDescs =
+	{
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+	};
+
+
+};
 
 void Renderer::CreateVertexBufferView()
 {

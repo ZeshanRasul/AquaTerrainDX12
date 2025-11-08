@@ -1,10 +1,8 @@
 #pragma once
 #include "../Utils/d3dUtil.h"
-
+#include "UploadBuffer.h"
 
 using namespace DirectX;
-
-
 
 class Renderer {
 public:
@@ -13,6 +11,7 @@ public:
 
 	bool InitializeD3D12(HWND& windowHandle);
 	bool Shutdown();
+	void Update();
 	void Draw();
 
 private:
@@ -35,6 +34,11 @@ private:
 	void CreateIndexBuffer();
 	void CreateIndexBufferView();
 
+	void CreateCbvDescriptorHeap();
+	void CreateConstantBuffer();
+
+	void BuildShadersAndInputLayout();
+
 	void FlushCommandQueue();
 
 	ID3D12Resource* CurrentBackBuffer() const;
@@ -52,6 +56,7 @@ private:
 
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_RtvHeap;;
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_DsvHeap;
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_CbvHeap;
 
 	Microsoft::WRL::ComPtr<IDXGISwapChain> m_SwapChain;
 	static const int SwapChainBufferCount = 2;
@@ -71,6 +76,16 @@ private:
 	D3D12_INDEX_BUFFER_VIEW m_IbView;
 	UINT64 m_IbByteSize = 0;
 
+	struct ObjectConstants
+	{
+		XMFLOAT4X4 WorldViewProj = MathHelper::Identity4x4();
+	};
+
+	UINT m_CbufferElementByteSize = 0;
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_UploadCBuffer = nullptr;
+	std::unique_ptr<UploadBuffer<ObjectConstants>> m_ObjectCB = nullptr;
+
+
 	UINT m_RtvDescriptorSize = 0;
 	UINT m_DsvDescriptorSize = 0;
 	UINT m_CbvSrvDescriptorSize = 0;
@@ -85,6 +100,15 @@ private:
 	HWND& m_Hwnd;
 	UINT m_ClientWidth;
 	UINT m_ClientHeight;
+
+
+	Microsoft::WRL::ComPtr<ID3DBlob> m_VsByteCode;
+	Microsoft::WRL::ComPtr<ID3DBlob> m_PsByteCode;
+	std::vector<D3D12_INPUT_ELEMENT_DESC> m_InputLayoutDescs;
+	
+	XMFLOAT4X4 m_World = MathHelper::Identity4x4();
+	XMFLOAT4X4 m_View = MathHelper::Identity4x4();
+	XMFLOAT4X4 m_Proj = MathHelper::Identity4x4();
 
 	struct Vertex
 	{
