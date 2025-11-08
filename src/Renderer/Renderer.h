@@ -40,6 +40,10 @@ private:
 	void CreateRootSignature();
 
 	void BuildShadersAndInputLayout();
+	
+	void BuildBoxGeometry();
+
+	void BuildPSO();
 
 	void FlushCommandQueue();
 
@@ -68,11 +72,13 @@ private:
 
 	D3D12_RECT m_ScissorRect;
 
+	Microsoft::WRL::ComPtr<ID3DBlob> m_VertexBufferCPU = nullptr;
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_VertexBufferGPU = nullptr;
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_VertexBufferUploader = nullptr;
 	D3D12_VERTEX_BUFFER_VIEW m_VbView;
 	UINT64 m_VbByteSize = 0;
 
+	Microsoft::WRL::ComPtr<ID3DBlob> m_IndexBufferCPU = nullptr;
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_IndexBufferGPU = nullptr;
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_IndexBufferUploader = nullptr;
 	D3D12_INDEX_BUFFER_VIEW m_IbView;
@@ -113,6 +119,7 @@ private:
 	XMFLOAT4X4 m_Proj = MathHelper::Identity4x4();
 
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_RootSignature;
+	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_PipelineStateObject;
 
 	struct Vertex
 	{

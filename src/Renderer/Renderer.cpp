@@ -37,23 +37,34 @@ bool Renderer::InitializeD3D12(HWND& windowHandle)
 
 	CreateDepthStencilView();
 
-	CreateVertexBuffer();
-	CreateVertexBufferView();
+	//CreateVertexBuffer();
 
-	CreateIndexBuffer();
+	//CreateIndexBuffer();
+
+	BuildBoxGeometry();
+	CreateVertexBufferView();
 	CreateIndexBufferView();
 
 	CreateCbvDescriptorHeap();
 	CreateConstantBuffer();
 
 	CreateRootSignature();
+	BuildShadersAndInputLayout();
+
+	BuildPSO();
+
+	ThrowIfFailed(m_CommandList->Close());
+	ID3D12CommandList* cmdLists[] = { m_CommandList.Get() };
+	m_CommandQueue->ExecuteCommandLists(_countof(cmdLists), cmdLists);
+
+	FlushCommandQueue();
 
 	return true;
 }
 
 void Renderer::Update()
 {
-	XMVECTOR pos = XMVectorSet(0.0f, 0.0f, 3.0f, 1.0f);
+	XMVECTOR pos = XMVectorSet(0.0f, 0.0f, -10.0f, 1.0f);
 	XMVECTOR target = XMVectorZero();
 	XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 
@@ -74,9 +85,7 @@ void Renderer::Draw()
 {
 	ThrowIfFailed(m_CommandAllocator->Reset());
 
-	ThrowIfFailed(m_CommandList->Reset(m_CommandAllocator.Get(), nullptr));
-
-	m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
+	ThrowIfFailed(m_CommandList->Reset(m_CommandAllocator.Get(), m_PipelineStateObject.Get()));
 
 	D3D12_VIEWPORT vp;
 	vp.TopLeftX = 0.0f;
@@ -91,9 +100,9 @@ void Renderer::Draw()
 	m_ScissorRect = { 0, 0, static_cast<long>(m_ClientWidth), static_cast<long>(m_ClientHeight) };
 	m_CommandList->RSSetScissorRects(1, &m_ScissorRect);
 
-	const float clearColor[4] = { 0.690196097f, 0.768627524f, 0.870588303f, 1.f };
+	m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
 
-	m_CommandList->ClearRenderTargetView(CurrentBackBufferView(), clearColor, 0, nullptr);
+	m_CommandList->ClearRenderTargetView(CurrentBackBufferView(), DirectX::Colors::LightSteelBlue, 0, nullptr);
 	m_CommandList->ClearDepthStencilView(DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
 	m_CommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
@@ -102,6 +111,14 @@ void Renderer::Draw()
 	m_CommandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
 
 	m_CommandList->SetGraphicsRootSignature(m_RootSignature.Get());
+
+	m_CommandList->IASetVertexBuffers(0, 1, &m_VbView);
+	m_CommandList->IASetIndexBuffer(&m_IbView);
+	m_CommandList->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	m_CommandList->SetGraphicsRootDescriptorTable(0, m_CbvHeap->GetGPUDescriptorHandleForHeapStart());
+
+	m_CommandList->DrawIndexedInstanced(indices.size(), 1, 0, 0, 0);
 
 	m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
 
@@ -173,7 +190,7 @@ void Renderer::CreateCommandObjects()
 
 	ThrowIfFailed(m_Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_CommandAllocator.Get(), nullptr, IID_PPV_ARGS(m_CommandList.GetAddressOf())));
 
-	m_CommandList->Close();
+//	m_CommandList->Close();
 }
 
 void Renderer::CreateSwapChain(HWND& windowHandle)
@@ -274,13 +291,13 @@ void Renderer::CreateVertexBuffer()
 {
 	m_VbByteSize = 8 * sizeof(Vertex);
 
-	m_VertexBufferGPU = d3dUtil::CreateDefaultBuffer(m_Device.Get(), m_CommandList.Get(), &vertices, m_VbByteSize, m_VertexBufferUploader);
+	m_VertexBufferGPU = d3dUtil::CreateDefaultBuffer(m_Device.Get(), m_CommandList.Get(), vertices.data(), m_VbByteSize, m_VertexBufferUploader);
 }
 
 void Renderer::CreateIndexBuffer()
 {
 	m_IbByteSize = 36 * sizeof(uint16_t);
-	m_IndexBufferGPU = d3dUtil::CreateDefaultBuffer(m_Device.Get(), m_CommandList.Get(), &indices, m_IbByteSize, m_IndexBufferUploader);
+	m_IndexBufferGPU = d3dUtil::CreateDefaultBuffer(m_Device.Get(), m_CommandList.Get(), indices.data(), m_IbByteSize, m_IndexBufferUploader);
 }
 
 void Renderer::CreateIndexBufferView()
@@ -339,17 +356,74 @@ void Renderer::CreateRootSignature()
 
 	HRESULT hr = D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1, serializedRootSig.GetAddressOf(), errorBlob.GetAddressOf());
 
+	if (errorBlob != nullptr)
+	{
+		::OutputDebugStringA((char*)errorBlob->GetBufferPointer());
+	}
+
 	ThrowIfFailed(m_Device->CreateRootSignature(0, serializedRootSig->GetBufferPointer(), serializedRootSig->GetBufferSize(), IID_PPV_ARGS(&m_RootSignature)));
 }
 
 void Renderer::BuildShadersAndInputLayout()
 {
+	HRESULT hr = S_OK;
+
+	m_VsByteCode = d3dUtil::CompileShader(L"Shaders\\vertex.hlsl", nullptr, "VS", "vs_5_0");
+	m_PsByteCode = d3dUtil::CompileShader(L"Shaders\\pixel.hlsl", nullptr, "PS", "ps_5_0");
+
 	m_InputLayoutDescs =
 	{
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 		{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
 	};
 
+
+}
+void Renderer::BuildBoxGeometry()
+{
+	const UINT vbByteSize = (UINT)vertices.size() * sizeof(Vertex);
+	const UINT ibByteSize = (UINT)indices.size() * sizeof(std::uint16_t);
+
+	ThrowIfFailed(D3DCreateBlob(vbByteSize, &m_VertexBufferCPU));
+	CopyMemory(m_VertexBufferCPU->GetBufferPointer(), vertices.data(), vbByteSize);
+
+	ThrowIfFailed(D3DCreateBlob(ibByteSize, &m_IndexBufferCPU));
+	CopyMemory(m_IndexBufferCPU->GetBufferPointer(), indices.data(), ibByteSize);
+
+	CreateVertexBuffer();
+	CreateIndexBuffer();
+	
+}
+
+void Renderer::BuildPSO()
+{
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc;
+	ZeroMemory(&psoDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
+	psoDesc.InputLayout = {
+		m_InputLayoutDescs.data(), (UINT)m_InputLayoutDescs.size()
+	};
+	psoDesc.pRootSignature = m_RootSignature.Get();
+	psoDesc.VS = {
+		reinterpret_cast<BYTE*>(m_VsByteCode->GetBufferPointer()),
+		m_VsByteCode->GetBufferSize()
+	};
+	psoDesc.PS = {
+		reinterpret_cast<BYTE*>(m_PsByteCode->GetBufferPointer()),
+		m_PsByteCode->GetBufferSize()
+	};
+	psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+	psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+	psoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+	psoDesc.SampleMask = UINT_MAX;
+	psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+	psoDesc.NumRenderTargets = 1;
+	psoDesc.RTVFormats[0] = m_BackBufferFormat;
+	psoDesc.SampleDesc.Count = 1;
+	psoDesc.SampleDesc.Quality = 0;
+	psoDesc.DSVFormat = m_DepthStencilFormat;
+
+	ThrowIfFailed(m_Device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_PipelineStateObject)));
+//	m_CommandList->SetPipelineState(m_PipelineStateObject.Get());
 
 };
 

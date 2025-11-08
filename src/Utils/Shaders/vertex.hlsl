@@ -1,10 +1,7 @@
-struct ObjectConstants
+cbuffer cbPerObject : register(b0)
 {
     float4x4 gWorldViewProj;
-    uint matIndex;
-};
-
-ConstantBuffer<ObjectConstants> gObjConstants : register(b0);
+}
 
 struct VertexIn
 {
@@ -14,8 +11,8 @@ struct VertexIn
 
 struct VertexOut
 {
-    float4 PosH : SV_Position;
-    float4 Color : CoOLOR;
+    float4 PosH : SV_POSITION;
+    float4 Color : COLOR;
 };
     
 
@@ -25,6 +22,8 @@ VertexOut VS(VertexIn vIn)
     VertexOut vOut;
     
     vOut.PosH = mul(float4(vIn.PosL, 1.0f), gWorldViewProj);
+    
+//vOut.PosH = float4(vIn.PosL, 1.0f);
     
     vOut.Color = vIn.Color;
     
