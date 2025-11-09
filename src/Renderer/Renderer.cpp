@@ -918,7 +918,7 @@ void Renderer::UpdateMainPassCB()
 	m_MainPassCB.InvRenderTargetSize = XMFLOAT2(1.0f / m_ClientWidth, 1.0f / m_ClientHeight);
 	m_MainPassCB.NearZ = 1.0f;
 	m_MainPassCB.FarZ = 1000.0f;
-	m_MainPassCB.AmbientLight = { 0.4f, 0.3f, 0.4f, 1.0f };
+	m_MainPassCB.AmbientLight = { 0.25f, 0.25f, 0.35f, 1.0f };
 	m_MainPassCB.Lights[0].Direction = { 0.57735f, -0.57735f, 0.57735f };
 	m_MainPassCB.Lights[0].Strength = { 0.6f, 0.6f, 0.6f };
 	m_MainPassCB.Lights[1].Direction = { -0.57735f, -0.57735f, 0.57735f };
