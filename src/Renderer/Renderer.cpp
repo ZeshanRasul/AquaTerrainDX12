@@ -75,6 +75,15 @@ void Renderer::Update()
 		CloseHandle(eventHandle);
 	}
 
+	XMVECTOR pos = XMVectorSet(0.0f, 1.0f, -22.0f, 1.0f);
+	XMVECTOR target = XMVectorZero();
+	XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+	XMMATRIX view = XMMatrixLookAtLH(pos, target, up);
+	XMStoreFloat4x4(&m_View, view);
+
+	XMMATRIX P = XMMatrixPerspectiveFovLH(0.25f * MathHelper::Pi, (float)(m_ClientWidth / m_ClientHeight), 0.1f, 1000.0f);
+	XMStoreFloat4x4(&m_Proj, P);
+
 	UpdateObjectCBs();
 	UpdateMainPassCB();
 }
