@@ -1038,6 +1038,7 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> Renderer::CreateRayGenSignature()
 Microsoft::WRL::ComPtr<ID3D12RootSignature> Renderer::CreateHitSignature()
 {
 	nv_helpers_dx12::RootSignatureGenerator rsc;
+	rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_SRV);
 	return rsc.Generate(m_Device.Get(), true);
 }
 
@@ -1127,7 +1128,7 @@ void Renderer::CreateShaderBindingTable()
 	m_SbtHelper.AddRayGenerationProgram(L"RayGen", { heapPointer });
 
 	m_SbtHelper.AddMissProgram(L"Miss", {});
-	m_SbtHelper.AddHitGroup(L"HitGroup", {});
+	m_SbtHelper.AddHitGroup(L"HitGroup", {(void*)m_AllRenderItems[2]->Geo->VertexBufferGPU->GetGPUVirtualAddress()});
 
 	uint32_t sbtSize = m_SbtHelper.ComputeSBTSize();
 
@@ -1141,13 +1142,14 @@ void Renderer::CreateShaderBindingTable()
 	m_SbtHelper.Generate(m_SbtStorage.Get(), m_RtStateObjectProps.Get());
 }
 
-Renderer::AccelerationStructureBuffers Renderer::CreateBottomLevelAS(std::vector <std::pair<Microsoft::WRL::ComPtr<ID3D12Resource>, uint32_t>> vVertexBuffers)
+Renderer::AccelerationStructureBuffers Renderer::CreateBottomLevelAS(std::vector <std::pair<Microsoft::WRL::ComPtr<ID3D12Resource>, uint32_t>> vVertexBuffers, std::vector <std::pair<Microsoft::WRL::ComPtr<ID3D12Resource>, uint32_t>> vIndexBuffers)
 {
 	nv_helpers_dx12::BottomLevelASGenerator bottomLevelAS;
 
-	for (const auto& buffer : vVertexBuffers)
-	{
-		bottomLevelAS.AddVertexBuffer(buffer.first.Get(), 0, buffer.second, sizeof(Vertex), 0, 0);
+	for (size_t i = 0; i < vVertexBuffers.size(); i++) {
+		// for (const auto &buffer : vVertexBuffers) {
+		if (i < vIndexBuffers.size() && vIndexBuffers[i].second > 0)
+			bottomLevelAS.AddVertexBuffer(vVertexBuffers[i].first.Get(), offsetof(Vertex, Pos), vVertexBuffers[i].second, sizeof(Vertex), vIndexBuffers[i].first.Get(), 0, vIndexBuffers[i].second, nullptr, 0);
 	}
 
 	UINT64 scratchSizeInBytes = 0;
@@ -1191,7 +1193,8 @@ void Renderer::CreateTopLevelAS(std::vector<std::pair<Microsoft::WRL::ComPtr<ID3
 
 void Renderer::CreateAccelerationStructures()
 {
-	AccelerationStructureBuffers bottomLevelBuffers = CreateBottomLevelAS({ { m_Geometries["skullGeo"]->VertexBufferGPU, m_skullVertCount} });
+	AccelerationStructureBuffers bottomLevelBuffers = CreateBottomLevelAS({ { m_Geometries["skullGeo"]->VertexBufferGPU, m_skullVertCount} }, { {m_Geometries["skullGeo"]->IndexBufferGPU, m_Geometries["skullGeo"]->DrawArgs["skull"].IndexCount }
+});
 
 	m_Instances = { {bottomLevelBuffers.pResult, XMMatrixIdentity()} };
 	CreateTopLevelAS(m_Instances);

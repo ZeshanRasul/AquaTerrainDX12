@@ -20,7 +20,7 @@ void RayGen()
     float2 d = (((launchIndex.xy + 0.5f) / dims.xy) * 2.0f - 1.0f);
     
     RayDesc ray;
-    ray.Origin = float3(d.x, -d.y, 1);
+    ray.Origin = float3(d.x, -d.y, 22);
     ray.Direction = float3(0, 0, -1);
     ray.TMin = 0;
     ray.TMax = 100000;
