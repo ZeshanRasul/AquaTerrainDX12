@@ -58,7 +58,7 @@ GeometryGenerator::MeshData GeometryGenerator::CreateBox(float width, float heig
 	v[23] = Vertex(+w2, -h2, +d2, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f);
 
 	meshData.Vertices.assign(&v[0], &v[24]);
- 
+
 	//
 	// Create the indices.
 	//
