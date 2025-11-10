@@ -165,9 +165,9 @@ void Renderer::Draw(bool useRaster)
 		desc.MissShaderTable.StrideInBytes = m_SbtHelper.GetMissEntrySize();
 
 		UINT64 hitGroupsSectionSize = m_SbtHelper.GetHitGroupSectionSize();
-		desc.HitGroupTable.StartAddress = Align(m_SbtStorage->GetGPUVirtualAddress() + rayGenerationSectionSizeInBytes + missSectionSizeInBytes, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
+		desc.HitGroupTable.StartAddress = m_SbtStorage->GetGPUVirtualAddress() + rayGenerationSectionSizeInBytes + missSectionSizeInBytes;
 		desc.HitGroupTable.SizeInBytes = hitGroupsSectionSize;
-		desc.HitGroupTable.StrideInBytes = Align(m_SbtHelper.GetHitGroupEntrySize(), D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
+		desc.HitGroupTable.StrideInBytes = m_SbtHelper.GetHitGroupEntrySize();
 
 		desc.Width = m_ClientWidth;
 		desc.Height = m_ClientHeight;
@@ -1071,7 +1071,7 @@ void Renderer::CreateRaytracingPipeline()
 
 	pipeline.AddRootSignatureAssociation(m_RayGenSignature.Get(), { L"RayGen" });
 	pipeline.AddRootSignatureAssociation(m_MissSignature.Get(), { L"Miss" });
-	pipeline.AddRootSignatureAssociation(m_HitSignature.Get(), { L"ClosestHit" });
+	pipeline.AddRootSignatureAssociation(m_HitSignature.Get(), { L"HitGroup" });
 
 	pipeline.SetMaxPayloadSize(4 * sizeof(float));
 	pipeline.SetMaxAttributeSize(2 * sizeof(float));
@@ -1141,7 +1141,8 @@ void Renderer::CreateShaderBindingTable()
 	m_SbtHelper.AddRayGenerationProgram(L"RayGen", { heapPointer });
 
 	m_SbtHelper.AddMissProgram(L"Miss", {});
-	m_SbtHelper.AddHitGroup(L"HitGroup", {(void*)m_Geometries["skullGeo"]->VertexBufferGPU->GetGPUVirtualAddress(), heapPointer});
+
+	m_SbtHelper.AddHitGroup(L"HitGroup", {(void*)(m_Geometries["skullGeo"]->VertexBufferGPU->GetGPUVirtualAddress()), heapPointer});
 
 	uint32_t sbtSize = m_SbtHelper.ComputeSBTSize();
 

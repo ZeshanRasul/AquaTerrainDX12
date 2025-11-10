@@ -12,6 +12,9 @@ struct Light
 // Raytracing output texture, accessed as a UAV
 RWTexture2D<float4> gOutput : register(u0);
 
+// Raytracing acceleration structure, accessed as a SRV
+RaytracingAccelerationStructure SceneBVH : register(t0);
+
 cbuffer cbPass : register(b0)
 {
     float4x4 gView;
@@ -33,9 +36,6 @@ cbuffer cbPass : register(b0)
     Light gLights[MaxLights];
 };
 
-// Raytracing acceleration structure, accessed as a SRV
-RaytracingAccelerationStructure SceneBVH : register(t0);
-
 [shader("raygeneration")]
 void RayGen()
 {
@@ -55,7 +55,7 @@ void RayGen()
 
     // Construct a ray through the pixel in world space
     float4 originVS = float4(0, 0, 0, 1);
-    float4 targetVS = mul(float4(d.x, d.y, 1.0f, 1.0f), gInvProj);
+    float4 targetVS = mul(float4(d.x, d.y, 1.0, 1.0), gInvProj);
     targetVS /= targetVS.w;
 
     float3 originWS = mul(originVS, gInvView).xyz;
