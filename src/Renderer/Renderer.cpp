@@ -68,6 +68,10 @@ bool Renderer::InitializeD3D12(HWND& windowHandle)
 	return true;
 }
 
+static inline UINT64 Align(UINT64 v, UINT64 alignment) {
+	return (v + (alignment - 1)) & ~(alignment - 1);
+}
+
 void Renderer::Update()
 {
 	m_CurrentFrameResourceIndex = (m_CurrentFrameResourceIndex + 1) % NumFrameResources;
@@ -139,12 +143,52 @@ void Renderer::Draw(bool useRaster)
 		m_CommandList->SetGraphicsRootConstantBufferView(2, passCB->GetGPUVirtualAddress());
 
 		DrawRenderItems(m_CommandList.Get(), m_OpaqueRenderItems);
-
 	}
 	else
 	{
-		m_CommandList->ClearRenderTargetView(CurrentBackBufferView(), DirectX::Colors::Indigo, 0, nullptr);
+		std::vector<ID3D12DescriptorHeap*> heaps = { m_SrvUavHeap.Get()};
+		m_CommandList->SetDescriptorHeaps(static_cast<UINT>(heaps.size()), heaps.data());
+
+		CD3DX12_RESOURCE_BARRIER transition = CD3DX12_RESOURCE_BARRIER::Transition(m_OutputResource.Get(), D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+		m_CommandList->ResourceBarrier(1, &transition);
+
+		D3D12_DISPATCH_RAYS_DESC desc = {};
+
+		UINT64 rayGenerationSectionSizeInBytes = m_SbtHelper.GetRayGenSectionSize();
+		desc.RayGenerationShaderRecord.StartAddress = m_SbtStorage->GetGPUVirtualAddress();
+		desc.RayGenerationShaderRecord.SizeInBytes = rayGenerationSectionSizeInBytes;
+
+		UINT64 missSectionSizeInBytes = m_SbtHelper.GetMissSectionSize();
+
+		desc.MissShaderTable.StartAddress = Align(m_SbtStorage->GetGPUVirtualAddress() + rayGenerationSectionSizeInBytes, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
+		desc.MissShaderTable.SizeInBytes = missSectionSizeInBytes;
+		desc.MissShaderTable.StrideInBytes = m_SbtHelper.GetMissEntrySize();
+
+		UINT64 hitGroupsSectionSize = m_SbtHelper.GetHitGroupSectionSize();
+		desc.HitGroupTable.StartAddress = Align(m_SbtStorage->GetGPUVirtualAddress() + rayGenerationSectionSizeInBytes + missSectionSizeInBytes, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
+		desc.HitGroupTable.SizeInBytes = hitGroupsSectionSize;
+		desc.HitGroupTable.StrideInBytes = Align(m_SbtHelper.GetHitGroupEntrySize(), D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
+
+		desc.Width = m_ClientWidth;
+		desc.Height = m_ClientHeight;
+		desc.Depth = 1;
+
+		m_CommandList->SetPipelineState1(m_RtStateObject.Get());
+		m_CommandList->DispatchRays(&desc);
+
+		transition = CD3DX12_RESOURCE_BARRIER::Transition(m_OutputResource.Get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_SOURCE);
+		m_CommandList->ResourceBarrier(1, &transition);
+
+		transition = CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_COPY_DEST);
+		m_CommandList->ResourceBarrier(1, &transition);
+
+		m_CommandList->CopyResource(CurrentBackBuffer(), m_OutputResource.Get());
+
+		transition = CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_RENDER_TARGET);
+		m_CommandList->ResourceBarrier(1, &transition);
+
 	}
+
 	m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
 
 	ThrowIfFailed(m_CommandList->Close());
