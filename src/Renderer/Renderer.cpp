@@ -54,6 +54,7 @@ bool Renderer::InitializeD3D12(HWND& windowHandle)
 	BuildFrameResources();
 
 	BuildPSOs();
+	CreateCameraBuffer();
 	XMVECTOR pos = XMVectorSet(0.0f, 1.0f, -27.0f, 1.0f);
 	XMVECTOR target = XMVectorZero();
 	XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
@@ -98,7 +99,7 @@ void Renderer::Update()
 		CloseHandle(eventHandle);
 	}
 
-	XMVECTOR pos = XMVectorSet(0.0f, 1.0f, -27.0f, 1.0f);
+	XMVECTOR pos = XMVectorSet(0.0f, 2.0f, -27.0f, 1.0f);
 	XMVECTOR target = XMVectorZero();
 	XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 	XMMATRIX view = XMMatrixLookAtLH(pos, target, up);
@@ -106,7 +107,7 @@ void Renderer::Update()
 
 	XMMATRIX P = XMMatrixPerspectiveFovLH(0.25f * MathHelper::Pi, (float)(m_ClientWidth / m_ClientHeight), 0.1f, 1000.0f);
 	XMStoreFloat4x4(&m_Proj, P);
-
+	UpdateCameraBuffer();
 	UpdateObjectCBs();
 	UpdateMainPassCB();
 	UpdateMaterialCBs();
@@ -154,6 +155,7 @@ void Renderer::Draw(bool useRaster)
 
 		auto passCB = m_CurrentFrameResource->PassCB->Resource();
 		m_CommandList->SetGraphicsRootConstantBufferView(2, passCB->GetGPUVirtualAddress());
+		m_CommandList->SetGraphicsRootConstantBufferView(3, m_CameraBuffer->GetGPUVirtualAddress());
 
 		DrawRenderItems(m_CommandList.Get(), m_OpaqueRenderItems);
 	}
@@ -460,17 +462,27 @@ void Renderer::CreateConstantBufferViews()
 
 		m_Device->CreateConstantBufferView(&cbvDesc, handle);
 	}
+
+	//UINT camCBByteSize = d3dUtil::CalcConstantBufferByteSize(m_CameraBufferSize);
+
+	//auto camCB = m_CameraBuffer;
+
+	//D3D12_GPU_VIRTUAL_ADDRESS camBufAddress = camCB->GetGPUVirtualAddress();
+
+	//int heapIndex = camBufOffset;
+	//auto handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_ConstHeap->GetCPUDescriptorHandleForHeapStart())
 }
 
 void Renderer::CreateRootSignature()
 {
-	CD3DX12_ROOT_PARAMETER slotRootParameter[3];
+	CD3DX12_ROOT_PARAMETER slotRootParameter[4];
 
 	slotRootParameter[0].InitAsConstantBufferView(0);
 	slotRootParameter[1].InitAsConstantBufferView(1);
 	slotRootParameter[2].InitAsConstantBufferView(2);
+	slotRootParameter[3].InitAsConstantBufferView(3);
 
-	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(3, slotRootParameter, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(4, slotRootParameter, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
 	Microsoft::WRL::ComPtr<ID3DBlob> serializedRootSig = nullptr;
 	Microsoft::WRL::ComPtr<ID3DBlob> errorBlob = nullptr;
@@ -1044,6 +1056,7 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> Renderer::CreateRayGenSignature()
 		{ { 0, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 0 },
 		{ 0, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1},
 		{ 0, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 2},
+		{ 1, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 3},
 		}
 	);
 
@@ -1116,7 +1129,7 @@ void Renderer::CreateRaytracingOutputBuffer()
 
 void Renderer::CreateShaderResourceHeap()
 {
-	m_SrvUavHeap = nv_helpers_dx12::CreateDescriptorHeap(m_Device.Get(), 3, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
+	m_SrvUavHeap = nv_helpers_dx12::CreateDescriptorHeap(m_Device.Get(), 4, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
 
 	D3D12_CPU_DESCRIPTOR_HANDLE srvHandle = m_SrvUavHeap->GetCPUDescriptorHandleForHeapStart();
 
@@ -1136,18 +1149,23 @@ void Renderer::CreateShaderResourceHeap()
 
 	srvHandle.ptr += m_Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
+
 	D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
 	cbvDesc.BufferLocation = m_FrameResources[m_CurrentFrameResourceIndex]->PassCB->Resource()->GetGPUVirtualAddress();
 	cbvDesc.SizeInBytes = Align(sizeof(PassConstants), 256);
+	m_Device->CreateConstantBufferView(&cbvDesc, srvHandle);
+
+	srvHandle.ptr += m_Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+	cbvDesc = {};
+	cbvDesc.BufferLocation = m_CameraBuffer->GetGPUVirtualAddress();
+	cbvDesc.SizeInBytes = m_CameraBufferSize;
 	m_Device->CreateConstantBufferView(&cbvDesc, srvHandle);
 }
 
 void Renderer::CreateShaderBindingTable()
 {
 	m_SbtHelper.Reset();
-
-
-
 
 	D3D12_GPU_DESCRIPTOR_HANDLE srvUavHeapHandle = m_SrvUavHeap->GetGPUDescriptorHandleForHeapStart();
 	auto heapPointer = reinterpret_cast<void*>(srvUavHeapHandle.ptr);
@@ -1250,4 +1268,51 @@ void Renderer::CreateAccelerationStructures()
 	ThrowIfFailed(m_CommandList->Reset(m_CommandAllocator.Get(), m_PipelineStateObjects["opaque"].Get()));
 
 	m_BottomLevelAS = bottomLevelBuffers.pResult;
+}
+
+void Renderer::CreateCameraBuffer()
+{
+	uint32_t nbMatrix = 4;
+	m_CameraBufferSize = nbMatrix * sizeof(XMMATRIX);
+
+	m_CameraBuffer = nv_helpers_dx12::CreateBuffer(m_Device.Get(), m_CameraBufferSize, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, nv_helpers_dx12::kUploadHeapProps);
+
+	m_ConstHeap = nv_helpers_dx12::CreateDescriptorHeap(m_Device.Get(), 1, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
+
+	D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
+	cbvDesc.BufferLocation = m_CameraBuffer->GetGPUVirtualAddress();
+	cbvDesc.SizeInBytes = m_CameraBufferSize;
+
+	D3D12_CPU_DESCRIPTOR_HANDLE srvHandle = m_ConstHeap->GetCPUDescriptorHandleForHeapStart();
+	m_Device->CreateConstantBufferView(&cbvDesc, srvHandle);
+}
+
+void Renderer::UpdateCameraBuffer()
+{
+	std::vector<XMMATRIX> matrices(4);
+
+	XMVECTOR Eye = XMVectorSet(0.0f, 1.0f, -7.5f, 1.0f);
+	XMVECTOR At = XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f);
+	XMVECTOR Up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+	matrices[0] = XMMatrixLookAtLH(Eye, At, Up);
+	//XMVECTOR pos = XMVectorSet(0.0f, 1.0f, -27.0f, 1.0f);
+	//XMVECTOR target = XMVectorZero();
+	//XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+	//XMMATRIX view = XMMatrixLookAtLH(pos, target, up);
+	//XMStoreFloat4x4(&m_View, view);
+
+	//XMMATRIX P = XMMatrixPerspectiveFovLH(0.25f * MathHelper::Pi, (float)(m_ClientWidth / m_ClientHeight), 0.1f, 1000.0f);
+	//XMStoreFloat4x4(&m_Proj, P);
+	float fovAngleY = 45.0f * XM_PI / 180.0f;
+	m_AspectRatio = (float)m_ClientWidth / (float)m_ClientHeight;
+	matrices[1] = XMMatrixPerspectiveFovLH(fovAngleY, m_AspectRatio, 0.1f, 1000.0f);
+
+	XMVECTOR det;
+	matrices[2] = XMMatrixInverse(&det, matrices[0]);
+	matrices[3] = XMMatrixInverse(&det, matrices[1]);
+
+	uint8_t* pData;
+	ThrowIfFailed(m_CameraBuffer->Map(0, nullptr, (void**)&pData));
+	memcpy(pData, matrices.data(), m_CameraBufferSize);
+	m_CameraBuffer->Unmap(0, nullptr);
 }

@@ -34,6 +34,12 @@ cbuffer cbPass : register(b2)
     Light gLights[MaxLights];
 };
 
+cbuffer cbCamera : register(b3)
+{
+    float4x4 view;
+    float4x4 projection;
+}
+
 struct VertexIn
 {
     float3 PosL : POSITION;

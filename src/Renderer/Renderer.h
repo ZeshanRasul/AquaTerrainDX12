@@ -14,7 +14,7 @@ using namespace DirectX;
 class Renderer {
 public:
 	Renderer(HWND& windowHandle, UINT width, UINT height);
-	~Renderer() = default;
+	~Renderer() { m_Device->Release(); };
 
 	bool InitializeD3D12(HWND& windowHandle);
 	bool Shutdown();
@@ -204,4 +204,13 @@ private:
 	void CreateAccelerationStructures();
 	UINT m_vertexCount = 0;
 	Microsoft::WRL::ComPtr<ID3D12Resource> skullUB;
+
+	void CreateCameraBuffer();
+	void UpdateCameraBuffer();
+
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_CameraBuffer;
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_ConstHeap;
+	uint32_t m_CameraBufferSize = 0;
+	UINT camBufOffset;
+	float m_AspectRatio;
 };
