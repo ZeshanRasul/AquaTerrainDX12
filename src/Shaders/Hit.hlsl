@@ -116,7 +116,18 @@ void ClosestHit(inout HitInfo payload, Attributes attrib)
         modulationFactor = float4(hitColor.xyz, 1.0f);
     };
     
-    float3 lit = ComputeDirectionalLight(L, nW, toEye) + modulationFactor.xyz;
+    float3 lit = ComputeDirectionalLight(L, nW, toEye);
 
     payload.colorAndDistance = float4(lit, RayTCurrent());
+}
+
+[shader("closesthit")]
+void PlaneClosestHit(inout HitInfo payload, Attributes attrib)
+{
+    float3 bary = float3(1.0f - attrib.bary.x - attrib.bary.y, attrib.bary.x, attrib.bary.y);
+    
+    float3 hitColor = float3(1.0f, 0.1f, 0.1f);
+    
+    payload.colorAndDistance = float4(hitColor.xyz, 1.0f);
+
 }

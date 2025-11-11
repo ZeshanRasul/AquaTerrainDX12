@@ -198,7 +198,7 @@ void Renderer::Draw(bool useRaster)
 
 		UINT64 missSectionSizeInBytes = m_SbtHelper.GetMissSectionSize();
 
-		desc.MissShaderTable.StartAddress = Align(m_SbtStorage->GetGPUVirtualAddress() + rayGenerationSectionSizeInBytes, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
+		desc.MissShaderTable.StartAddress = m_SbtStorage->GetGPUVirtualAddress() + rayGenerationSectionSizeInBytes;
 		desc.MissShaderTable.SizeInBytes = missSectionSizeInBytes;
 		desc.MissShaderTable.StrideInBytes = m_SbtHelper.GetMissEntrySize();
 
@@ -1115,17 +1115,19 @@ void Renderer::CreateRaytracingPipeline()
 
 	pipeline.AddLibrary(m_RayGenLibrary.Get(), { L"RayGen" });
 	pipeline.AddLibrary(m_MissLibrary.Get(), { L"Miss" });
-	pipeline.AddLibrary(m_HitLibrary.Get(), { L"ClosestHit" });
+	pipeline.AddLibrary(m_HitLibrary.Get(), { L"ClosestHit", L"PlaneClosestHit"});
 
 	m_RayGenSignature = CreateRayGenSignature();
 	m_MissSignature = CreateMissSignature();
 	m_HitSignature = CreateHitSignature();
 
 	pipeline.AddHitGroup(L"HitGroup", L"ClosestHit");
+	pipeline.AddHitGroup(L"PlaneHitGroup", L"PlaneClosestHit");
 
 	pipeline.AddRootSignatureAssociation(m_RayGenSignature.Get(), { L"RayGen" });
 	pipeline.AddRootSignatureAssociation(m_MissSignature.Get(), { L"Miss" });
-	pipeline.AddRootSignatureAssociation(m_HitSignature.Get(), { L"HitGroup" });
+	pipeline.AddRootSignatureAssociation(m_HitSignature.Get(), { L"HitGroup"});
+	pipeline.AddRootSignatureAssociation(m_HitSignature.Get(), { L"HitGroup",  L"PlaneHitGroup" });
 
 	pipeline.SetMaxPayloadSize(4 * sizeof(float));
 	pipeline.SetMaxAttributeSize(2 * sizeof(float));
@@ -1204,6 +1206,8 @@ void Renderer::CreateShaderBindingTable()
 	m_SbtHelper.AddHitGroup(L"HitGroup", {(void*)m_Geometries["skullGeo"]->VertexBufferGPU->GetGPUVirtualAddress(), (void*)m_Geometries["skullGeo"]->IndexBufferGPU->GetGPUVirtualAddress(), 
 		(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(), (void*)m_GlobalConstantBuffer->GetGPUVirtualAddress()});
 
+	m_SbtHelper.AddHitGroup(L"PlaneHitGroup", {heapPointer});
+
 	uint32_t sbtSize = m_SbtHelper.ComputeSBTSize();
 
 	m_SbtStorage = nv_helpers_dx12::CreateBuffer(m_Device.Get(), sbtSize, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, nv_helpers_dx12::kUploadHeapProps);
@@ -1249,7 +1253,12 @@ void Renderer::CreateTopLevelAS(std::vector<std::pair<Microsoft::WRL::ComPtr<ID3
 
 	for (size_t i = 0; i < instances.size(); i++)
 	{
-		m_topLevelASGenerator.AddInstance(instances[i].first.Get(), instances[i].second, static_cast<UINT>(i), static_cast<UINT>(0));
+		UINT hitGroupIndex = 0;
+		if (i == 3)
+		{
+			hitGroupIndex = 1;
+		}
+		m_topLevelASGenerator.AddInstance(instances[i].first.Get(), instances[i].second, static_cast<UINT>(i), hitGroupIndex);
 	}
 
 	UINT64 scratchSizeInBytes = 0;
@@ -1271,8 +1280,7 @@ void Renderer::CreateAccelerationStructures()
 {
 	AccelerationStructureBuffers bottomLevelBuffers = CreateBottomLevelAS({ { m_Geometries["skullGeo"]->VertexBufferGPU, m_skullVertCount} }, { {m_Geometries["skullGeo"]->IndexBufferGPU, m_Geometries["skullGeo"]->DrawArgs["skull"].IndexCount }
 		});
-	AccelerationStructureBuffers planeBottomLevelBuffers = CreateBottomLevelAS({ { m_PlaneBuffer.Get(), 6 } }, {{ nullptr, 0 }
-});
+	AccelerationStructureBuffers planeBottomLevelBuffers = CreateBottomLevelAS({ { m_PlaneBuffer.Get(), 6 } }, {});
 
 
 
@@ -1308,12 +1316,12 @@ void Renderer::CreateAccelerationStructures()
 void Renderer::CreatePlaneVB()
 {
 	Vertex planeVertices[] = {
-		 {{-1.5f, -.8f, 01.5f} }, // 0
-		 {{-1.5f, -.8f, -1.5f} }, // 1
-		 {{01.5f, -.8f, 01.5f} }, // 2
-		 {{01.5f, -.8f, 01.5f} }, // 2
-		 {{-1.5f, -.8f, -1.5f} }, // 1
-		 {{01.5f, -.8f, -1.5f} }  // 4
+		 {{-1.5f, -.8f, 01.5f}, { 0.0f, 0.0f, 0.0f },}, // 0
+		 {{-1.5f, -.8f, -1.5f}, { 0.0f, 0.0f, 0.0f },}, // 1
+		 {{01.5f, -.8f, 01.5f}, { 0.0f, 0.0f, 0.0f },}, // 2
+		 {{01.5f, -.8f, 01.5f}, { 0.0f, 0.0f, 0.0f },}, // 2
+		 {{-1.5f, -.8f, -1.5f}, { 0.0f, 0.0f, 0.0f },}, // 1
+		 {{01.5f, -.8f, -1.5f}, { 0.0f, 0.0f, 0.0f } }  // 4
 	};
 
 	const UINT planeBufferSize = sizeof(planeVertices);
