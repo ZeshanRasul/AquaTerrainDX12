@@ -20,8 +20,8 @@ Renderer::Renderer(HWND& windowHandle, UINT width, UINT height)
 
 bool Renderer::InitializeD3D12(HWND& windowHandle)
 {
-	nv_helpers_dx12::Manipulator::Singleton().setWindowSize(m_ClientWidth, m_ClientHeight);
-	nv_helpers_dx12::Manipulator::Singleton().setLookat(glm::vec3(0.0f, 1.0f, -27.0f), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
+	//nv_helpers_dx12::Manipulator::Singleton().setWindowSize(m_ClientWidth, m_ClientHeight);
+	//nv_helpers_dx12::Manipulator::Singleton().setLookat(glm::vec3(0.0f, 1.0f, -27.0f), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
 
 #if defined(DEBUG) || defined(_DEBUG)
 	CreateDebugController();
@@ -59,6 +59,9 @@ bool Renderer::InitializeD3D12(HWND& windowHandle)
 	BuildRenderItems();
 
 	BuildFrameResources();
+	m_CurrentFrameResource = 0;
+	m_CurrentFrameResourceIndex = (m_CurrentFrameResourceIndex + 1) % gNumFrameResources;
+	m_CurrentFrameResource = m_FrameResources[m_CurrentFrameResourceIndex].get();
 
 	BuildPSOs();
 	CreateCameraBuffer();
@@ -70,9 +73,6 @@ bool Renderer::InitializeD3D12(HWND& windowHandle)
 
 	XMMATRIX P = XMMatrixPerspectiveFovLH(0.25f * MathHelper::Pi, (float)(m_ClientWidth / m_ClientHeight), 0.1f, 1000.0f);
 	XMStoreFloat4x4(&m_Proj, P);
-	m_CurrentFrameResource = 0;
-	m_CurrentFrameResourceIndex = (m_CurrentFrameResourceIndex + 1) % gNumFrameResources;
-	m_CurrentFrameResource = m_FrameResources[m_CurrentFrameResourceIndex].get();
 
 
 	CreateAccelerationStructures();
@@ -93,11 +93,25 @@ static inline UINT64 Align(UINT64 v, UINT64 alignment) {
 	return (v + (alignment - 1)) & ~(alignment - 1);
 }
 
-void Renderer::Update(float dt, float mTheta, float mPhi, float mRadius, float mLastMousePosX, float mLastMousePosY)
+void Renderer::Update(float dt, float mTheta, float mPhi, float mRadius, float mLastMousePosX, float mLastMousePosY, bool left, bool right)
 {
-	m_Theta = mTheta;
-	m_Phi = mPhi;
-	m_Radius = mRadius;
+	if (left)
+	{
+		float dx = XMConvertToRadians(0.25f * static_cast<float>(mLastMousePosX - m_LastMousePosX));
+		float dy = XMConvertToRadians(0.25f * static_cast<float>(mLastMousePosY - m_LastMousePosY));
+		m_Theta += dx;
+		m_Phi += dy;
+
+		m_Phi = MathHelper::Clamp(m_Phi, 0.1f, MathHelper::Pi - 0.1f);
+	}
+	else if (right)
+	{
+		float dx = 0.05f * static_cast<float>(mLastMousePosX - m_LastMousePosX);
+		float dy = 0.05f * static_cast<float>(mLastMousePosY - m_LastMousePosY);
+
+		m_Radius += (dx - dy);
+		m_Radius = MathHelper::Clamp(m_Radius, 5.0f, 150.0f);
+	}
 	m_LastMousePosX = mLastMousePosX;
 	m_LastMousePosY = mLastMousePosY;
 
@@ -1009,10 +1023,13 @@ void Renderer::UpdateMainPassCB()
 	XMStoreFloat4x4(&m_MainPassCB.InvViewProj, XMMatrixTranspose(invViewProj));
 
 	m_MainPassCB.EyePosW = m_EyePos;
+	m_MainPassCB.cbPerObjectPad1 = 0.5f;
 	m_MainPassCB.RenderTargetSize = XMFLOAT2((float)m_ClientWidth, (float)m_ClientHeight);
 	m_MainPassCB.InvRenderTargetSize = XMFLOAT2(1.0f / m_ClientWidth, 1.0f / m_ClientHeight);
 	m_MainPassCB.NearZ = 1.0f;
 	m_MainPassCB.FarZ = 1000.0f;
+	m_MainPassCB.cbPerObjectPad2 = 0.5f;
+	m_MainPassCB.cbPerObjectPad3 = 0.5f;
 	m_MainPassCB.AmbientLight = { 0.25f, 0.25f, 0.35f, 1.0f };
 	m_MainPassCB.Lights[0].Direction = { 0.57735f, -0.57735f, 0.57735f };
 	m_MainPassCB.Lights[0].Strength = { 0.6f, 0.6f, 0.6f };
@@ -1185,7 +1202,7 @@ void Renderer::CreateShaderBindingTable()
 	m_SbtHelper.AddMissProgram(L"Miss", {});
 
 	m_SbtHelper.AddHitGroup(L"HitGroup", {(void*)m_Geometries["skullGeo"]->VertexBufferGPU->GetGPUVirtualAddress(), (void*)m_Geometries["skullGeo"]->IndexBufferGPU->GetGPUVirtualAddress(), 
-		(void*)m_FrameResources[0]->PassCB->Resource()->GetGPUVirtualAddress(), (void*)m_GlobalConstantBuffer->GetGPUVirtualAddress()});
+		(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(), (void*)m_GlobalConstantBuffer->GetGPUVirtualAddress()});
 
 	uint32_t sbtSize = m_SbtHelper.ComputeSBTSize();
 
@@ -1358,8 +1375,8 @@ void Renderer::UpdateCameraBuffer()
 	XMVECTOR At = XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f);
 	XMVECTOR Up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 	matrices[0] = XMMatrixLookAtLH(Eye, At, Up);
-	const glm::mat4& mat = nv_helpers_dx12::CameraManip.getMatrix();
-	memcpy(&matrices[0].r->m128_f32[0], glm::value_ptr(mat), 16 * sizeof(float));
+	//const glm::mat4& mat = nv_helpers_dx12::CameraManip.getMatrix();
+	//memcpy(&matrices[0].r->m128_f32[0], glm::value_ptr(mat), 16 * sizeof(float));
 
 
 //	matrices[0] = XMLoadFloat4x4(matrices[]);

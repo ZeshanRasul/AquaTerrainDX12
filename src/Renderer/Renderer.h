@@ -18,7 +18,7 @@ public:
 
 	bool InitializeD3D12(HWND& windowHandle);
 	bool Shutdown();
-	void Update(float dt, float m_Theta, float m_Phi, float m_Radius, float m_LastMousePosX, float m_LastMousePosY);
+	void Update(float dt, float m_Theta, float m_Phi, float m_Radius, float m_LastMousePosX, float m_LastMousePosY, bool left, bool right);
 	void Draw(bool useRaster);
 
 private:

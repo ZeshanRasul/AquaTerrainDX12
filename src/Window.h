@@ -10,14 +10,15 @@ struct WindowProps
 	unsigned int Width;
 	unsigned int Height;
 
-	WindowProps(const std::string& title = "Windows Framework", 
+	WindowProps(const std::string& title = "Windows Framework",
 		unsigned int width = 1280,
 		unsigned int height = 960)
 		:
 		Title(title),
 		Width(width),
 		Height(height)
-	{}
+	{
+	}
 };
 
 class Window
@@ -35,7 +36,7 @@ private:
 	private:
 		WindowClass();
 		~WindowClass();
-		
+
 		static constexpr const wchar_t* wndClassName = L"Windows Framework";
 		static WindowClass wndClass;
 		HINSTANCE hInstance;
@@ -78,10 +79,13 @@ private:
 public:
 	Input input;
 	bool m_Raster = true;
-	float mLastMousePosX, mLastMousePosY = 0;
+	float mLastMousePosX = 0;
+	float mLastMousePosY = 0;
 	float mTheta = 1.5f * 3.141592f;
 	float mPhi = 0.2f * 3.141592f;
 	float mRadius = 35.0f;
+	bool isLButton = false;
+	bool isRButton = false;
 private:
 	void* m_Window;
 

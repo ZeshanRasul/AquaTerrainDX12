@@ -171,6 +171,8 @@ LRESULT Window::HandleMessage(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 		// Restrict the angle mPhi.
 		mPhi = MathHelper::Clamp(mPhi, 0.1f, MathHelper::Pi - 0.1f);
+		isLButton = true;
+		isRButton = false;
 
 		mLastMousePosX = GET_X_LPARAM(lParam);
 		mLastMousePosY = GET_Y_LPARAM(lParam);
@@ -189,6 +191,14 @@ LRESULT Window::HandleMessage(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		mRadius = MathHelper::Clamp(mRadius, 5.0f, 150.0f);
 		mLastMousePosX = GET_X_LPARAM(lParam);
 		mLastMousePosY = GET_Y_LPARAM(lParam);
+
+		isRButton = true;
+		isLButton = false;
+	}
+	else
+	{
+		isRButton = false;
+		isLButton = false;
 	}
 
 	
