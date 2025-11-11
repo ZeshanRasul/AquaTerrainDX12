@@ -1,5 +1,5 @@
 #include "Common.hlsl"
-#define MaxLights 10
+#define MaxLights 16
 struct Light
 {
     float3 Strength;

@@ -24,9 +24,9 @@ struct PassConstants
 	XMFLOAT2 InvRenderTargetSize = { 0.0f, 0.0f };
 	float NearZ = 0.0f;
 	float FarZ = 0.0f;
-	float TotalTime = 0.0f;
-	float DeltaTime = 0.0f;
-	XMFLOAT4 AmbientLight = { 0.2f, 0.2f, 0.2f, 1.0f };
+	float cbPerObjectPad2 = 0.0f;
+	float cbPerObjectPad3 = 0.0f;
+	XMFLOAT4 AmbientLight = { 0.2f, 0.2f, 1.0f, 1.0f };
 
 	Light Lights[MaxLights];
 };

@@ -1,5 +1,5 @@
 #include "Common.hlsl"
-#define MaxLights 10
+#define MaxLights 16
 struct Light
 {
     float3 Strength;
@@ -42,16 +42,16 @@ cbuffer cbPass : register(b0)
 [shader("closesthit")] 
 void ClosestHit(inout HitInfo payload, Attributes attrib) 
 {
-    //float3 barycentrics = float3(1.0f - attrib.bary.x - attrib.bary.y, attrib.bary.x, attrib.bary.y);
+    float3 barycentrics = float3(1.0f - attrib.bary.x - attrib.bary.y, attrib.bary.x, attrib.bary.y);
     
     //const float3 A = float3(1.0, 0.0, 0.0);
     //const float3 B = float3(0.0, 1.0, 0.0);
     //const float3 C = float3(0.0, 0.0, 1.0);
     
     //uint vertId = 3 * PrimitiveIndex();
-    //float3 hitColor = BTriVertex[vertId + 0].normal * barycentrics.x +
-    //              BTriVertex[vertId + 1].normal * barycentrics.y +
-    //              BTriVertex[vertId + 2].normal * barycentrics.z;
-    
-    payload.colorAndDistance = float4(0.0, 1.0, 0.0, RayTCurrent());
+    //float3 hitColor = BTriVertex[vertId + 0].Normal * barycentrics.x +
+    //              BTriVertex[vertId + 1].Normal * barycentrics.y +
+    //              BTriVertex[vertId + 2].Normal * barycentrics.z;
+    float3 col = gLights[0].Direction * gAmbientLight.xyz * 0.9;
+    payload.colorAndDistance = float4(barycentrics * col, RayTCurrent());
 }
