@@ -78,12 +78,14 @@ private:
 public:
 	Input input;
 	bool m_Raster = true;
-
+	float mLastMousePosX, mLastMousePosY = 0;
+	float mTheta = 1.5f * 3.141592f;
+	float mPhi = 0.2f * 3.141592f;
+	float mRadius = 35.0f;
 private:
 	void* m_Window;
 
 	WindowData m_Data;
 
 	HWND m_Hwnd;
-
 };

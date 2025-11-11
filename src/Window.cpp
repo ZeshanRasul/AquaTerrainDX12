@@ -247,20 +247,35 @@ LRESULT Window::HandleMessage(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 	case WM_MOVE:
 	{
-		const POINTS pt = MAKEPOINTS(lParam);
-		using nv_helpers_dx12::Manipulator;
-		Manipulator::Inputs inputs;
-		inputs.lmb = wParam & MK_LBUTTON;
-		inputs.mmb = wParam & MK_MBUTTON;
-		inputs.rmb = wParam & MK_RBUTTON;
-		if (!inputs.lmb && !inputs.rmb && !inputs.mmb)
-			break; // no mouse button pressed
+	
+		if ((wParam & MK_LBUTTON) != 0)
+		{
+			// Make each pixel correspond to a quarter of a degree.
+			float dx = XMConvertToRadians(0.25f * static_cast<float>(GET_X_LPARAM(lParam) - mLastMousePosX));
+			float dy = XMConvertToRadians(0.25f * static_cast<float>(GET_Y_LPARAM(lParam) - mLastMousePosY));
 
-		inputs.ctrl = GetAsyncKeyState(VK_CONTROL);
-		inputs.shift = GetAsyncKeyState(VK_SHIFT);
-		inputs.alt = GetAsyncKeyState(VK_MENU);
+			// Update angles based on input to orbit camera around box.
+			mTheta += dx;
+			mPhi += dy;
 
-		CameraManip.mouseMove(-GET_X_LPARAM(lParam), -GET_Y_LPARAM(lParam), inputs);
+			// Restrict the angle mPhi.
+			mPhi = MathHelper::Clamp(mPhi, 0.1f, MathHelper::Pi - 0.1f);
+		}
+		else if ((wParam & MK_RBUTTON) != 0)
+		{
+			// Make each pixel correspond to 0.2 unit in the scene.
+			float dx = 0.05f * static_cast<float>(GET_X_LPARAM(lParam) - mLastMousePosX);
+			float dy = 0.05f * static_cast<float>(GET_Y_LPARAM(lParam) - mLastMousePosY);
+
+			// Update the camera radius based on input.
+			mRadius += dx - dy;
+
+			// Restrict the radius.
+			mRadius = MathHelper::Clamp(mRadius, 5.0f, 150.0f);
+		}
+
+		mLastMousePosX = GET_X_LPARAM(lParam);
+		mLastMousePosY = GET_Y_LPARAM(lParam);
 
 		break;
 	}

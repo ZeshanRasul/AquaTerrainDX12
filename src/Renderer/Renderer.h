@@ -18,7 +18,7 @@ public:
 
 	bool InitializeD3D12(HWND& windowHandle);
 	bool Shutdown();
-	void Update();
+	void Update(float m_Theta, float m_Phi, float m_Radius, float m_LastMousePosX, float m_LastMousePosY);
 	void Draw(bool useRaster);
 
 private:
@@ -218,4 +218,8 @@ private:
 	uint32_t m_CameraBufferSize = 0;
 	UINT camBufOffset;
 	float m_AspectRatio;
+
+	void OnMouseMove(WPARAM btnState, int x, int y);
+	float m_LastMousePosX, m_LastMousePosY;
+
 };

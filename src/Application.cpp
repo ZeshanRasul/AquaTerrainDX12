@@ -37,7 +37,7 @@ int Application::Run()
 		{
 			return *ecode;
 		}
-		m_Renderer->Update();
+		m_Renderer->Update(m_Window->mTheta, m_Window->mPhi, m_Window->mRadius, m_Window->mLastMousePosX, m_Window->mLastMousePosY);
 		m_Renderer->Draw(m_Window->m_Raster);
 	}
 

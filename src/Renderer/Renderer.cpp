@@ -92,8 +92,14 @@ static inline UINT64 Align(UINT64 v, UINT64 alignment) {
 	return (v + (alignment - 1)) & ~(alignment - 1);
 }
 
-void Renderer::Update()
+void Renderer::Update(float m_Theta, float m_Phi, float m_Radius, float m_LastMousePosX, float m_LastMousePosY)
 {
+	m_Theta = m_Theta;
+	m_Phi = m_Phi;
+	m_Radius = m_Radius;
+	m_LastMousePosX = m_LastMousePosX;
+	m_LastMousePosY = m_LastMousePosY;
+
 	m_CurrentFrameResourceIndex = (m_CurrentFrameResourceIndex + 1) % gNumFrameResources;
 	m_CurrentFrameResource = m_FrameResources[m_CurrentFrameResourceIndex].get();
 
@@ -110,8 +116,19 @@ void Renderer::Update()
 	XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 	XMMATRIX view = XMMatrixLookAtLH(pos, target, up);
 	XMStoreFloat4x4(&m_View, view);
+	// Convert Spherical to Cartesian coordinates.
+	m_EyePos.x = m_Radius * sinf(m_Phi) * cosf(m_Theta);
+	m_EyePos.z = m_Radius * sinf(m_Phi) * sinf(m_Theta);
+	m_EyePos.y = m_Radius * cosf(m_Phi);
 
-	XMMATRIX P = XMMatrixPerspectiveFovLH(0.25f * MathHelper::Pi, (float)(m_ClientWidth / m_ClientHeight), 0.1f, 1000.0f);
+	// Build the view matrix.
+	pos = XMVectorSet(m_EyePos.x, m_EyePos.y, m_EyePos.z, 1.0f);
+	target = XMVectorZero();
+	up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+
+	view = XMMatrixLookAtLH(pos, target, up);
+	XMStoreFloat4x4(&m_View, view);
+	XMMATRIX P = XMMatrixPerspectiveFovLH(0.25f * MathHelper::Pi, (float)((float)m_ClientWidth / (float)m_ClientHeight), 0.1f, 1000.0f);
 	XMStoreFloat4x4(&m_Proj, P);
 	UpdateCameraBuffer();
 	UpdateObjectCBs();
