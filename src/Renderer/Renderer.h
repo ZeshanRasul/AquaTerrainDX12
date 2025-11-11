@@ -205,6 +205,11 @@ private:
 	UINT m_vertexCount = 0;
 	Microsoft::WRL::ComPtr<ID3D12Resource> skullUB;
 
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_PlaneBuffer;
+	D3D12_VERTEX_BUFFER_VIEW m_PlaneBufferView;
+
+	void CreatePlaneVB();
+
 	void CreateCameraBuffer();
 	void UpdateCameraBuffer();
 

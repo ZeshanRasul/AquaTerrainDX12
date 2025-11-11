@@ -2,6 +2,9 @@
 #include "nv_helpers_dx12/BottomLevelASGenerator.h"
 #include "nv_helpers_dx12/RaytracingPipelineGenerator.h"
 #include "nv_helpers_dx12/RootSignatureGenerator.h"
+#include "manipulator.h"
+#include "glm/glm.hpp"
+#include "glm/gtc/type_ptr.hpp"
 #include "Renderer.h"
 
 const int gNumFrameResources = 3;
@@ -17,6 +20,9 @@ Renderer::Renderer(HWND& windowHandle, UINT width, UINT height)
 
 bool Renderer::InitializeD3D12(HWND& windowHandle)
 {
+	nv_helpers_dx12::Manipulator::Singleton().setWindowSize(m_ClientWidth, m_ClientHeight);
+	nv_helpers_dx12::Manipulator::Singleton().setLookat(glm::vec3(0.0f, 1.0f, -27.0f), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
+
 #if defined(DEBUG) || defined(_DEBUG)
 	CreateDebugController();
 #endif
@@ -48,6 +54,7 @@ bool Renderer::InitializeD3D12(HWND& windowHandle)
 	BuildShadersAndInputLayout();
 	BuildShapeGeometry();
 	BuildSkullGeometry();
+	CreatePlaneVB();
 	BuildMaterials();
 	BuildRenderItems();
 
@@ -67,7 +74,6 @@ bool Renderer::InitializeD3D12(HWND& windowHandle)
 	m_CurrentFrameResourceIndex = (m_CurrentFrameResourceIndex + 1) % gNumFrameResources;
 	m_CurrentFrameResource = m_FrameResources[m_CurrentFrameResourceIndex].get();
 
-	UpdateMainPassCB();
 
 	CreateAccelerationStructures();
 	CreateRaytracingPipeline();
@@ -158,6 +164,10 @@ void Renderer::Draw(bool useRaster)
 		m_CommandList->SetGraphicsRootConstantBufferView(3, m_CameraBuffer->GetGPUVirtualAddress());
 
 		DrawRenderItems(m_CommandList.Get(), m_OpaqueRenderItems);
+
+		m_CommandList->IASetVertexBuffers(0, 1, &m_PlaneBufferView);
+		m_CommandList->DrawInstanced(6, 1, 0, 0);
+
 	}
 	else
 	{
@@ -1196,6 +1206,8 @@ Renderer::AccelerationStructureBuffers Renderer::CreateBottomLevelAS(std::vector
 		// for (const auto &buffer : vVertexBuffers) {
 		if (i < vIndexBuffers.size() && vIndexBuffers[i].second > 0)
 			bottomLevelAS.AddVertexBuffer(vVertexBuffers[i].first.Get(), offsetof(Vertex, Pos), vVertexBuffers[i].second, sizeof(Vertex), vIndexBuffers[i].first.Get(), 0, vIndexBuffers[i].second, nullptr, 0);
+		else
+			bottomLevelAS.AddVertexBuffer(vVertexBuffers[i].first.Get(), offsetof(Vertex, Pos), vVertexBuffers[i].second, sizeof(Vertex), nullptr, 0);
 	}
 
 	UINT64 scratchSizeInBytes = 0;
@@ -1240,9 +1252,14 @@ void Renderer::CreateTopLevelAS(std::vector<std::pair<Microsoft::WRL::ComPtr<ID3
 void Renderer::CreateAccelerationStructures()
 {
 	AccelerationStructureBuffers bottomLevelBuffers = CreateBottomLevelAS({ { m_Geometries["skullGeo"]->VertexBufferGPU, m_skullVertCount} }, { {m_Geometries["skullGeo"]->IndexBufferGPU, m_Geometries["skullGeo"]->DrawArgs["skull"].IndexCount }
+		});
+	AccelerationStructureBuffers planeBottomLevelBuffers = CreateBottomLevelAS({ { m_PlaneBuffer.Get(), 6 } }, {{ nullptr, 0 }
 });
 
-	m_Instances = { {bottomLevelBuffers.pResult, XMMatrixIdentity()} };
+
+
+
+	m_Instances = { {bottomLevelBuffers.pResult, XMMatrixIdentity()}, {bottomLevelBuffers.pResult, XMMatrixTranslation(-6.0f, 0.0f, 0.0f)}, {bottomLevelBuffers.pResult, XMMatrixTranslation(6.0f, 0.0f, 0.0f)}, {planeBottomLevelBuffers.pResult, XMMatrixScaling(10.f, 1.0f, 10.0f)}};
 	CreateTopLevelAS(m_Instances);
 
 	m_CommandList->Close();
@@ -1270,6 +1287,38 @@ void Renderer::CreateAccelerationStructures()
 	m_BottomLevelAS = bottomLevelBuffers.pResult;
 }
 
+void Renderer::CreatePlaneVB()
+{
+	Vertex planeVertices[] = {
+		 {{-1.5f, -.8f, 01.5f} }, // 0
+		 {{-1.5f, -.8f, -1.5f} }, // 1
+		 {{01.5f, -.8f, 01.5f} }, // 2
+		 {{01.5f, -.8f, 01.5f} }, // 2
+		 {{-1.5f, -.8f, -1.5f} }, // 1
+		 {{01.5f, -.8f, -1.5f} }  // 4
+	};
+
+	const UINT planeBufferSize = sizeof(planeVertices);
+
+	CD3DX12_HEAP_PROPERTIES heapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+	CD3DX12_RESOURCE_DESC bufferResource = CD3DX12_RESOURCE_DESC::Buffer(planeBufferSize);
+
+	ThrowIfFailed(m_Device->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &bufferResource, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&m_PlaneBuffer)));
+
+	UINT8* pVertexDataBegin;
+
+	CD3DX12_RANGE readRange(0, 0);
+
+    ThrowIfFailed(m_PlaneBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pVertexDataBegin)));
+
+	memcpy(pVertexDataBegin, planeVertices, sizeof(planeVertices));
+	m_PlaneBuffer->Unmap(0, nullptr);
+
+	m_PlaneBufferView.BufferLocation = m_PlaneBuffer->GetGPUVirtualAddress();
+	m_PlaneBufferView.StrideInBytes = 3 * sizeof(float);
+	m_PlaneBufferView.SizeInBytes = planeBufferSize;
+}
+
 void Renderer::CreateCameraBuffer()
 {
 	uint32_t nbMatrix = 4;
@@ -1295,6 +1344,11 @@ void Renderer::UpdateCameraBuffer()
 	XMVECTOR At = XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f);
 	XMVECTOR Up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 	matrices[0] = XMMatrixLookAtLH(Eye, At, Up);
+	const glm::mat4& mat = nv_helpers_dx12::CameraManip.getMatrix();
+	memcpy(&matrices[0].r->m128_f32[0], glm::value_ptr(mat), 16 * sizeof(float));
+
+
+//	matrices[0] = XMLoadFloat4x4(matrices[]);
 	//XMVECTOR pos = XMVectorSet(0.0f, 1.0f, -27.0f, 1.0f);
 	//XMVECTOR target = XMVectorZero();
 	//XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);

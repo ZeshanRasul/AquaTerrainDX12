@@ -3,6 +3,8 @@
 #include "Events/KeyEvent.h"
 #include "Events/MouseEvent.h"
 #include "Renderer/Renderer.h"
+#include "manipulator.h"
+#include "Windowsx.h"
 
 Window::WindowClass Window::WindowClass::wndClass;
 
@@ -246,60 +248,27 @@ LRESULT Window::HandleMessage(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	case WM_MOVE:
 	{
 		const POINTS pt = MAKEPOINTS(lParam);
+		using nv_helpers_dx12::Manipulator;
+		Manipulator::Inputs inputs;
+		inputs.lmb = wParam & MK_LBUTTON;
+		inputs.mmb = wParam & MK_MBUTTON;
+		inputs.rmb = wParam & MK_RBUTTON;
+		if (!inputs.lmb && !inputs.rmb && !inputs.mmb)
+			break; // no mouse button pressed
 
-		if (pt.x >= 0 && pt.x <= (int)m_Data.Width && pt.y >= 0 && pt.y <= (int)m_Data.Height)
-		{
-			input.OnMouseMove(pt.x, pt.y);
+		inputs.ctrl = GetAsyncKeyState(VK_CONTROL);
+		inputs.shift = GetAsyncKeyState(VK_SHIFT);
+		inputs.alt = GetAsyncKeyState(VK_MENU);
 
-			Window* const p_Wnd = reinterpret_cast<Window*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
-			WindowData& data = p_Wnd->m_Data;
+		CameraManip.mouseMove(-GET_X_LPARAM(lParam), -GET_Y_LPARAM(lParam), inputs);
 
-			MouseMovedEvent event((float)pt.x, (float)pt.y);
-			if (data.EventCallback != nullptr)
-			{
-				data.EventCallback(event);
-			}
-			if (!input.IsInWindow())
-			{
-				SetCapture(hWnd);
-				input.OnMouseEnter();
-			}
-			break;
-		}
-		else
-		{
-			if (wParam & (MK_LBUTTON | MK_RBUTTON))
-			{
-				input.OnMouseMove(pt.x, pt.y);
-
-				Window* const p_Wnd = reinterpret_cast<Window*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
-				WindowData& data = p_Wnd->m_Data;
-
-				MouseMovedEvent event((float)pt.x, (float)pt.y);
-				if (data.EventCallback != nullptr)
-				{
-					data.EventCallback(event);
-				}
-			}
-		}
 		break;
 	}
 
 	case WM_LBUTTONDOWN:
 	{
-		const POINTS pt = MAKEPOINTS(lParam);
-		input.OnLeftPressed();
+		nv_helpers_dx12::Manipulator::Singleton().setMousePosition(-GET_X_LPARAM(lParam), -GET_Y_LPARAM(lParam));
 
-		SetForegroundWindow(hWnd);
-
-		Window* const p_Wnd = reinterpret_cast<Window*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
-		WindowData& data = p_Wnd->m_Data;
-
-		MouseButtonPressedEvent event(0);
-		if (data.EventCallback != nullptr)
-		{
-			data.EventCallback(event);
-		}
 
 		break;
 	}
