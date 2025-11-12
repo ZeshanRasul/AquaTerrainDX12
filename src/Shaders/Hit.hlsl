@@ -79,7 +79,7 @@ float3 ComputeDirectionalLight(Light L, float3 normal, float3 toEye)
 {
     float3 lightVec = -L.Direction;
     float ndotl = max(dot(lightVec, normal), 0.0f);
-    float3 lightStrength = L.Strength * ndotl;
+    float3 lightStrength = lightVec * ndotl;
     return BlinnPhong(lightStrength, lightVec, normal, toEye);
 }
 
@@ -135,13 +135,13 @@ void PlaneClosestHit(inout HitInfo payload, Attributes attrib)
     float3 bary = float3(1.0f - attrib.bary.x - attrib.bary.y, attrib.bary.x, attrib.bary.y);
     Light L = gLights[0];
 
-    //float3 lightPos = float3(0.0f, 200.0f, 0.0f);
-    float3 lightPos = L.Direction;
+    float3 lightPos = float3(0.0f, -20.0f, 0.0f);
+  //  float3 lightPos = L.Direction;
     
-    float3 worldOrigin = WorldRayOrigin() + (RayTCurrent() - 0.1) * WorldRayDirection();
+    float3 worldOrigin = WorldRayOrigin() + (RayTCurrent()) * WorldRayDirection();
     
     float3 lightDir = normalize(lightPos - worldOrigin);
-  //  float3 lightDir = normalize(lightPos);
+ //   float3 lightDir = normalize(lightPos);
     
 
     
@@ -166,7 +166,7 @@ void PlaneClosestHit(inout HitInfo payload, Attributes attrib)
     float3 nW = normalize(mul(nObj, transpose(w2o))); // inverse-transpose
 
     // Hit position in world space (from the ray)
-    float3 pW = WorldRayOrigin() + RayTCurrent() * WorldRayDirection();
+    float3 pW = WorldRayOrigin() + (RayTCurrent() + 1.0f) * WorldRayDirection();
 
     // To-eye vector (world)
     float3 toEye = normalize(gEyePosW - pW);
@@ -184,18 +184,18 @@ void PlaneClosestHit(inout HitInfo payload, Attributes attrib)
     
     TraceRay(
         SceneBVH,
-        RAY_FLAG_NONE,
+        RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH | RAY_FLAG_SKIP_CLOSEST_HIT_SHADER,
         0xFF,
         1,
-        0,
+        2,
         1,
         ray,
         shadowPayload);
     
-    float factor = shadowPayload.isHit ? 0.0 : 1.0;
+    float factor = shadowPayload.isHit ? 0.3 : 1.0;
 
-   // float4 hitColor = shadowPayload.isHit ? float4(float3(0.0, 1.0, 0.0), RayTCurrent()) : float4(float3(0.0, 0.0, 1.0), RayTCurrent());
-    float4 hitColor = float4(lit * factor, RayTCurrent());
+    float4 hitColor = shadowPayload.isHit ? float4(float3(0.0, 1.0, 0.0), 1.0f) : float4(float3(0.0, 0.0, 1.0), 1.0f );
+  //  float4 hitColor = float4(lit * factor, RayTCurrent());
     
     payload.colorAndDistance = float4(hitColor);
 

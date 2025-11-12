@@ -24,7 +24,7 @@ bool Renderer::InitializeD3D12(HWND& windowHandle)
 	//nv_helpers_dx12::Manipulator::Singleton().setLookat(glm::vec3(0.0f, 1.0f, -27.0f), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
 
 #if defined(DEBUG) || defined(_DEBUG)
-	CreateDebugController();
+//	CreateDebugController();
 #endif
 
 	ThrowIfFailed(CreateDXGIFactory1(IID_PPV_ARGS(&m_DxgiFactory)));
@@ -1031,7 +1031,7 @@ void Renderer::UpdateMainPassCB()
 	m_MainPassCB.cbPerObjectPad2 = 0.5f;
 	m_MainPassCB.cbPerObjectPad3 = 0.5f;
 	m_MainPassCB.AmbientLight = { 0.25f, 0.25f, 0.35f, 1.0f };
-	m_MainPassCB.Lights[0].Direction = { 0.0f, -100.0f, 0.0f };
+	m_MainPassCB.Lights[0].Direction = { 0.0f, -1.0f, 0.0f };
 	m_MainPassCB.Lights[0].Strength = { 0.6f, 0.6f, 0.6f };
 	m_MainPassCB.Lights[1].Direction = { -0.57735f, -0.57735f, 0.57735f };
 
@@ -1240,9 +1240,9 @@ Renderer::AccelerationStructureBuffers Renderer::CreateBottomLevelAS(std::vector
 	for (size_t i = 0; i < vVertexBuffers.size(); i++) {
 		// for (const auto &buffer : vVertexBuffers) {
 		if (i < vIndexBuffers.size() && vIndexBuffers[i].second > 0)
-			bottomLevelAS.AddVertexBuffer(vVertexBuffers[i].first.Get(), offsetof(Vertex, Pos), vVertexBuffers[i].second, sizeof(Vertex), vIndexBuffers[i].first.Get(), 0, vIndexBuffers[i].second, nullptr, 0);
+			bottomLevelAS.AddVertexBuffer(vVertexBuffers[i].first.Get(), 0, vVertexBuffers[i].second, sizeof(Vertex), vIndexBuffers[i].first.Get(), 0, vIndexBuffers[i].second, nullptr, 0);
 		else
-			bottomLevelAS.AddVertexBuffer(vVertexBuffers[i].first.Get(), offsetof(Vertex, Pos), vVertexBuffers[i].second, sizeof(Vertex), nullptr, 0);
+			bottomLevelAS.AddVertexBuffer(vVertexBuffers[i].first.Get(), 0, vVertexBuffers[i].second, sizeof(Vertex), nullptr, 0);
 	}
 
 	UINT64 scratchSizeInBytes = 0;
@@ -1267,11 +1267,11 @@ void Renderer::CreateTopLevelAS(std::vector<std::pair<Microsoft::WRL::ComPtr<ID3
 	for (size_t i = 0; i < instances.size(); i++)
 	{
 		UINT hitGroupIndex = 0;
-		if (i == 0)
+		if (i == 3)
 		{
 			hitGroupIndex = 1;
 		}
-		m_topLevelASGenerator.AddInstance(instances[i].first.Get(), instances[i].second, static_cast<UINT>(0), static_cast<UINT>(hitGroupIndex));
+		m_topLevelASGenerator.AddInstance(instances[i].first.Get(), instances[i].second, static_cast<UINT>(i), static_cast<UINT>(0));
 	}
 
 	UINT64 scratchSizeInBytes = 0;
@@ -1295,7 +1295,9 @@ void Renderer::CreateAccelerationStructures()
 		});
 	AccelerationStructureBuffers planeBottomLevelBuffers = CreateBottomLevelAS({ { m_Geometries["skullGeo"]->VertexBufferGPU, m_skullVertCount } }, { { m_Geometries["skullGeo"]->IndexBufferGPU, m_Geometries["skullGeo"]->DrawArgs["skull"].IndexCount} });
 
-	m_Instances = { {planeBottomLevelBuffers.pResult, XMMatrixScaling(10.f, 1.0f, 10.0f) * XMMatrixTranslation(0.0f, -10.0f, 0.0f)}, { bottomLevelBuffers.pResult, XMMatrixIdentity() }, {bottomLevelBuffers.pResult, XMMatrixTranslation(-6.0f, 0.0f, 0.0f)}, {bottomLevelBuffers.pResult, XMMatrixTranslation(6.0f, 0.0f, 0.0f)}, };
+	m_Instances = { 
+		{ bottomLevelBuffers.pResult, XMMatrixIdentity() }, {bottomLevelBuffers.pResult, XMMatrixTranslation(-6.0f, 0.0f, 0.0f)}, {bottomLevelBuffers.pResult, XMMatrixTranslation(6.0f, 0.0f, 0.0f)},
+		{ planeBottomLevelBuffers.pResult, XMMatrixScaling(10.f, 1.0f, 10.0f)* XMMatrixTranslation(0.0f, -10.0f, 0.0f) }	 };
 	CreateTopLevelAS(m_Instances);
 
 	m_CommandList->Close();

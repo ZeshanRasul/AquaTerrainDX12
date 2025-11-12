@@ -65,7 +65,7 @@ void RayGen()
     RayDesc ray;
     ray.Origin = originWS;
     ray.Direction = dirWS;
-    ray.TMin = 0.001f;
+    ray.TMin = 0.1f;
     ray.TMax = 1e38f;
     
     TraceRay(
@@ -73,7 +73,7 @@ void RayGen()
     RAY_FLAG_NONE,
     0XFF,
     0,
-    0,
+    2,
     0,
     ray,
     payload);
