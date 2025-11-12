@@ -1216,7 +1216,7 @@ void Renderer::CreateShaderBindingTable()
 	m_SbtHelper.AddHitGroup(L"HitGroup", {(void*)m_Geometries["skullGeo"]->VertexBufferGPU->GetGPUVirtualAddress(), (void*)m_Geometries["skullGeo"]->IndexBufferGPU->GetGPUVirtualAddress(), 
 		(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(), (void*)m_GlobalConstantBuffer->GetGPUVirtualAddress()});
 
-	m_SbtHelper.AddHitGroup(L"PlaneHitGroup", {heapPointer});
+	m_SbtHelper.AddHitGroup(L"PlaneHitGroup", { (void*)m_PlaneBuffer->GetGPUVirtualAddress(), (void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(), heapPointer});
 
 	m_SbtHelper.AddHitGroup(L"ShadowHitGroup", {});
 

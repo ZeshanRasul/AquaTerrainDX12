@@ -17,5 +17,5 @@ void ShadowClosestHit(inout ShadowHitInfo hit, Attributes bary)
 [shader("miss")]
 void ShadowMiss(inout ShadowHitInfo hit : SV_RayPayload)
 {
-    hit.isHit = true;
+    hit.isHit = false;
 }
