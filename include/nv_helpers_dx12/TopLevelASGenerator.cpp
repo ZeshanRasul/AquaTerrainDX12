@@ -186,14 +186,19 @@ void TopLevelASGenerator::Generate(
     // Instance flags, including backface culling, winding, etc - TODO: should
     // be accessible from outside
     instanceDescs[i].Flags = D3D12_RAYTRACING_INSTANCE_FLAG_NONE;
-    // Instance transform matrix
-    DirectX::XMMATRIX m = XMMatrixTranspose(
-        m_instances[i].transform); // GLM is column major, the INSTANCE_DESC is row major
-    memcpy(instanceDescs[i].Transform, &m, sizeof(instanceDescs[i].Transform));
+    // DirectXMath: matrices are already in D3D row-major convention
+    DirectX::XMMATRIX m = m_instances[i].transform;
+
+    // Store as 3x4 row-major for the instance desc
+    DirectX::XMFLOAT3X4 m3x4;
+    DirectX::XMStoreFloat3x4(&m3x4, m);
+
+    memcpy(instanceDescs[i].Transform, &m3x4, sizeof(m3x4));
     // Get access to the bottom level
     instanceDescs[i].AccelerationStructure = m_instances[i].bottomLevelAS->GetGPUVirtualAddress();
     // Visibility mask, always visible here - TODO: should be accessible from
     // outside
+
     instanceDescs[i].InstanceMask = 0xFF;
   }
 
