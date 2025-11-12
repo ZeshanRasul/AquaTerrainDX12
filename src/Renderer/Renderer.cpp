@@ -1113,27 +1113,30 @@ void Renderer::CreateRaytracingPipeline()
 	m_RayGenLibrary = nv_helpers_dx12::CompileShaderLibrary(L"Shaders\\RayGen.hlsl");
 	m_MissLibrary = nv_helpers_dx12::CompileShaderLibrary(L"Shaders\\Miss.hlsl");
 	m_HitLibrary = nv_helpers_dx12::CompileShaderLibrary(L"Shaders\\Hit.hlsl");
+
 	m_ShadowLibrary = nv_helpers_dx12::CompileShaderLibrary(L"Shaders\\ShadowRay.hlsl");
+	pipeline.AddLibrary(m_ShadowLibrary.Get(), { L"ShadowClosestHit", L"ShadowMiss"});
+	m_ShadowSignature = CreateHitSignature();
 
 	pipeline.AddLibrary(m_RayGenLibrary.Get(), { L"RayGen" });
 	pipeline.AddLibrary(m_MissLibrary.Get(), { L"Miss" });
 	pipeline.AddLibrary(m_HitLibrary.Get(), { L"ClosestHit", L"PlaneClosestHit"});
-	pipeline.AddLibrary(m_ShadowLibrary.Get(), { L"ShadowClosestHit", L"ShadowMiss"});
 
 	m_RayGenSignature = CreateRayGenSignature();
 	m_MissSignature = CreateMissSignature();
 	m_HitSignature = CreateHitSignature();
-	m_ShadowSignature = CreateHitSignature();
 
 	pipeline.AddHitGroup(L"HitGroup", L"ClosestHit");
 	pipeline.AddHitGroup(L"PlaneHitGroup", L"PlaneClosestHit");
 	pipeline.AddHitGroup(L"ShadowHitGroup", L"ShadowClosestHit");
 
 	pipeline.AddRootSignatureAssociation(m_RayGenSignature.Get(), { L"RayGen" });
-	pipeline.AddRootSignatureAssociation(m_MissSignature.Get(), { L"Miss", L"ShadowMiss"});
+	pipeline.AddRootSignatureAssociation(m_MissSignature.Get(), { L"Miss"});
 	pipeline.AddRootSignatureAssociation(m_HitSignature.Get(), { L"HitGroup"});
-	pipeline.AddRootSignatureAssociation(m_HitSignature.Get(), { L"HitGroup",  L"PlaneHitGroup" });
+
 	pipeline.AddRootSignatureAssociation(m_ShadowSignature.Get(), { L"ShadowHitGroup" });
+	pipeline.AddRootSignatureAssociation(m_MissSignature.Get(), { L"Miss", L"ShadowMiss"});
+	pipeline.AddRootSignatureAssociation(m_HitSignature.Get(), { L"HitGroup",  L"PlaneHitGroup" });
 
 	pipeline.SetMaxPayloadSize(4 * sizeof(float));
 	pipeline.SetMaxAttributeSize(2 * sizeof(float));
@@ -1203,7 +1206,7 @@ void Renderer::CreateShaderBindingTable()
 	m_SbtHelper.Reset();
 
 	D3D12_GPU_DESCRIPTOR_HANDLE srvUavHeapHandle = m_SrvUavHeap->GetGPUDescriptorHandleForHeapStart();
-	auto heapPointer = reinterpret_cast<void*>(srvUavHeapHandle.ptr);
+	auto heapPointer = reinterpret_cast<UINT64*>(srvUavHeapHandle.ptr);
 
 	m_SbtHelper.AddRayGenerationProgram(L"RayGen", { heapPointer });
 
@@ -1263,11 +1266,11 @@ void Renderer::CreateTopLevelAS(std::vector<std::pair<Microsoft::WRL::ComPtr<ID3
 	for (size_t i = 0; i < instances.size(); i++)
 	{
 		UINT hitGroupIndex = 0;
-		if (i == 3)
+		if (i == 0)
 		{
 			hitGroupIndex = 1;
 		}
-		m_topLevelASGenerator.AddInstance(instances[i].first.Get(), instances[i].second, static_cast<UINT>(i), static_cast<UINT>(hitGroupIndex * 2));
+		m_topLevelASGenerator.AddInstance(instances[i].first.Get(), instances[i].second, static_cast<UINT>(i), static_cast<UINT>(hitGroupIndex));
 	}
 
 	UINT64 scratchSizeInBytes = 0;
@@ -1291,7 +1294,7 @@ void Renderer::CreateAccelerationStructures()
 		});
 	AccelerationStructureBuffers planeBottomLevelBuffers = CreateBottomLevelAS({ { m_PlaneBuffer.Get(), 6 } }, {});
 
-	m_Instances = { {bottomLevelBuffers.pResult, XMMatrixIdentity()}, {bottomLevelBuffers.pResult, XMMatrixTranslation(-6.0f, 0.0f, 0.0f)}, {bottomLevelBuffers.pResult, XMMatrixTranslation(6.0f, 0.0f, 0.0f)}, {planeBottomLevelBuffers.pResult, XMMatrixScaling(10.f, 1.0f, 10.0f)}};
+	m_Instances = { {planeBottomLevelBuffers.pResult, XMMatrixScaling(10.f, 1.0f, 10.0f)}, { bottomLevelBuffers.pResult, XMMatrixIdentity() }, {bottomLevelBuffers.pResult, XMMatrixTranslation(-6.0f, 0.0f, 0.0f)}, {bottomLevelBuffers.pResult, XMMatrixTranslation(6.0f, 0.0f, 0.0f)}, };
 	CreateTopLevelAS(m_Instances);
 
 	m_CommandList->Close();

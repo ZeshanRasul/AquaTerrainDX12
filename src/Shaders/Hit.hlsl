@@ -22,11 +22,11 @@ struct STriVertex
     float3 Normal;
 };
 
+// Raytracing acceleration structure, accessed as a SRV
+RaytracingAccelerationStructure SceneBVH : register(t2);
 StructuredBuffer<STriVertex> BTriVertex : register(t0);
 StructuredBuffer<int> indices : register(t1);
 
-// Raytracing acceleration structure, accessed as a SRV
-RaytracingAccelerationStructure SceneBVH : register(t2);
 
 cbuffer cbPass : register(b0)
 {
@@ -134,36 +134,35 @@ void PlaneClosestHit(inout HitInfo payload, Attributes attrib)
 {
     float3 bary = float3(1.0f - attrib.bary.x - attrib.bary.y, attrib.bary.x, attrib.bary.y);
     
-    Light L = gLights[0];
-    float3 lightPos = float3(2, 2, -2);
+    float3 lightPos = float3(200.0f, -200.0f, -200.0f);
     
-    float3 worldOrigin = WorldRayOrigin() + RayTCurrent() * WorldRayDirection();
+    float3 worldOrigin = WorldRayOrigin() + (RayTCurrent() - 0.1) * WorldRayDirection();
     
     float3 lightDir = normalize(lightPos - worldOrigin);
     
     RayDesc ray;
     ray.Origin = worldOrigin;
     ray.Direction = lightDir;
-    ray.TMin = 0.01;
-    ray.TMax = 100000;
-    bool hit = true;
+    ray.TMin = 1.01f;
+    ray.TMax = 100000.0f;
+    //bool hit = true;
     ShadowHitInfo shadowPayload;
-    shadowPayload.isHit = false;
+    shadowPayload.isHit = true;
     
     TraceRay(
         SceneBVH,
         RAY_FLAG_NONE,
         0xFF,
         1,
-        0, 
+        0,
         1,
         ray,
         shadowPayload);
     
     float factor = shadowPayload.isHit ? 0.3 : 1.0;
     
-    float4 hitColor = float4(float3(0.7, 0.3, 0.4) * factor, RayTCurrent());
+    float4 hitColor = float4(float3(0.7, 0.70, 0.7) * factor, RayTCurrent());
     
-    payload.colorAndDistance = float4(hitColor);
+    payload.colorAndDistance = float4(hitColor.xyz, RayTCurrent());
 
 }
