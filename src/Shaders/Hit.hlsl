@@ -192,6 +192,6 @@ void PlaneClosestHit(inout HitInfo payload, Attributes attrib)
    // float4 hitColor = shadowPayload.isHit ? float4(float3(0.0, 1.0, 0.0), RayTCurrent()) : float4(float3(0.0, 0.0, 1.0), RayTCurrent());
     float4 hitColor = float4(lit * factor, RayTCurrent());
     
-    payload.colorAndDistance = float4(v0.Vertex, 1.0);
+    payload.colorAndDistance = float4(v0.Normal, 1.0);
 
 }
