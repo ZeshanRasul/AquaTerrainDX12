@@ -56,6 +56,11 @@ cbuffer Colors : register(b1)
     float3 C[3];
 }
 
+cbuffer PerInstance : register(b2)
+{
+    uint materialIndex;
+}
+
 float3 SchlickFresnel(float3 R0, float3 normal, float3 lightVec)
 {
     float cosIncidentAngle = saturate(dot(normal, lightVec));

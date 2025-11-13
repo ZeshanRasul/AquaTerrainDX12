@@ -233,4 +233,9 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_GlobalConstantBuffer;
 
 	uint32_t m_AnimationCounter = 0;
+
+	void CreatePerInstanceBuffers();
+	std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> m_PerInstanceCBs;
+	UINT m_PerInstanceCBCount = 4;
+
 };

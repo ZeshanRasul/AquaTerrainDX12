@@ -74,9 +74,9 @@ bool Renderer::InitializeD3D12(HWND& windowHandle)
 	XMMATRIX P = XMMatrixPerspectiveFovLH(0.25f * MathHelper::Pi, (float)(m_ClientWidth / m_ClientHeight), 0.1f, 1000.0f);
 	XMStoreFloat4x4(&m_Proj, P);
 
-
 	CreateAccelerationStructures();
 	CreateRaytracingPipeline();
+	CreatePerInstanceBuffers();
 	CreateGlobalConstantBuffer();
 	CreateRaytracingOutputBuffer();
 	CreateShaderResourceHeap();
@@ -1103,6 +1103,7 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> Renderer::CreateHitSignature()
 	rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_SRV, 2);
 	rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_CBV, 0);
 	rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_CBV, 1);
+	rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_CBV, 2);
 
 	return rsc.Generate(m_Device.Get(), true);
 }
@@ -1220,11 +1221,15 @@ void Renderer::CreateShaderBindingTable()
 	m_SbtHelper.AddMissProgram(L"Miss", {});
 	m_SbtHelper.AddMissProgram(L"ShadowMiss", {});
 
-	m_SbtHelper.AddHitGroup(L"HitGroup", { (void*)m_Geometries["skullGeo"]->VertexBufferGPU->GetGPUVirtualAddress(), (void*)m_Geometries["skullGeo"]->IndexBufferGPU->GetGPUVirtualAddress(),
-		(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(), (void*)m_GlobalConstantBuffer->GetGPUVirtualAddress() });
+	for (int i = 0; i < m_PerInstanceCBCount - 1; i++)
+	{
+		m_SbtHelper.AddHitGroup(L"HitGroup", { (void*)m_Geometries["skullGeo"]->VertexBufferGPU->GetGPUVirtualAddress(), (void*)m_Geometries["skullGeo"]->IndexBufferGPU->GetGPUVirtualAddress(), (void*)m_topLevelASBuffers.pResult->GetGPUVirtualAddress(),
+			(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(), (void*)m_GlobalConstantBuffer->GetGPUVirtualAddress(), (void*)m_PerInstanceCBs[i]->GetGPUVirtualAddress()});
+	}
+
 
 	m_SbtHelper.AddHitGroup(L"PlaneHitGroup", { (void*)m_Geometries["skullGeo"]->VertexBufferGPU->GetGPUVirtualAddress(),(void*)m_Geometries["skullGeo"]->IndexBufferGPU->GetGPUVirtualAddress(), (void*)m_topLevelASBuffers.pResult->GetGPUVirtualAddress(),
-		(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress() });
+		(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(),  (void*)m_GlobalConstantBuffer->GetGPUVirtualAddress(), (void*)m_PerInstanceCBs[m_PerInstanceCBCount - 1]->GetGPUVirtualAddress() });
 
 	//	m_SbtHelper.AddHitGroup(L"ShadowHitGroup", {});
 
@@ -1279,7 +1284,7 @@ void Renderer::CreateTopLevelAS(std::vector<std::pair<Microsoft::WRL::ComPtr<ID3
 			{
 				hitGroupIndex = 1;
 			}
-			m_topLevelASGenerator.AddInstance(instances[i].first.Get(), instances[i].second, static_cast<UINT>(i), static_cast<UINT>(1));
+			m_topLevelASGenerator.AddInstance(instances[i].first.Get(), instances[i].second, static_cast<UINT>(i), static_cast<UINT>(i));
 		}
 
 		UINT64 scratchSizeInBytes = 0;
@@ -1459,4 +1464,26 @@ void Renderer::CreateGlobalConstantBuffer()
 	ThrowIfFailed(m_GlobalConstantBuffer->Map(0, nullptr, (void**)&pData));
 	memcpy(pData, bufferData, sizeof(bufferData));
 	m_GlobalConstantBuffer->Unmap(0, nullptr);
+}
+
+void Renderer::CreatePerInstanceBuffers()
+{
+	UINT materialIndex;
+
+	m_PerInstanceCBs.resize(m_PerInstanceCBCount);
+
+	int i(0);
+
+	for (auto& cb : m_PerInstanceCBs)
+	{
+		const uint32_t bufferSize = sizeof(UINT);
+
+		cb = nv_helpers_dx12::CreateBuffer(m_Device.Get(), bufferSize, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, nv_helpers_dx12::kUploadHeapProps);
+
+		uint8_t* pData;
+		ThrowIfFailed(cb->Map(0, nullptr, (void**)&pData));
+		memcpy(pData, &i, bufferSize);
+		cb->Unmap(0, nullptr);
+		++i;
+	}
 }
