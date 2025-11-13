@@ -29,9 +29,9 @@ struct STriVertex
     float3 Normal;
 };
 
-// Raytracing acceleration structure, accessed as a SRV
 StructuredBuffer<STriVertex> BTriVertex : register(t0);
 StructuredBuffer<int> indices : register(t1);
+// Raytracing acceleration structure, accessed as a SRV
 RaytracingAccelerationStructure SceneBVH : register(t2);
 StructuredBuffer<Material> materials : register(t3);
 
@@ -143,13 +143,7 @@ void ClosestHit(inout HitInfo payload, Attributes attrib)
     float3 lit = ComputeDirectionalLight(L, nObj, toEye, materials[materialIndex]);
 
     payload.colorAndDistance = float4(lit, RayTCurrent());
-    
-    //uint iid = InstanceID();
-    //uint mid = materialIndex; // from per-instance CB
-    //float color = (mid + 1) / 4.0; // normalize 1..4
-
-    //payload.colorAndDistance = float4(color, 0, 0, 1.0); // visualize material index
-}
+  }
 
 [shader("closesthit")]
 void PlaneClosestHit(inout HitInfo payload, Attributes attrib)
@@ -173,21 +167,13 @@ void PlaneClosestHit(inout HitInfo payload, Attributes attrib)
                             v1.Normal * bary.y +
                             v2.Normal * bary.z);
 
-    // Transform normal to world space with inverse-transpose of Object->World
-  //  nW = float3(0.0, 1.0, 0.0); // inverse-transpose
-
     
-    // Hit position in world space
     float3 pW = WorldRayOrigin() + RayTCurrent() * WorldRayDirection();
 
-    // To-eye vector
     float3 toEye = normalize(gEyePosW - pW);
 
-    // Normal Blinn-Phong lighting from your directional light
     float3 lit = ComputeDirectionalLight(L, nObj, toEye, materials[materialIndex]);
 
-    // Directional light: L.Direction is the direction the light shines.
-    // Vector from surface toward the light is -L.Direction.
     float3 toLight = normalize(-L.Direction);
 
     // Shadow ray (world space)
@@ -213,16 +199,10 @@ void PlaneClosestHit(inout HitInfo payload, Attributes attrib)
     );
 
     // If we hit something between the plane and the light, we are in shadow
-    float shadowFactor = shadowPayload.isHit ? 0.0f : 1.0f;
+    float shadowFactor = shadowPayload.isHit ? 0.3f : 1.0f;
 
     float3 finalColor = lit * shadowFactor;
 
     payload.colorAndDistance = float4(finalColor, RayTCurrent());
     
-    //uint iid = InstanceID();
-    //uint mid = materialIndex; // from per-instance CB
-    //float color = (mid + 1) / 4.0; // normalize 1..4
-
-    //payload.colorAndDistance = float4(color, 0, 0, 1.0); // visualize material index
-
 }
