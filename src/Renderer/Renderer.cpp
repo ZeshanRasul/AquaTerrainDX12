@@ -565,7 +565,7 @@ void Renderer::BuildMaterials()
 	stone0->Name = "stone0";
 	stone0->MatCBIndex = 1;
 	stone0->DiffuseSrvHeapIndex = 1;
-	stone0->DiffuseAlbedo = XMFLOAT4(Colors::LightSteelBlue);
+	stone0->DiffuseAlbedo = XMFLOAT4(Colors::Crimson);
 	stone0->FresnelR0 = XMFLOAT3(0.05f, 0.05f, 0.05f);
 	stone0->Roughness = 0.3f;
 
@@ -581,7 +581,7 @@ void Renderer::BuildMaterials()
 	skullMat->Name = "skullMat";
 	skullMat->MatCBIndex = 3;
 	skullMat->DiffuseSrvHeapIndex = 3;
-	skullMat->DiffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	skullMat->DiffuseAlbedo = XMFLOAT4(Colors::BlanchedAlmond);
 	skullMat->FresnelR0 = XMFLOAT3(0.05f, 0.05f, 0.05);
 	skullMat->Roughness = 0.3f;
 
@@ -990,7 +990,7 @@ void Renderer::UpdateObjectCBs()
 }
 void Renderer::UpdateMaterialCBs()
 {
-	auto curretMaterialCB = m_CurrentFrameResource->MaterialCB.get();
+	auto currentMaterialCB = m_CurrentFrameResource->MaterialCB.get();
 
 	for (auto& e : m_Materials)
 	{
@@ -1004,8 +1004,9 @@ void Renderer::UpdateMaterialCBs()
 			matConstants.DiffuseAlbedo = mat->DiffuseAlbedo;
 			matConstants.FresnelR0 = mat->FresnelR0;
 			matConstants.Roughness = mat->Roughness;
+			matConstants.MatTransform = mat->MatTransform;
 
-			curretMaterialCB->CopyData(mat->MatCBIndex, matConstants);
+			currentMaterialCB->CopyData(mat->MatCBIndex, matConstants);
 
 			mat->NumFramesDirty--;
 		}
@@ -1101,6 +1102,7 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> Renderer::CreateHitSignature()
 	rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_SRV, 0);
 	rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_SRV, 1);
 	rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_SRV, 2);
+	rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_SRV, 3);
 	rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_CBV, 0);
 	rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_CBV, 1);
 	rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_CBV, 2);
@@ -1224,12 +1226,14 @@ void Renderer::CreateShaderBindingTable()
 	for (int i = 0; i < m_PerInstanceCBCount - 1; i++)
 	{
 		m_SbtHelper.AddHitGroup(L"HitGroup", { (void*)m_Geometries["skullGeo"]->VertexBufferGPU->GetGPUVirtualAddress(), (void*)m_Geometries["skullGeo"]->IndexBufferGPU->GetGPUVirtualAddress(), (void*)m_topLevelASBuffers.pResult->GetGPUVirtualAddress(),
+			(void*) m_CurrentFrameResource->MaterialCB->Resource()->GetGPUVirtualAddress(),
 			(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(), (void*)m_GlobalConstantBuffer->GetGPUVirtualAddress(), (void*)m_PerInstanceCBs[i]->GetGPUVirtualAddress()});
 	}
 
 
 	m_SbtHelper.AddHitGroup(L"PlaneHitGroup", { (void*)m_Geometries["skullGeo"]->VertexBufferGPU->GetGPUVirtualAddress(),(void*)m_Geometries["skullGeo"]->IndexBufferGPU->GetGPUVirtualAddress(), (void*)m_topLevelASBuffers.pResult->GetGPUVirtualAddress(),
-		(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(),  (void*)m_GlobalConstantBuffer->GetGPUVirtualAddress(), (void*)m_PerInstanceCBs[m_PerInstanceCBCount - 1]->GetGPUVirtualAddress() });
+		(void*)m_CurrentFrameResource->MaterialCB->Resource()->GetGPUVirtualAddress(),
+		(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(),  (void*)m_GlobalConstantBuffer->GetGPUVirtualAddress(), (void*)m_PerInstanceCBs[3]->GetGPUVirtualAddress() });
 
 	//	m_SbtHelper.AddHitGroup(L"ShadowHitGroup", {});
 

@@ -5,6 +5,13 @@ struct ShadowHitInfo
     bool isHit;
 };
 
+struct Material
+{
+    float4 DiffuseAlbedo;
+    float3 FresnelR0;
+    float Shininess;
+};  
+
 #define MaxLights 16
 struct Light
 {
@@ -23,9 +30,10 @@ struct STriVertex
 };
 
 // Raytracing acceleration structure, accessed as a SRV
-RaytracingAccelerationStructure SceneBVH : register(t2);
 StructuredBuffer<STriVertex> BTriVertex : register(t0);
 StructuredBuffer<int> indices : register(t1);
+RaytracingAccelerationStructure SceneBVH : register(t2);
+StructuredBuffer<Material> materials : register(t3);
 
 
 cbuffer cbPass : register(b0)
@@ -64,28 +72,34 @@ cbuffer PerInstance : register(b2)
 float3 SchlickFresnel(float3 R0, float3 normal, float3 lightVec)
 {
     float cosIncidentAngle = saturate(dot(normal, lightVec));
+    
     float f0 = 1.0f - cosIncidentAngle;
     float3 reflectPercent = R0 + (1.0f - R0) * (f0 * f0 * f0 * f0 * f0);
+    
     return reflectPercent;
 }
 
-float3 BlinnPhong(float3 lightStrength, float3 lightVec, float3 normal, float3 toEye)
+float3 BlinnPhong(float3 lightStrength, float3 lightVec, float3 normal, float3 toEye, Material mat)
 {
-    const float m = 0.6 * 256.0f;
+    const float m = mat.Shininess * 256.0f;
     float3 halfVec = normalize(toEye + lightVec);
+    
     float roughnessFactor = (m + 8.0f) * pow(max(dot(halfVec, normal), 0.0f), m) / 8.0f;
-    float3 fresnelFactor = SchlickFresnel(0.3, halfVec, lightVec);
+    float3 fresnelFactor = SchlickFresnel(mat.FresnelR0, halfVec, lightVec);
+    
     float3 specularAlbedo = fresnelFactor * roughnessFactor;
+    
     specularAlbedo = specularAlbedo / (specularAlbedo + 1.0f);
-    return (float3(0.8, 0.7, 0.6) + specularAlbedo) * lightStrength;
+    
+    return (mat.DiffuseAlbedo.rgb + specularAlbedo) * lightStrength;
 }
 
-float3 ComputeDirectionalLight(Light L, float3 normal, float3 toEye)
+float3 ComputeDirectionalLight(Light L, float3 normal, float3 toEye, Material mat)
 {
     float3 lightVec = -L.Direction;
     float ndotl = max(dot(lightVec, normal), 0.0f);
     float3 lightStrength = L.Strength * ndotl;
-    return BlinnPhong(lightStrength, lightVec, normal, toEye);
+    return BlinnPhong(lightStrength, lightVec, normal, toEye, mat);
 }
 
 [shader("closesthit")]
@@ -129,7 +143,7 @@ void ClosestHit(inout HitInfo payload, Attributes attrib)
         modulationFactor = float4(hitColor.xyz, 1.0f);
     };
     
-    float3 lit = ComputeDirectionalLight(L, nW, toEye);
+    float3 lit = ComputeDirectionalLight(L, nW, toEye, materials[materialIndex]);
 
     payload.colorAndDistance = float4(lit, RayTCurrent());
 }
@@ -159,7 +173,7 @@ void PlaneClosestHit(inout HitInfo payload, Attributes attrib)
     // Transform normal to world space (inverse-transpose)
     float3x3 w2o = (float3x3) WorldToObject3x4();
     float3 nW = normalize(mul(nObj, transpose(w2o)));
-
+    
     // Hit position in world space
     float3 pW = WorldRayOrigin() + RayTCurrent() * WorldRayDirection();
 
@@ -167,7 +181,7 @@ void PlaneClosestHit(inout HitInfo payload, Attributes attrib)
     float3 toEye = normalize(gEyePosW - pW);
 
     // Normal Blinn-Phong lighting from your directional light
-    float3 lit = ComputeDirectionalLight(L, nW, toEye);
+    float3 lit = ComputeDirectionalLight(L, nW, toEye, materials[materialIndex]);
 
     // Directional light: L.Direction is the direction the light shines.
     // Vector from surface toward the light is -L.Direction.
