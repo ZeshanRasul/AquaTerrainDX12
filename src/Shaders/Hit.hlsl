@@ -66,7 +66,7 @@ cbuffer Colors : register(b1)
 
 cbuffer PerInstance : register(b2)
 {
-    uint materialIndex;
+    int materialIndex;
 }
 
 float3 SchlickFresnel(float3 R0, float3 normal, float3 lightVec)
@@ -202,7 +202,7 @@ void PlaneClosestHit(inout HitInfo payload, Attributes attrib)
         RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH |
         RAY_FLAG_SKIP_CLOSEST_HIT_SHADER,
         /*InstanceInclusionMask*/ 0xff, // or 0x1 if you later mask out the plane
-        /*RayContributionToHitGroupIndex*/ 0,
+        /*RayContributionToHitGroupIndex*/ 1,
         /*MultiplierForGeometryContributionToHitGroupIndex*/ 1,
         /*MissShaderIndex*/ 1, // ShadowMiss (2nd miss in SBT)
         shadowRay,

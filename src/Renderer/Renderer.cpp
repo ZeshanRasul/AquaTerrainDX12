@@ -74,9 +74,9 @@ bool Renderer::InitializeD3D12(HWND& windowHandle)
 	XMMATRIX P = XMMatrixPerspectiveFovLH(0.25f * MathHelper::Pi, (float)(m_ClientWidth / m_ClientHeight), 0.1f, 1000.0f);
 	XMStoreFloat4x4(&m_Proj, P);
 
+	CreatePerInstanceBuffers();
 	CreateAccelerationStructures();
 	CreateRaytracingPipeline();
-	CreatePerInstanceBuffers();
 	CreateGlobalConstantBuffer();
 	CreateRaytracingOutputBuffer();
 	CreateShaderResourceHeap();
@@ -126,10 +126,10 @@ void Renderer::Update(float dt, float mTheta, float mPhi, float mRadius, float m
 		CloseHandle(eventHandle);
 	}
 
-	m_AnimationCounter++;
-	m_Instances[0].second = XMMatrixRotationAxis({ 0.0f, 1.0f, 0.0f }, static_cast<float>(m_AnimationCounter) / 500.0f);
-	m_Instances[1].second = XMMatrixRotationAxis({ 0.0f, 1.0f, 0.0f }, static_cast<float>(m_AnimationCounter) / -500.0f) * XMMatrixTranslation(10.0f, -10.0f, 0.0f);;
-	m_Instances[2].second = XMMatrixRotationAxis({ 0.0f, 1.0f, 0.0f }, static_cast<float>(m_AnimationCounter) / -500.0f) * XMMatrixTranslation(-10.0f, -10.0f, 0.0f);;
+	//m_AnimationCounter++;
+	//m_Instances[0].second = XMMatrixRotationAxis({ 0.0f, 1.0f, 0.0f }, static_cast<float>(m_AnimationCounter) / 500.0f);
+	//m_Instances[1].second = XMMatrixRotationAxis({ 0.0f, 1.0f, 0.0f }, static_cast<float>(m_AnimationCounter) / -500.0f) * XMMatrixTranslation(10.0f, -10.0f, 0.0f);;
+	//m_Instances[2].second = XMMatrixRotationAxis({ 0.0f, 1.0f, 0.0f }, static_cast<float>(m_AnimationCounter) / -500.0f) * XMMatrixTranslation(-10.0f, -10.0f, 0.0f);;
 
 	UpdateCameraBuffer();
 	UpdateObjectCBs();
@@ -1126,7 +1126,7 @@ void Renderer::CreateRaytracingPipeline()
 
 	m_ShadowLibrary = nv_helpers_dx12::CompileShaderLibrary(L"Shaders\\ShadowRay.hlsl");
 	pipeline.AddLibrary(m_ShadowLibrary.Get(), { L"ShadowMiss" });
-	m_ShadowSignature = CreateHitSignature();
+	m_ShadowSignature = CreateMissSignature();
 
 	pipeline.AddLibrary(m_RayGenLibrary.Get(), { L"RayGen" });
 	pipeline.AddLibrary(m_MissLibrary.Get(), { L"Miss" });
@@ -1138,13 +1138,13 @@ void Renderer::CreateRaytracingPipeline()
 
 	pipeline.AddHitGroup(L"HitGroup", L"ClosestHit");
 	pipeline.AddHitGroup(L"PlaneHitGroup", L"PlaneClosestHit");
-	//	pipeline.AddHitGroup(L"ShadowHitGroup", L"ShadowClosestHit");
+	//pipeline.AddHitGroup(L"ShadowHitGroup", nullptr, nullptr);
 
 	pipeline.AddRootSignatureAssociation(m_RayGenSignature.Get(), { L"RayGen" });
 	pipeline.AddRootSignatureAssociation(m_MissSignature.Get(), { L"Miss" });
 	pipeline.AddRootSignatureAssociation(m_HitSignature.Get(), { L"HitGroup" });
 
-	//	pipeline.AddRootSignatureAssociation(m_ShadowSignature.Get(), { L"ShadowHitGroup" });
+	//pipeline.AddRootSignatureAssociation(m_ShadowSignature.Get(), { L"ShadowHitGroup" });
 	pipeline.AddRootSignatureAssociation(m_MissSignature.Get(), { L"Miss", L"ShadowMiss" });
 	pipeline.AddRootSignatureAssociation(m_HitSignature.Get(), { L"HitGroup",  L"PlaneHitGroup" });
 
@@ -1233,7 +1233,7 @@ void Renderer::CreateShaderBindingTable()
 
 	m_SbtHelper.AddHitGroup(L"PlaneHitGroup", { (void*)m_Geometries["skullGeo"]->VertexBufferGPU->GetGPUVirtualAddress(),(void*)m_Geometries["skullGeo"]->IndexBufferGPU->GetGPUVirtualAddress(), (void*)m_topLevelASBuffers.pResult->GetGPUVirtualAddress(),
 		(void*)m_CurrentFrameResource->MaterialCB->Resource()->GetGPUVirtualAddress(),
-		(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(),  (void*)m_GlobalConstantBuffer->GetGPUVirtualAddress(), (void*)m_PerInstanceCBs[3]->GetGPUVirtualAddress() });
+		(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(),  (void*)m_GlobalConstantBuffer->GetGPUVirtualAddress(), (void*)m_PerInstanceCBs[1]->GetGPUVirtualAddress() });
 
 	//	m_SbtHelper.AddHitGroup(L"ShadowHitGroup", {});
 
@@ -1283,7 +1283,7 @@ void Renderer::CreateTopLevelAS(std::vector<std::pair<Microsoft::WRL::ComPtr<ID3
 	{
 		for (size_t i = 0; i < instances.size(); i++)
 		{
-			UINT hitGroupIndex = 0;
+			UINT hitGroupIndex = i;
 			if (i == 3)
 			{
 				hitGroupIndex = 1;
@@ -1480,7 +1480,7 @@ void Renderer::CreatePerInstanceBuffers()
 
 	for (auto& cb : m_PerInstanceCBs)
 	{
-		const uint32_t bufferSize = sizeof(UINT);
+		const uint32_t bufferSize = sizeof(int);
 
 		cb = nv_helpers_dx12::CreateBuffer(m_Device.Get(), bufferSize, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, nv_helpers_dx12::kUploadHeapProps);
 
