@@ -176,10 +176,10 @@ void PlaneClosestHit(inout HitInfo payload, Attributes attrib)
                             v1.Normal * bary.y +
                             v2.Normal * bary.z);
 
-    // Transform normal to world space (inverse-transpose)
-    float3x3 w2o = (float3x3) WorldToObject3x4();
-    float3 nW = normalize(mul(nObj, transpose(w2o)));
-    
+    // Transform normal to world space with inverse-transpose of Object->World
+    float3x3 w2o = (float3x3) WorldToObject3x4(); // 3x3
+    float3x3 o2w = (float3x3) ObjectToWorld3x4(); // 3x3
+    float3 nW = normalize(mul(nObj, transpose(w2o))); // inverse-transpose    
     // Hit position in world space
     float3 pW = WorldRayOrigin() + RayTCurrent() * WorldRayDirection();
 
@@ -187,7 +187,7 @@ void PlaneClosestHit(inout HitInfo payload, Attributes attrib)
     float3 toEye = normalize(gEyePosW - pW);
 
     // Normal Blinn-Phong lighting from your directional light
-    float3 lit = ComputeDirectionalLight(L, nW, toEye, materials[materialIndex]);
+    float3 lit = ComputeDirectionalLight(L, nW, toEye, materials[0]);
 
     // Directional light: L.Direction is the direction the light shines.
     // Vector from surface toward the light is -L.Direction.

@@ -1492,7 +1492,7 @@ void Renderer::CreatePerInstanceBuffers()
 
 	m_PerInstanceCBs.resize(m_PerInstanceCBCount);
 
-	int i(0);
+	int i(4);
 
 	for (auto& cb : m_PerInstanceCBs)
 	{
