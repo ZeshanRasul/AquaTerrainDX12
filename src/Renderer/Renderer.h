@@ -156,6 +156,10 @@ private:
 	PassConstants m_MainPassCB;
 	UINT m_skullVertCount = 0;
 
+	////////////////
+	/// DXR
+	////////////////
+
 	struct AccelerationStructureBuffers
 	{
 		Microsoft::WRL::ComPtr<ID3D12Resource> pScratch;
@@ -203,7 +207,7 @@ private:
 	std::pair< Microsoft::WRL::ComPtr<ID3D12Resource>, uint32_t> rtVerts;
 	std::vector<std::pair<Microsoft::WRL::ComPtr<ID3D12Resource>, uint32_t>> m_BlasVertInput;
 	AccelerationStructureBuffers CreateBottomLevelAS(std::vector <std::pair<Microsoft::WRL::ComPtr<ID3D12Resource>, uint32_t>> vVertexBuffers, std::vector <std::pair<Microsoft::WRL::ComPtr<ID3D12Resource>, uint32_t>> vIndexBuffers);
-	void CreateTopLevelAS(std::vector <std::pair<Microsoft::WRL::ComPtr<ID3D12Resource>, DirectX::XMMATRIX>>& instances);
+	void CreateTopLevelAS(std::vector <std::pair<Microsoft::WRL::ComPtr<ID3D12Resource>, DirectX::XMMATRIX>>& instances, bool updateOnly = false);
 	void CreateAccelerationStructures();
 	UINT m_vertexCount = 0;
 	Microsoft::WRL::ComPtr<ID3D12Resource> skullUB;
@@ -228,4 +232,5 @@ private:
 	void CreateGlobalConstantBuffer();
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_GlobalConstantBuffer;
 
+	uint32_t m_AnimationCounter = 0;
 };

@@ -126,6 +126,11 @@ void Renderer::Update(float dt, float mTheta, float mPhi, float mRadius, float m
 		CloseHandle(eventHandle);
 	}
 
+	m_AnimationCounter++;
+	m_Instances[0].second = XMMatrixRotationAxis({ 0.0f, 1.0f, 0.0f }, static_cast<float>(m_AnimationCounter) / 500.0f);
+	m_Instances[1].second = XMMatrixRotationAxis({ 0.0f, 1.0f, 0.0f }, static_cast<float>(m_AnimationCounter) / -500.0f) * XMMatrixTranslation(10.0f, -10.0f, 0.0f);;
+	m_Instances[2].second = XMMatrixRotationAxis({ 0.0f, 1.0f, 0.0f }, static_cast<float>(m_AnimationCounter) / -500.0f) * XMMatrixTranslation(-10.0f, -10.0f, 0.0f);;
+
 	UpdateCameraBuffer();
 	UpdateObjectCBs();
 	UpdateMainPassCB();
@@ -178,13 +183,15 @@ void Renderer::Draw(bool useRaster)
 
 		DrawRenderItems(m_CommandList.Get(), m_OpaqueRenderItems);
 
-	//	m_CommandList->IASetVertexBuffers(0, 1, &m_PlaneBufferView);
-	//	m_CommandList->DrawInstanced(6, 1, 0, 0);
+		//	m_CommandList->IASetVertexBuffers(0, 1, &m_PlaneBufferView);
+		//	m_CommandList->DrawInstanced(6, 1, 0, 0);
 
 	}
 	else
 	{
-		std::vector<ID3D12DescriptorHeap*> heaps = { m_SrvUavHeap.Get()};
+		CreateTopLevelAS(m_Instances, true);
+
+		std::vector<ID3D12DescriptorHeap*> heaps = { m_SrvUavHeap.Get() };
 		m_CommandList->SetDescriptorHeaps(static_cast<UINT>(heaps.size()), heaps.data());
 
 		CD3DX12_RESOURCE_BARRIER transition = CD3DX12_RESOURCE_BARRIER::Transition(m_OutputResource.Get(), D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
@@ -1115,12 +1122,12 @@ void Renderer::CreateRaytracingPipeline()
 	m_HitLibrary = nv_helpers_dx12::CompileShaderLibrary(L"Shaders\\Hit.hlsl");
 
 	m_ShadowLibrary = nv_helpers_dx12::CompileShaderLibrary(L"Shaders\\ShadowRay.hlsl");
-	pipeline.AddLibrary(m_ShadowLibrary.Get(), { L"ShadowMiss"});
+	pipeline.AddLibrary(m_ShadowLibrary.Get(), { L"ShadowMiss" });
 	m_ShadowSignature = CreateHitSignature();
 
 	pipeline.AddLibrary(m_RayGenLibrary.Get(), { L"RayGen" });
 	pipeline.AddLibrary(m_MissLibrary.Get(), { L"Miss" });
-	pipeline.AddLibrary(m_HitLibrary.Get(), { L"ClosestHit", L"PlaneClosestHit"});
+	pipeline.AddLibrary(m_HitLibrary.Get(), { L"ClosestHit", L"PlaneClosestHit" });
 
 	m_RayGenSignature = CreateRayGenSignature();
 	m_MissSignature = CreateMissSignature();
@@ -1128,14 +1135,14 @@ void Renderer::CreateRaytracingPipeline()
 
 	pipeline.AddHitGroup(L"HitGroup", L"ClosestHit");
 	pipeline.AddHitGroup(L"PlaneHitGroup", L"PlaneClosestHit");
-//	pipeline.AddHitGroup(L"ShadowHitGroup", L"ShadowClosestHit");
+	//	pipeline.AddHitGroup(L"ShadowHitGroup", L"ShadowClosestHit");
 
 	pipeline.AddRootSignatureAssociation(m_RayGenSignature.Get(), { L"RayGen" });
-	pipeline.AddRootSignatureAssociation(m_MissSignature.Get(), { L"Miss"});
-	pipeline.AddRootSignatureAssociation(m_HitSignature.Get(), { L"HitGroup"});
+	pipeline.AddRootSignatureAssociation(m_MissSignature.Get(), { L"Miss" });
+	pipeline.AddRootSignatureAssociation(m_HitSignature.Get(), { L"HitGroup" });
 
-//	pipeline.AddRootSignatureAssociation(m_ShadowSignature.Get(), { L"ShadowHitGroup" });
-	pipeline.AddRootSignatureAssociation(m_MissSignature.Get(), { L"Miss", L"ShadowMiss"});
+	//	pipeline.AddRootSignatureAssociation(m_ShadowSignature.Get(), { L"ShadowHitGroup" });
+	pipeline.AddRootSignatureAssociation(m_MissSignature.Get(), { L"Miss", L"ShadowMiss" });
 	pipeline.AddRootSignatureAssociation(m_HitSignature.Get(), { L"HitGroup",  L"PlaneHitGroup" });
 
 	pipeline.SetMaxPayloadSize(4 * sizeof(float));
@@ -1213,13 +1220,13 @@ void Renderer::CreateShaderBindingTable()
 	m_SbtHelper.AddMissProgram(L"Miss", {});
 	m_SbtHelper.AddMissProgram(L"ShadowMiss", {});
 
-	m_SbtHelper.AddHitGroup(L"HitGroup", {(void*)m_Geometries["skullGeo"]->VertexBufferGPU->GetGPUVirtualAddress(), (void*)m_Geometries["skullGeo"]->IndexBufferGPU->GetGPUVirtualAddress(), 
-		(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(), (void*)m_GlobalConstantBuffer->GetGPUVirtualAddress()});
+	m_SbtHelper.AddHitGroup(L"HitGroup", { (void*)m_Geometries["skullGeo"]->VertexBufferGPU->GetGPUVirtualAddress(), (void*)m_Geometries["skullGeo"]->IndexBufferGPU->GetGPUVirtualAddress(),
+		(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(), (void*)m_GlobalConstantBuffer->GetGPUVirtualAddress() });
 
 	m_SbtHelper.AddHitGroup(L"PlaneHitGroup", { (void*)m_Geometries["skullGeo"]->VertexBufferGPU->GetGPUVirtualAddress(),(void*)m_Geometries["skullGeo"]->IndexBufferGPU->GetGPUVirtualAddress(), (void*)m_topLevelASBuffers.pResult->GetGPUVirtualAddress(),
-		(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress()});
+		(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress() });
 
-//	m_SbtHelper.AddHitGroup(L"ShadowHitGroup", {});
+	//	m_SbtHelper.AddHitGroup(L"ShadowHitGroup", {});
 
 	uint32_t sbtSize = m_SbtHelper.ComputeSBTSize();
 
@@ -1261,43 +1268,45 @@ Renderer::AccelerationStructureBuffers Renderer::CreateBottomLevelAS(std::vector
 	return buffers;
 }
 
-void Renderer::CreateTopLevelAS(std::vector<std::pair<Microsoft::WRL::ComPtr<ID3D12Resource>, DirectX::XMMATRIX>>& instances)
+void Renderer::CreateTopLevelAS(std::vector<std::pair<Microsoft::WRL::ComPtr<ID3D12Resource>, DirectX::XMMATRIX>>& instances, bool updateOnly)
 {
-
-	for (size_t i = 0; i < instances.size(); i++)
+	if (!updateOnly)
 	{
-		UINT hitGroupIndex = 0;
-		if (i == 3)
+		for (size_t i = 0; i < instances.size(); i++)
 		{
-			hitGroupIndex = 1;
+			UINT hitGroupIndex = 0;
+			if (i == 3)
+			{
+				hitGroupIndex = 1;
+			}
+			m_topLevelASGenerator.AddInstance(instances[i].first.Get(), instances[i].second, static_cast<UINT>(i), static_cast<UINT>(1));
 		}
-		m_topLevelASGenerator.AddInstance(instances[i].first.Get(), instances[i].second, static_cast<UINT>(i), static_cast<UINT>(1));
+
+		UINT64 scratchSizeInBytes = 0;
+
+		UINT64 resultSizeInBytes = 0;
+
+		UINT64 instanceDescsSizeInBytes = 0;
+
+		m_topLevelASGenerator.ComputeASBufferSizes(m_Device.Get(), true, &scratchSizeInBytes, &resultSizeInBytes, &instanceDescsSizeInBytes);
+
+		m_topLevelASBuffers.pScratch = nv_helpers_dx12::CreateBuffer(m_Device.Get(), scratchSizeInBytes, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COMMON, nv_helpers_dx12::kDefaultHeapProps);
+		m_topLevelASBuffers.pResult = nv_helpers_dx12::CreateBuffer(m_Device.Get(), resultSizeInBytes, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE, nv_helpers_dx12::kDefaultHeapProps);
+		m_topLevelASBuffers.pInstanceDesc = nv_helpers_dx12::CreateBuffer(m_Device.Get(), instanceDescsSizeInBytes, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, nv_helpers_dx12::kUploadHeapProps);
 	}
 
-	UINT64 scratchSizeInBytes = 0;
-
-	UINT64 resultSizeInBytes = 0;
-
-	UINT64 instanceDescsSizeInBytes = 0;
-
-	m_topLevelASGenerator.ComputeASBufferSizes(m_Device.Get(), true, &scratchSizeInBytes, &resultSizeInBytes, &instanceDescsSizeInBytes);
-
-	m_topLevelASBuffers.pScratch = nv_helpers_dx12::CreateBuffer(m_Device.Get(), scratchSizeInBytes, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COMMON, nv_helpers_dx12::kDefaultHeapProps);
-	m_topLevelASBuffers.pResult = nv_helpers_dx12::CreateBuffer(m_Device.Get(), resultSizeInBytes, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE, nv_helpers_dx12::kDefaultHeapProps);
-	m_topLevelASBuffers.pInstanceDesc = nv_helpers_dx12::CreateBuffer(m_Device.Get(), instanceDescsSizeInBytes, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, nv_helpers_dx12::kUploadHeapProps);
-
-	m_topLevelASGenerator.Generate(m_CommandList.Get(), m_topLevelASBuffers.pScratch.Get(), m_topLevelASBuffers.pResult.Get(), m_topLevelASBuffers.pInstanceDesc.Get());
+	m_topLevelASGenerator.Generate(m_CommandList.Get(), m_topLevelASBuffers.pScratch.Get(), m_topLevelASBuffers.pResult.Get(), m_topLevelASBuffers.pInstanceDesc.Get(), updateOnly, m_topLevelASBuffers.pResult.Get());
 }
 
 void Renderer::CreateAccelerationStructures()
 {
 	AccelerationStructureBuffers bottomLevelBuffers = CreateBottomLevelAS({ { m_Geometries["skullGeo"]->VertexBufferGPU, m_skullVertCount} }, { {m_Geometries["skullGeo"]->IndexBufferGPU, m_Geometries["skullGeo"]->DrawArgs["skull"].IndexCount }
 		});
-	AccelerationStructureBuffers planeBottomLevelBuffers = CreateBottomLevelAS({ { m_Geometries["skullGeo"]->VertexBufferGPU, m_skullVertCount}}, {{m_Geometries["skullGeo"]->IndexBufferGPU, m_Geometries["skullGeo"]->DrawArgs["skull"].IndexCount}});
+	AccelerationStructureBuffers planeBottomLevelBuffers = CreateBottomLevelAS({ { m_Geometries["skullGeo"]->VertexBufferGPU, m_skullVertCount} }, { {m_Geometries["skullGeo"]->IndexBufferGPU, m_Geometries["skullGeo"]->DrawArgs["skull"].IndexCount} });
 
-	m_Instances = { 
+	m_Instances = {
 		{ bottomLevelBuffers.pResult, XMMatrixTranslation(0.0f, -10.0f, 0.0f) }, {bottomLevelBuffers.pResult, XMMatrixTranslation(-6.0f, -10.0f, 0.0f)}, {bottomLevelBuffers.pResult, XMMatrixTranslation(6.0f, -10.0f, 0.0f)},
-		{ planeBottomLevelBuffers.pResult, XMMatrixScaling(10.0f, 1.0f, 10.0f) * XMMatrixTranslation(0.0f, -20.0f, 0.0f) }	 };
+		{ planeBottomLevelBuffers.pResult, XMMatrixScaling(10.0f, 1.0f, 10.0f) * XMMatrixTranslation(0.0f, -40.0f, 0.0f) } };
 	CreateTopLevelAS(m_Instances);
 
 	m_CommandList->Close();
@@ -1348,7 +1357,7 @@ void Renderer::CreatePlaneVB()
 
 	CD3DX12_RANGE readRange(0, 0);
 
-    ThrowIfFailed(m_PlaneBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pVertexDataBegin)));
+	ThrowIfFailed(m_PlaneBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pVertexDataBegin)));
 
 	memcpy(pVertexDataBegin, planeVertices, sizeof(planeVertices));
 	m_PlaneBuffer->Unmap(0, nullptr);
