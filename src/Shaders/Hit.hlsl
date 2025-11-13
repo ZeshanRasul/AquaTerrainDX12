@@ -146,6 +146,12 @@ void ClosestHit(inout HitInfo payload, Attributes attrib)
     float3 lit = ComputeDirectionalLight(L, nW, toEye, materials[materialIndex]);
 
     payload.colorAndDistance = float4(lit, RayTCurrent());
+    
+    //uint iid = InstanceID();
+    //uint mid = materialIndex; // from per-instance CB
+    //float color = (mid + 1) / 4.0; // normalize 1..4
+
+    //payload.colorAndDistance = float4(color, 0, 0, 1.0); // visualize material index
 }
 
 [shader("closesthit")]
@@ -214,5 +220,12 @@ void PlaneClosestHit(inout HitInfo payload, Attributes attrib)
 
     float3 finalColor = lit * shadowFactor;
 
-    payload.colorAndDistance = float4(finalColor, RayTCurrent());
+   payload.colorAndDistance = float4(finalColor, RayTCurrent());
+    
+    //uint iid = InstanceID();
+    //uint mid = materialIndex; // from per-instance CB
+    //float color = (mid + 1) / 4.0; // normalize 1..4
+
+    //payload.colorAndDistance = float4(color, 0, 0, 1.0); // visualize material index
+
 }

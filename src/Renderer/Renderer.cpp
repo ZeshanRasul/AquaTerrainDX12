@@ -1138,13 +1138,13 @@ void Renderer::CreateRaytracingPipeline()
 
 	pipeline.AddHitGroup(L"HitGroup", L"ClosestHit");
 	pipeline.AddHitGroup(L"PlaneHitGroup", L"PlaneClosestHit");
-	//pipeline.AddHitGroup(L"ShadowHitGroup", nullptr, nullptr);
+	pipeline.AddHitGroup(L"ShadowHitGroup", L"");
 
 	pipeline.AddRootSignatureAssociation(m_RayGenSignature.Get(), { L"RayGen" });
 	pipeline.AddRootSignatureAssociation(m_MissSignature.Get(), { L"Miss" });
 	pipeline.AddRootSignatureAssociation(m_HitSignature.Get(), { L"HitGroup" });
 
-	//pipeline.AddRootSignatureAssociation(m_ShadowSignature.Get(), { L"ShadowHitGroup" });
+	pipeline.AddRootSignatureAssociation(m_ShadowSignature.Get(), { L"ShadowHitGroup" });
 	pipeline.AddRootSignatureAssociation(m_MissSignature.Get(), { L"Miss", L"ShadowMiss" });
 	pipeline.AddRootSignatureAssociation(m_HitSignature.Get(), { L"HitGroup",  L"PlaneHitGroup" });
 
@@ -1226,16 +1226,16 @@ void Renderer::CreateShaderBindingTable()
 	for (int i = 0; i < m_PerInstanceCBCount - 1; i++)
 	{
 		m_SbtHelper.AddHitGroup(L"HitGroup", { (void*)m_Geometries["skullGeo"]->VertexBufferGPU->GetGPUVirtualAddress(), (void*)m_Geometries["skullGeo"]->IndexBufferGPU->GetGPUVirtualAddress(), (void*)m_topLevelASBuffers.pResult->GetGPUVirtualAddress(),
-			(void*) m_CurrentFrameResource->MaterialCB->Resource()->GetGPUVirtualAddress(),
-			(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(), (void*)m_GlobalConstantBuffer->GetGPUVirtualAddress(), (void*)m_PerInstanceCBs[i]->GetGPUVirtualAddress()});
+			(void*)m_UploadCBuffer->GetGPUVirtualAddress(),
+			(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(), (void*)m_GlobalConstantBuffer->GetGPUVirtualAddress(), (void*)m_PerInstanceCBs[i]->GetGPUVirtualAddress() });
 	}
 
 
 	m_SbtHelper.AddHitGroup(L"PlaneHitGroup", { (void*)m_Geometries["skullGeo"]->VertexBufferGPU->GetGPUVirtualAddress(),(void*)m_Geometries["skullGeo"]->IndexBufferGPU->GetGPUVirtualAddress(), (void*)m_topLevelASBuffers.pResult->GetGPUVirtualAddress(),
-		(void*)m_CurrentFrameResource->MaterialCB->Resource()->GetGPUVirtualAddress(),
-		(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(),  (void*)m_GlobalConstantBuffer->GetGPUVirtualAddress(), (void*)m_PerInstanceCBs[1]->GetGPUVirtualAddress() });
+		(void*)m_UploadCBuffer->GetGPUVirtualAddress(),
+		(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(),  (void*)m_GlobalConstantBuffer->GetGPUVirtualAddress(), (void*)m_PerInstanceCBs[m_PerInstanceCBs.size() - 1]->GetGPUVirtualAddress() });
 
-	//	m_SbtHelper.AddHitGroup(L"ShadowHitGroup", {});
+	m_SbtHelper.AddHitGroup(L"ShadowHitGroup", {});
 
 	uint32_t sbtSize = m_SbtHelper.ComputeSBTSize();
 
@@ -1489,5 +1489,18 @@ void Renderer::CreatePerInstanceBuffers()
 		memcpy(pData, &i, bufferSize);
 		cb->Unmap(0, nullptr);
 		++i;
+	}
+
+	const uint32_t bufferSize = 4 * sizeof(MaterialConstants);
+
+	m_UploadCBuffer = nv_helpers_dx12::CreateBuffer(m_Device.Get(), bufferSize, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, nv_helpers_dx12::kUploadHeapProps);
+
+	uint8_t* pData;
+	ThrowIfFailed(m_UploadCBuffer->Map(0, nullptr, (void**)&pData));
+	memcpy(pData, &m_Materials, bufferSize);
+	m_UploadCBuffer->Unmap(0, nullptr);
+	//++i;
+	for (int i = 0; i < 4; i++)
+	{
 	}
 }
