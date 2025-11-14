@@ -258,7 +258,7 @@ void ReflectionClosestHit(inout HitInfo payload, Attributes attrib)
         SceneBVH,
         RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH,
         /*InstanceInclusionMask*/ 0xff, 
-    /*RayContributionToHitGroupIndex*/ 5,
+    /*RayContributionToHitGroupIndex*/ 6,
         /*MultiplierForGeometryContributionToHitGroupIndex*/ 1,
         /*MissShaderIndex*/ 0, 
         reflectionRay,
