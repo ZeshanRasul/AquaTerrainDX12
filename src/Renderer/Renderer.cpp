@@ -1247,7 +1247,7 @@ void Renderer::CreateShaderBindingTable()
 	m_SbtHelper.Reset();
 
 	D3D12_GPU_DESCRIPTOR_HANDLE srvUavHeapHandle = m_SrvUavHeap->GetGPUDescriptorHandleForHeapStart();
-	auto heapPointer = reinterpret_cast<UINT64*>(srvUavHeapHandle.ptr);
+	auto heapPointer = reinterpret_cast<void*>(srvUavHeapHandle.ptr);
 
 	m_SbtHelper.AddRayGenerationProgram(L"RayGen", { heapPointer });
 

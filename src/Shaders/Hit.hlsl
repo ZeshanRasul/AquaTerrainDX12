@@ -233,7 +233,7 @@ void ReflectionClosestHit(inout HitInfo payload, Attributes attrib)
     // Interpolate vertex normal in object space
     float3 nObj = normalize(v0.Normal * bary.x + v1.Normal * bary.y + v2.Normal * bary.z);
     float3 nW = normalize(mul((float3x3) ObjectToWorld3x4(), nObj));
-
+    nObj = float3(0, 1, 0);
 
     // Hit position in world space (from the ray)
     float3 pW = WorldRayOrigin() + RayTCurrent() * WorldRayDirection();
