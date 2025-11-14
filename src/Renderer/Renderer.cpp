@@ -564,6 +564,7 @@ void Renderer::BuildMaterials()
 	bricks0->DiffuseAlbedo = XMFLOAT4(Colors::ForestGreen);
 	bricks0->FresnelR0 = XMFLOAT3(0.02f, 0.02f, 0.02f);
 	bricks0->Roughness = 0.8f;
+	bricks0->IsReflective = true;
 
 	auto stone0 = std::make_unique<Material>();
 	stone0->Name = "stone0";
@@ -1135,15 +1136,17 @@ void Renderer::CreateRaytracingPipeline()
 
 	pipeline.AddLibrary(m_RayGenLibrary.Get(), { L"RayGen" });
 	pipeline.AddLibrary(m_MissLibrary.Get(), { L"Miss" });
-	pipeline.AddLibrary(m_HitLibrary.Get(), { L"ClosestHit", L"PlaneClosestHit" });
+	pipeline.AddLibrary(m_HitLibrary.Get(), { L"ClosestHit", L"PlaneClosestHit", L"ReflectionClosestHit"});
 
 	m_RayGenSignature = CreateRayGenSignature();
 	m_MissSignature = CreateMissSignature();
 	m_HitSignature = CreateHitSignature();
+	m_ReflectionSignature = CreateHitSignature();
 
 	pipeline.AddHitGroup(L"HitGroup", L"ClosestHit");
 	pipeline.AddHitGroup(L"PlaneHitGroup", L"PlaneClosestHit");
 	pipeline.AddHitGroup(L"ShadowHitGroup", L"");
+	pipeline.AddHitGroup(L"ReflectionHitGroup", L"ReflectionClosestHit");
 
 	pipeline.AddRootSignatureAssociation(m_RayGenSignature.Get(), { L"RayGen" });
 	pipeline.AddRootSignatureAssociation(m_MissSignature.Get(), { L"Miss" });
@@ -1153,9 +1156,14 @@ void Renderer::CreateRaytracingPipeline()
 	pipeline.AddRootSignatureAssociation(m_MissSignature.Get(), { L"Miss", L"ShadowMiss" });
 	pipeline.AddRootSignatureAssociation(m_HitSignature.Get(), { L"HitGroup",  L"PlaneHitGroup" });
 
+	pipeline.AddRootSignatureAssociation(m_ReflectionSignature.Get(), { L"ReflectionHitGroup" });
+	pipeline.AddRootSignatureAssociation(m_MissSignature.Get(), { L"Miss" });
+	pipeline.AddRootSignatureAssociation(m_HitSignature.Get(), { L"HitGroup",  L"PlaneHitGroup" });
+
+
 	pipeline.SetMaxPayloadSize(4 * sizeof(float));
 	pipeline.SetMaxAttributeSize(2 * sizeof(float));
-	pipeline.SetMaxRecursionDepth(2);
+	pipeline.SetMaxRecursionDepth(3);
 
 	m_RtStateObject = pipeline.Generate();
 
@@ -1257,6 +1265,8 @@ void Renderer::CreateShaderBindingTable()
 		(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(),  (void*)m_GlobalConstantBuffer->GetGPUVirtualAddress(), (void*)m_PerInstanceCBs[m_PerInstanceCBs.size() - 1]->GetGPUVirtualAddress(), heapPointer });
 
 	m_SbtHelper.AddHitGroup(L"ShadowHitGroup", {});
+	m_SbtHelper.AddHitGroup(L"ReflectionHitGroup", { (void*)m_Geometries["skullGeo"]->VertexBufferGPU->GetGPUVirtualAddress(),(void*)m_Geometries["skullGeo"]->IndexBufferGPU->GetGPUVirtualAddress(), (void*)m_topLevelASBuffers.pResult->GetGPUVirtualAddress(),
+		(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(),  (void*)m_GlobalConstantBuffer->GetGPUVirtualAddress(), (void*)m_PerInstanceCBs[m_PerInstanceCBs.size() - 1]->GetGPUVirtualAddress(), heapPointer });
 
 	uint32_t sbtSize = m_SbtHelper.ComputeSBTSize();
 
@@ -1304,10 +1314,10 @@ void Renderer::CreateTopLevelAS(std::vector<std::pair<Microsoft::WRL::ComPtr<ID3
 	{
 		for (size_t i = 0; i < instances.size(); i++)
 		{
-			UINT hitGroupIndex = i;
-			if (i == 3)
+			UINT hitGroupIndex = 1;
+			if (i == 0)
 			{
-				hitGroupIndex = 1;
+				hitGroupIndex = 2;
 			}
 			m_topLevelASGenerator.AddInstance(instances[i].first.Get(), instances[i].second, static_cast<UINT>(i), static_cast<UINT>(i));
 		}
@@ -1519,6 +1529,7 @@ void Renderer::CreatePerInstanceBuffers()
 		matGpu.DiffuseAlbedo = mat->DiffuseAlbedo;
 		matGpu.FresnelR0 = mat->FresnelR0;
 		matGpu.Shininess = 1.0 - mat->Roughness;
+		matGpu.isReflective = mat->IsReflective;
 
 		m_MaterialsGPU.push_back(std::move(matGpu));
 	}

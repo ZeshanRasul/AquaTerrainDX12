@@ -59,6 +59,7 @@ struct MaterialDataGPU
 	DirectX::XMFLOAT4 DiffuseAlbedo;
 	DirectX::XMFLOAT3 FresnelR0;
 	float Shininess;
+	bool isReflective = false;
 };
 
 struct RenderItem

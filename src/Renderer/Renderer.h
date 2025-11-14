@@ -190,6 +190,7 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_HitSignature;
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_MissSignature;
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_ShadowSignature;
+	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_ReflectionSignature;
 
 	Microsoft::WRL::ComPtr<ID3D12StateObject> m_RtStateObject;
 	Microsoft::WRL::ComPtr<ID3D12StateObjectProperties> m_RtStateObjectProps;

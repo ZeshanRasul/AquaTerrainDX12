@@ -5,12 +5,18 @@ struct ShadowHitInfo
     bool isHit;
 };
 
+struct ReflectionHitInfo
+{
+    float4 colorAndDistance;
+};
+
 struct Material
 {
     float4 DiffuseAlbedo;
     float3 FresnelR0;
     float Shininess;
-};  
+    bool IsReflective;
+};
 
 #define MaxLights 16
 struct Light
@@ -143,7 +149,7 @@ void ClosestHit(inout HitInfo payload, Attributes attrib)
     float3 lit = ComputeDirectionalLight(L, nObj, toEye, materials[materialIndex]);
 
     payload.colorAndDistance = float4(lit, RayTCurrent());
-  }
+}
 
 [shader("closesthit")]
 void PlaneClosestHit(inout HitInfo payload, Attributes attrib)
@@ -205,4 +211,61 @@ void PlaneClosestHit(inout HitInfo payload, Attributes attrib)
 
     payload.colorAndDistance = float4(finalColor, RayTCurrent());
     
+}
+
+[shader("closesthit")]
+void ReflectionClosestHit(inout HitInfo payload, Attributes attrib)
+{
+      // Triangle index in this geometry
+    const uint triIndex = PrimitiveIndex();
+    const uint vbase = triIndex * 3;
+
+    // Fetch the triangle’s vertices (object space)
+    STriVertex v0 = BTriVertex[indices[vbase + 0]];
+
+    STriVertex v1 = BTriVertex[indices[vbase + 1]];
+
+    STriVertex v2 = BTriVertex[indices[vbase + 2]];
+
+    // Full barycentric triple
+    float3 bary = float3(1.0f - attrib.bary.x - attrib.bary.y, attrib.bary.x, attrib.bary.y);
+
+    // Interpolate vertex normal in object space
+    float3 nObj = normalize(v0.Normal * bary.x + v1.Normal * bary.y + v2.Normal * bary.z);
+
+    // Transform normal to world space with inverse-transpose of Object->World
+
+    // Hit position in world space (from the ray)
+    float3 pW = WorldRayOrigin() + RayTCurrent() * WorldRayDirection();
+
+    float3 incidentRay = WorldRayDirection();
+    
+    float3 reflectionDir = incidentRay - (2 * (dot(incidentRay, nObj) * nObj));
+    
+    // To-eye vector (world)
+ //   float3 toEye = normalize(gEyePosW - pW);
+
+    Light L = gLights[0];
+    // Shadow ray (world space)
+    RayDesc reflectionRay;
+    reflectionRay.Origin = pW + nObj * 0.001f; // bias to avoid self-shadowing
+    reflectionRay.Direction = reflectionDir;
+    reflectionRay.TMin = 0.0f;
+    reflectionRay.TMax = 1e5f;
+
+    HitInfo reflectionPayload;
+
+    TraceRay(
+        SceneBVH,
+        RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH,
+        /*InstanceInclusionMask*/ 0xff, // or 0x1 if you later mask out the plane
+    /*RayContributionToHitGroupIndex*/ 2,
+        /*MultiplierForGeometryContributionToHitGroupIndex*/ 1,
+        /*MissShaderIndex*/ 0, // ShadowMiss (2nd miss in SBT)
+        reflectionRay,
+        reflectionPayload
+    );
+
+
+    payload.colorAndDistance = float4(reflectionPayload.colorAndDistance.xyz, RayTCurrent());
 }
