@@ -590,19 +590,28 @@ void Renderer::BuildMaterials()
 	skullMat->FresnelR0 = XMFLOAT3(0.05f, 0.05f, 0.05);
 	skullMat->Roughness = 0.7f;
 
-	auto tile1 = std::make_unique<Material>();
-	tile1->Name = "tile0";
-	tile1->MatCBIndex = 4;
-	tile1->DiffuseSrvHeapIndex = 4;
-	tile1->DiffuseAlbedo = XMFLOAT4(Colors::Sienna);
-	tile1->FresnelR0 = XMFLOAT3(0.02f, 0.02f, 0.02f);
-	tile1->Roughness = 0.8f;
+	auto sphereMat = std::make_unique<Material>();
+	sphereMat->Name = "sphere";
+	sphereMat->MatCBIndex = 4;
+	sphereMat->DiffuseSrvHeapIndex = 4;
+	sphereMat->DiffuseAlbedo = XMFLOAT4(Colors::Violet);
+	sphereMat->FresnelR0 = XMFLOAT3(0.06f, 0.06f, 0.06f);
+	sphereMat->Roughness = 0.85f;
 
-	m_Materials["tile0"] = std::move(tile0);
+	auto boxMat = std::make_unique<Material>();
+	boxMat->Name = "box";
+	boxMat->MatCBIndex = 4;
+	boxMat->DiffuseSrvHeapIndex = 4;
+	boxMat->DiffuseAlbedo = XMFLOAT4(Colors::Sienna);
+	boxMat->FresnelR0 = XMFLOAT3(0.02f, 0.02f, 0.02f);
+	boxMat->Roughness = 0.8f;
+
 	m_Materials["bricks0"] = std::move(bricks0);
 	m_Materials["stone0"] = std::move(stone0);
-	m_Materials["tile1"] = std::move(tile1);
+	m_Materials["tile0"] = std::move(tile0);
 	m_Materials["skullMat"] = std::move(skullMat);
+	m_Materials["sphere"] = std::move(sphereMat);
+	m_Materials["box"] = std::move(boxMat);
 }
 void Renderer::BuildShapeGeometry()
 {
@@ -643,7 +652,12 @@ void Renderer::BuildShapeGeometry()
 	gridSubmesh.BaseVertexLocation = gridVertexOffset;
 	gridSubmesh.VertexCount = (UINT)grid.Vertices.size();
 
-	SubmeshGeometry sphereSubmesh;
+	//SubmeshGeometry sphereSubmesh;
+	//sphereSubmesh.IndexCount = (UINT)sphere.Indices32.size();
+	//sphereSubmesh.StartIndexLocation = sphereIndexOffset;
+	//sphereSubmesh.BaseVertexLocation = sphereVertexOffset;
+	//sphereSubmesh.VertexCount = (UINT)sphere.Vertices.size();
+
 	sphereSubmesh.IndexCount = (UINT)sphere.Indices32.size();
 	sphereSubmesh.StartIndexLocation = sphereIndexOffset;
 	sphereSubmesh.BaseVertexLocation = sphereVertexOffset;
@@ -686,11 +700,13 @@ void Renderer::BuildShapeGeometry()
 		vertices[k].Pos = grid.Vertices[i].Position;
 		vertices[k].Normal = grid.Vertices[i].Normal;
 	}
-
+	k = 0;
 	for (size_t i = 0; i < sphere.Vertices.size(); ++i, ++k)
 	{
 		vertices[k].Pos = sphere.Vertices[i].Position;
 		vertices[k].Normal = sphere.Vertices[i].Normal;
+		sphereVertices[k].Pos = sphere.Vertices[i].Position;
+		sphereVertices[k].Normal = sphere.Vertices[i].Normal;
 	}
 
 	for (size_t i = 0; i < cylinder.Vertices.size(); ++i, ++k)
@@ -725,6 +741,26 @@ void Renderer::BuildShapeGeometry()
 
 	boxSubmesh.IndexBufferGPU = d3dUtil::CreateDefaultBuffer(m_Device.Get(),
 		m_CommandList.Get(), box.Indices32.data(), boxSubmesh.IndexBufferByteSize, boxSubmesh.IndexBufferUploader);
+
+
+	sphereSubmesh.VertexByteStride = sizeof(Vertex);
+	sphereSubmesh.BaseVertexLocation = 0;
+	sphereSubmesh.VertexBufferByteSize = (UINT)sphereVertices.size() * sizeof(Vertex);
+	sphereSubmesh.IndexBufferByteSize = sphere.Indices32.size() * sizeof(uint32_t);
+	sphereSubmesh.IndexFormat = DXGI_FORMAT_R32_UINT;
+
+	ThrowIfFailed(D3DCreateBlob(sphereSubmesh.VertexBufferByteSize, &sphereSubmesh.VertexBufferCPU));
+	CopyMemory(sphereSubmesh.VertexBufferCPU->GetBufferPointer(), sphereVertices.data(), sphereSubmesh.VertexBufferByteSize);
+
+	ThrowIfFailed(D3DCreateBlob(sphereSubmesh.IndexBufferByteSize, &sphereSubmesh.IndexBufferCPU));
+	CopyMemory(sphereSubmesh.IndexBufferCPU->GetBufferPointer(), sphere.Indices32.data(), sphereSubmesh.IndexBufferByteSize);
+
+	sphereSubmesh.VertexBufferGPU = d3dUtil::CreateDefaultBuffer(m_Device.Get(),
+		m_CommandList.Get(), sphereVertices.data(), sphereSubmesh.VertexBufferByteSize, sphereSubmesh.VertexBufferUploader);
+
+	sphereSubmesh.IndexBufferGPU = d3dUtil::CreateDefaultBuffer(m_Device.Get(),
+		m_CommandList.Get(), sphere.Indices32.data(), sphereSubmesh.IndexBufferByteSize, sphereSubmesh.IndexBufferUploader);
+
 
 
 	auto geo = std::make_unique<MeshGeometry>();
@@ -1156,6 +1192,8 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> Renderer::CreateHitSignature()
 	rsc.AddHeapRangesParameter({ { 3, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2} });
 	rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_SRV, 4);
 	rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_SRV, 5);
+	rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_SRV, 6);
+	rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_SRV, 7);
 
 	return rsc.Generate(m_Device.Get(), true);
 }
@@ -1301,7 +1339,9 @@ void Renderer::CreateShaderBindingTable()
 	for (int i = 0; i < m_PerInstanceCBCount - 1; i++)
 	{
 		m_SbtHelper.AddHitGroup(L"HitGroup", { (void*)m_Geometries["skullGeo"]->VertexBufferGPU->GetGPUVirtualAddress(), (void*)m_Geometries["skullGeo"]->IndexBufferGPU->GetGPUVirtualAddress(), (void*)m_topLevelASBuffers.pResult->GetGPUVirtualAddress(),
-			(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(), (void*)m_GlobalConstantBuffer->GetGPUVirtualAddress(), (void*)m_PerInstanceCBs[i]->GetGPUVirtualAddress(), heapPointer, (void*)boxSubmesh.VertexBufferGPU->GetGPUVirtualAddress(),
+			(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(), (void*)m_GlobalConstantBuffer->GetGPUVirtualAddress(), (void*)m_PerInstanceCBs[i]->GetGPUVirtualAddress(), heapPointer, 
+			(void*)sphereSubmesh.VertexBufferGPU->GetGPUVirtualAddress(),
+			(void*)sphereSubmesh.IndexBufferGPU->GetGPUVirtualAddress(), (void*)boxSubmesh.VertexBufferGPU->GetGPUVirtualAddress(),
 			(void*)boxSubmesh.IndexBufferGPU->GetGPUVirtualAddress()});
 	}
 
@@ -1316,6 +1356,8 @@ void Renderer::CreateShaderBindingTable()
 	}
 	m_SbtHelper.AddHitGroup(L"ReflectionHitGroup", { (void*)m_Geometries["skullGeo"]->VertexBufferGPU->GetGPUVirtualAddress(),(void*)m_Geometries["skullGeo"]->IndexBufferGPU->GetGPUVirtualAddress(), (void*)m_topLevelASBuffers.pResult->GetGPUVirtualAddress(),
 		(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(),  (void*)m_GlobalConstantBuffer->GetGPUVirtualAddress(), (void*)m_PerInstanceCBs[m_PerInstanceCBCount - 1]->GetGPUVirtualAddress(), heapPointer,
+		(void*)sphereSubmesh.VertexBufferGPU->GetGPUVirtualAddress(),
+			(void*)sphereSubmesh.IndexBufferGPU->GetGPUVirtualAddress(),
 		(void*)boxSubmesh.VertexBufferGPU->GetGPUVirtualAddress(),
 			(void*)boxSubmesh.IndexBufferGPU->GetGPUVirtualAddress() });
 
@@ -1323,6 +1365,8 @@ void Renderer::CreateShaderBindingTable()
 	{
 		m_SbtHelper.AddHitGroup(L"HitGroup", { (void*)m_Geometries["skullGeo"]->VertexBufferGPU->GetGPUVirtualAddress(), (void*)m_Geometries["skullGeo"]->IndexBufferGPU->GetGPUVirtualAddress(), (void*)m_topLevelASBuffers.pResult->GetGPUVirtualAddress(),
 			(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(), (void*)m_GlobalConstantBuffer->GetGPUVirtualAddress(), (void*)m_PerInstanceCBs[i]->GetGPUVirtualAddress(), heapPointer,
+			(void*)sphereSubmesh.VertexBufferGPU->GetGPUVirtualAddress(),
+			(void*)sphereSubmesh.IndexBufferGPU->GetGPUVirtualAddress(),
 			(void*)boxSubmesh.VertexBufferGPU->GetGPUVirtualAddress(),
 			(void*)boxSubmesh.IndexBufferGPU->GetGPUVirtualAddress() });
 	}
@@ -1374,9 +1418,9 @@ void Renderer::CreateTopLevelAS(std::vector<std::pair<Microsoft::WRL::ComPtr<ID3
 		for (size_t i = 0; i < instances.size(); i++)
 		{
 			UINT hitGroupIndex = i;
-			if (i == 4)
+			if (i == 5)
 			{
-				hitGroupIndex = 5;
+				hitGroupIndex = 6;
 			}
 			m_topLevelASGenerator.AddInstance(instances[i].first.Get(), instances[i].second, static_cast<UINT>(i), static_cast<UINT>(i));
 		}
@@ -1403,11 +1447,15 @@ void Renderer::CreateAccelerationStructures()
 	AccelerationStructureBuffers planeBottomLevelBuffers = CreateBottomLevelAS({ { m_Geometries["skullGeo"]->VertexBufferGPU, m_skullVertCount} }, { {m_Geometries["skullGeo"]->IndexBufferGPU, m_Geometries["skullGeo"]->DrawArgs["skull"].IndexCount} });
 	
 	AccelerationStructureBuffers boxBottomLevelBuffers = CreateBottomLevelAS({ { boxSubmesh.VertexBufferGPU, boxSubmesh.VertexCount} }, { {boxSubmesh.IndexBufferGPU, boxSubmesh.IndexCount} });
+	
+	AccelerationStructureBuffers sphereBottomLevelBuffers = CreateBottomLevelAS({ { sphereSubmesh.VertexBufferGPU, sphereSubmesh.VertexCount} }, { {sphereSubmesh.IndexBufferGPU, sphereSubmesh.IndexCount} });
 
 	m_Instances = {
 		{ bottomLevelBuffers.pResult, XMMatrixTranslation(0.0f, -10.0f, 0.0f) }, {bottomLevelBuffers.pResult, XMMatrixTranslation(-6.0f, -10.0f, 0.0f)}, {bottomLevelBuffers.pResult, XMMatrixTranslation(6.0f, -10.0f, 0.0f)},
+		
 		{ planeBottomLevelBuffers.pResult, XMMatrixScaling(1.0f, 1.0f, 1.0f) * XMMatrixTranslation(0.0f, 10.0f, 0.0f) }, 
-		{ boxBottomLevelBuffers.pResult, XMMatrixScaling(50.0f, 50.0f, 50.0f) * XMMatrixTranslation(0.0f, -80.0f, 0.0f) }
+		{ sphereBottomLevelBuffers.pResult, XMMatrixScaling(5.0f, 5.0f, 5.0f) * XMMatrixTranslation(0.0f, -30.0f, 0.0f) },
+		{ boxBottomLevelBuffers.pResult, XMMatrixScaling(50.0f, 50.0f, 50.0f) * XMMatrixTranslation(0.0f, -80.0f, 0.0f) },
 	};
 	CreateTopLevelAS(m_Instances);
 

@@ -39,6 +39,8 @@ StructuredBuffer<STriVertex> BTriVertex : register(t0);
 StructuredBuffer<int> indices : register(t1);
 RaytracingAccelerationStructure SceneBVH : register(t2);
 StructuredBuffer<Material> materials : register(t3);
+StructuredBuffer<STriVertex> STriVertex : register(t4);
+StructuredBuffer<int> sIndices : register(t5);
 StructuredBuffer<STriVertex> CTriVertex : register(t4);
 StructuredBuffer<int> cIndices : register(t5);
 
@@ -258,7 +260,7 @@ void ReflectionClosestHit(inout HitInfo payload, Attributes attrib)
         SceneBVH,
         RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH,
         /*InstanceInclusionMask*/ 0xff, 
-    /*RayContributionToHitGroupIndex*/ 5,
+    /*RayContributionToHitGroupIndex*/ 6,
         /*MultiplierForGeometryContributionToHitGroupIndex*/ 1,
         /*MissShaderIndex*/ 0, 
         reflectionRay,
