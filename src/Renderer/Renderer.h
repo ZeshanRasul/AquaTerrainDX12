@@ -138,6 +138,7 @@ private:
 	float m_Theta = 1.5f * DirectX::XM_PI;
 	float m_Phi = DirectX::XM_PIDIV4;
 	float m_Radius = 5.0f;
+	D3D12_VIEWPORT vp;
 
 	static const int NumFrameResources = 3;
 	std::vector<std::unique_ptr<FrameResource>> m_FrameResources;
