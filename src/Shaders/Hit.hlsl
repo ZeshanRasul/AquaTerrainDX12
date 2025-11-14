@@ -232,8 +232,8 @@ void ReflectionClosestHit(inout HitInfo payload, Attributes attrib)
 
     // Interpolate vertex normal in object space
     float3 nObj = normalize(v0.Normal * bary.x + v1.Normal * bary.y + v2.Normal * bary.z);
+    float3 nW = normalize(mul((float3x3) ObjectToWorld3x4(), nObj));
 
-    // Transform normal to world space with inverse-transpose of Object->World
 
     // Hit position in world space (from the ray)
     float3 pW = WorldRayOrigin() + RayTCurrent() * WorldRayDirection();
@@ -243,7 +243,7 @@ void ReflectionClosestHit(inout HitInfo payload, Attributes attrib)
     float3 reflectionDir = incidentRay - (2 * (dot(incidentRay, nObj) * nObj));
     
     // To-eye vector (world)
- //   float3 toEye = normalize(gEyePosW - pW);
+    float3 toEye = normalize(gEyePosW - pW);
 
     Light L = gLights[0];
     // Shadow ray (world space)
@@ -261,11 +261,14 @@ void ReflectionClosestHit(inout HitInfo payload, Attributes attrib)
         /*InstanceInclusionMask*/ 0xff, // or 0x1 if you later mask out the plane
     /*RayContributionToHitGroupIndex*/ 2,
         /*MultiplierForGeometryContributionToHitGroupIndex*/ 1,
-        /*MissShaderIndex*/ 0, // ShadowMiss (2nd miss in SBT)
+        /*MissShaderIndex*/ 0, 
         reflectionRay,
         reflectionPayload
     );
 
+    float3 lit = ComputeDirectionalLight(L, nObj, toEye, materials[materialIndex]);
+    
+    float3 finalColor = lit + reflectionPayload.colorAndDistance.xyz;
 
-    payload.colorAndDistance = float4(reflectionPayload.colorAndDistance.xyz, RayTCurrent());
+    payload.colorAndDistance = float4(finalColor, RayTCurrent());
 }

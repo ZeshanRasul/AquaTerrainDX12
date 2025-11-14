@@ -1158,7 +1158,7 @@ void Renderer::CreateRaytracingPipeline()
 
 	pipeline.AddRootSignatureAssociation(m_ReflectionSignature.Get(), { L"ReflectionHitGroup" });
 	pipeline.AddRootSignatureAssociation(m_MissSignature.Get(), { L"Miss" });
-	pipeline.AddRootSignatureAssociation(m_HitSignature.Get(), { L"HitGroup",  L"PlaneHitGroup" });
+	pipeline.AddRootSignatureAssociation(m_HitSignature.Get(), { L"HitGroup" });
 
 
 	pipeline.SetMaxPayloadSize(4 * sizeof(float));
@@ -1314,12 +1314,12 @@ void Renderer::CreateTopLevelAS(std::vector<std::pair<Microsoft::WRL::ComPtr<ID3
 	{
 		for (size_t i = 0; i < instances.size(); i++)
 		{
-			UINT hitGroupIndex = 1;
-			if (i == 0)
+			UINT hitGroupIndex = i;
+			if (i == 3)
 			{
-				hitGroupIndex = 2;
+				hitGroupIndex = 5;
 			}
-			m_topLevelASGenerator.AddInstance(instances[i].first.Get(), instances[i].second, static_cast<UINT>(i), static_cast<UINT>(i));
+			m_topLevelASGenerator.AddInstance(instances[i].first.Get(), instances[i].second, static_cast<UINT>(i), static_cast<UINT>(hitGroupIndex));
 		}
 
 		UINT64 scratchSizeInBytes = 0;
