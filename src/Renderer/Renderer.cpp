@@ -1491,7 +1491,7 @@ void Renderer::CreateAccelerationStructures()
 	m_Instances = {
 		{ bottomLevelBuffers.pResult, XMMatrixTranslation(0.0f, -10.0f, 0.0f) }, {bottomLevelBuffers.pResult, XMMatrixTranslation(-6.0f, -10.0f, 0.0f)}, {bottomLevelBuffers.pResult, XMMatrixTranslation(6.0f, -10.0f, 0.0f)},
 
-		{ planeBottomLevelBuffers.pResult, XMMatrixScaling(1.0f, 1.0f, 1.0f) * XMMatrixTranslation(0.0f, 10.0f, 0.0f) },
+		{ planeBottomLevelBuffers.pResult, XMMatrixScaling(25.0f, 25.0f, 25.0f) * XMMatrixTranslation(0.0f, 10.0f, 0.0f) },
 		{ sphereBottomLevelBuffers.pResult, XMMatrixScaling(15.0f, 15.0f, 15.0f) * XMMatrixTranslation(-30.0f, -30.0f, -20.0f) },
 		{ boxBottomLevelBuffers.pResult, XMMatrixScaling(50.0f, 50.0f, 50.0f) * XMMatrixTranslation(0.0f, -80.0f, 0.0f) },
 	};

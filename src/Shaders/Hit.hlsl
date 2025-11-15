@@ -380,8 +380,8 @@ void ReflectionClosestHit(inout HitInfo payload, Attributes attrib)
     
     if (refrPayload.colorAndDistance.w < tMax)
     {
-    }
         finalColor += refrPayload.colorAndDistance.xyz;
+    }
     
     
 
