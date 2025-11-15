@@ -302,7 +302,7 @@ void ReflectionClosestHit(inout HitInfo payload, Attributes attrib)
     }
     
     // Update medium for refracted ray
-    refrPayload.eta = eta_t;
+    payload.eta = eta_t;
 
 
     
@@ -311,14 +311,16 @@ void ReflectionClosestHit(inout HitInfo payload, Attributes attrib)
 
     Light L = gLights[0];
     float3 lit = ComputeDirectionalLight(L, nObj, toEye, materials[materialIndex]);
+    payload.depth += 1;
+    payload.eta = materials[materialIndex].Ior;
 
-    if (refrPayload.depth >= 5)
+    if (payload.depth >= 5)
     {
         payload.colorAndDistance = float4(payload.colorAndDistance.xyz, RayTCurrent());
         return;
     }
     reflectionPayload.depth++;
-    if (reflectionPayload.depth >= 5)
+    if (payload.depth >= 5)
     {
         payload.colorAndDistance = float4(lit, RayTCurrent());
         return;
@@ -342,8 +344,6 @@ void ReflectionClosestHit(inout HitInfo payload, Attributes attrib)
         reflectionRay,
         reflectionPayload
     );
-    payload.depth += 1;
-    payload.eta = materials[materialIndex].Ior;
     if (payload.depth >= 5)
     {
         payload.colorAndDistance = float4(payload.colorAndDistance.xyz, RayTCurrent());
@@ -368,7 +368,7 @@ void ReflectionClosestHit(inout HitInfo payload, Attributes attrib)
             SceneBVH,
             RAY_FLAG_NONE,
             0xff,
-            6,
+            0,
             1,
             0,
     refractionRay,
