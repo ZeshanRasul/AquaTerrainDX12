@@ -18,6 +18,9 @@ struct Material
     float Reflectivity;
     float3 Absorption;
     float Shininess;
+    float pad;
+    float pad1;
+    float pad2;
     bool IsReflective;
 };
 
@@ -291,7 +294,7 @@ void ReflectionClosestHit(inout HitInfo payload, Attributes attrib)
 
     float3 refractDir;
     bool totalInternalReflection = (sin2ThetaT > 1.0f);
-    totalInternalReflection = false;
+     totalInternalReflection = false;
 
     if (!totalInternalReflection)
     {

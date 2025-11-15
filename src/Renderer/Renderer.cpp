@@ -1680,7 +1680,10 @@ void Renderer::CreatePerInstanceBuffers()
 		matGpu.Ior = mat->Ior;
 		matGpu.Reflectivity = mat->Reflectivity;
 		matGpu.Absorption = mat->Absorption;
-		matGpu.Shininess = 1.0 - mat->Roughness;
+		matGpu.Shininess = 1.0f - mat->Roughness;
+		matGpu.pad = 1.0f;
+		matGpu.pad2 = 1.0f;
+		matGpu.pad3 = 1.0f;
 		matGpu.isReflective = mat->IsReflective;
 
 		m_MaterialsGPU.push_back(std::move(matGpu));
