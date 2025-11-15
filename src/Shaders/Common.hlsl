@@ -5,7 +5,9 @@
 // D3D12_RAYTRACING_SHADER_CONFIG pipeline subobjet.
 struct HitInfo
 {
-  float4 colorAndDistance;
+    float4 colorAndDistance;
+    uint depth;
+    float eta;
 };
 
 // Attributes output by the raytracing when hitting a surface,

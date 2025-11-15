@@ -605,6 +605,7 @@ void Renderer::BuildMaterials()
 	boxMat->DiffuseAlbedo = XMFLOAT4(Colors::Sienna);
 	boxMat->FresnelR0 = XMFLOAT3(0.02f, 0.02f, 0.02f);
 	boxMat->Roughness = 0.8f;
+	boxMat->Ior = 1.5f;
 
 	m_Materials["bricks0"] = std::move(bricks0);
 	m_Materials["stone0"] = std::move(stone0);
@@ -1241,7 +1242,7 @@ void Renderer::CreateRaytracingPipeline()
 	pipeline.AddRootSignatureAssociation(m_HitSignature.Get(), { L"HitGroup" });
 
 
-	pipeline.SetMaxPayloadSize(4 * sizeof(float));
+	pipeline.SetMaxPayloadSize(6 * sizeof(float));
 	pipeline.SetMaxAttributeSize(2 * sizeof(float));
 	pipeline.SetMaxRecursionDepth(3);
 
@@ -1491,7 +1492,7 @@ void Renderer::CreateAccelerationStructures()
 		{ bottomLevelBuffers.pResult, XMMatrixTranslation(0.0f, -10.0f, 0.0f) }, {bottomLevelBuffers.pResult, XMMatrixTranslation(-6.0f, -10.0f, 0.0f)}, {bottomLevelBuffers.pResult, XMMatrixTranslation(6.0f, -10.0f, 0.0f)},
 
 		{ planeBottomLevelBuffers.pResult, XMMatrixScaling(1.0f, 1.0f, 1.0f) * XMMatrixTranslation(0.0f, 10.0f, 0.0f) },
-		{ sphereBottomLevelBuffers.pResult, XMMatrixScaling(5.0f, 5.0f, 5.0f) * XMMatrixTranslation(0.0f, -30.0f, 0.0f) },
+		{ sphereBottomLevelBuffers.pResult, XMMatrixScaling(15.0f, 15.0f, 15.0f) * XMMatrixTranslation(-30.0f, -30.0f, -20.0f) },
 		{ boxBottomLevelBuffers.pResult, XMMatrixScaling(50.0f, 50.0f, 50.0f) * XMMatrixTranslation(0.0f, -80.0f, 0.0f) },
 	};
 	CreateTopLevelAS(m_Instances);

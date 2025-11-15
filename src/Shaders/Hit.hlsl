@@ -151,6 +151,8 @@ void ClosestHit(inout HitInfo payload, Attributes attrib)
     
     float3 lit = ComputeDirectionalLight(L, nObj, toEye, materials[materialIndex]);
 
+    payload.depth += 1;
+    payload.eta = materials[materialIndex].Ior;
     payload.colorAndDistance = float4(lit, RayTCurrent());
 }
 
@@ -193,13 +195,13 @@ void PlaneClosestHit(inout HitInfo payload, Attributes attrib)
     shadowRay.TMax = 1e5f;
 
     ShadowHitInfo shadowPayload;
-    shadowPayload.isHit = true; 
+    shadowPayload.isHit = true;
 
     TraceRay(
         SceneBVH,
         RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH |
         RAY_FLAG_SKIP_CLOSEST_HIT_SHADER,
-        /*InstanceInclusionMask*/ 0xff, 
+        /*InstanceInclusionMask*/ 0xff,
         /*RayContributionToHitGroupIndex*/ 1,
         /*MultiplierForGeometryContributionToHitGroupIndex*/ 1,
         /*MissShaderIndex*/ 1, // ShadowMiss (2nd miss in SBT)
@@ -212,6 +214,8 @@ void PlaneClosestHit(inout HitInfo payload, Attributes attrib)
 
     float3 finalColor = lit * shadowFactor;
 
+    payload.depth += 1;
+    payload.eta = materials[materialIndex].Ior;
     payload.colorAndDistance = float4(finalColor, RayTCurrent());
     
 }
@@ -235,8 +239,25 @@ void ReflectionClosestHit(inout HitInfo payload, Attributes attrib)
 
     // Interpolate vertex normal in object space
     float3 nObj = normalize(v0.Normal * bary.x + v1.Normal * bary.y + v2.Normal * bary.z);
- //   float3 nW = normalize(mul((float3x3) ObjectToWorld3x4(), nObj));
-
+    float3 N = normalize(mul((float3x3) ObjectToWorld3x4(), nObj));
+    float3 wo = -normalize(WorldRayDirection());
+    
+    Material mat = materials[materialIndex];
+    
+    float3 Nf = N;
+    
+    float eta_i = payload.eta;
+    float eta_t = mat.Ior;
+    
+    if (dot(wo, N) < 0.0f)
+    {
+        Nf = -N;
+        eta_i = mat.Ior;
+        eta_t = 1.0f;
+    }
+    
+    float eta = eta_i / eta_t;
+    
     // Hit position in world space (from the ray)
     float3 pW = WorldRayOrigin() + RayTCurrent() * WorldRayDirection();
 
@@ -244,13 +265,35 @@ void ReflectionClosestHit(inout HitInfo payload, Attributes attrib)
     
     float3 reflectionDir = incidentRay - (2 * (dot(incidentRay, nObj) * nObj));
     
+    float cosThetaI = dot(-wo, Nf);
+    float sin2ThetaI = max(0.0f, 1.0f - cosThetaI * cosThetaI);
+    float sin2ThetaT = eta * eta * sin2ThetaI;
+
+    float3 refractDir;
+    bool totalInternalReflection = (sin2ThetaT > 1.0f);
+
+    if (!totalInternalReflection)
+    {
+        refractDir = refract(-wo, Nf, eta);
+        refractDir = normalize(refractDir);
+    }
+    
+    HitInfo refrPayload = payload;
+
+    refrPayload.depth++;
+
+    // Update medium for refracted ray
+    refrPayload.eta = eta_t;
+
+
+    
     // To-eye vector (world)
     float3 toEye = normalize(gEyePosW - pW);
 
     Light L = gLights[0];
     // Shadow ray (world space)
     RayDesc reflectionRay;
-    reflectionRay.Origin = pW + nObj * 0.001f; // bias to avoid self-shadowing
+    reflectionRay.Origin = pW + Nf * 0.001f; // bias to avoid self-shadowing
     reflectionRay.Direction = reflectionDir;
     reflectionRay.TMin = 0.0f;
     reflectionRay.TMax = 1e5f;
@@ -260,17 +303,46 @@ void ReflectionClosestHit(inout HitInfo payload, Attributes attrib)
     TraceRay(
         SceneBVH,
         RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH,
-        /*InstanceInclusionMask*/ 0xff, 
+        /*InstanceInclusionMask*/ 0xff,
     /*RayContributionToHitGroupIndex*/ 6,
         /*MultiplierForGeometryContributionToHitGroupIndex*/ 1,
-        /*MissShaderIndex*/ 0, 
+        /*MissShaderIndex*/ 0,
         reflectionRay,
         reflectionPayload
     );
+    payload.depth += 1;
+    payload.eta = materials[materialIndex].Ior;
+ 
+    float tMin = 0.001f;
+    float tMax = 1e27f;
 
-    float3 lit = ComputeDirectionalLight(L, nObj, toEye, materials[materialIndex]);
+    RayDesc refractionRay;
+    refractionRay.Origin = wo * 0.001f; // bias to avoid self-shadowing
+    refractionRay.Direction = refractDir;
+    refractionRay.TMin = tMin;
+    refractionRay.TMax = tMax;
+
     
-    float3 finalColor = lit + 0.5 * reflectionPayload.colorAndDistance.xyz;
+    TraceRay(
+            SceneBVH,
+            RAY_FLAG_NONE,
+            0xff,
+            6,
+            1,
+            0,
+    refractionRay,
+    refrPayload
+        );
+    
+    float3 lit = ComputeDirectionalLight(L, nObj, toEye, materials[materialIndex]);
+    float3 finalColor = reflectionPayload.colorAndDistance.xyz;
+    
+    if (refrPayload.colorAndDistance.w < tMax)
+    {
+        finalColor += refrPayload.colorAndDistance.xyz;
+    }
+    
+    
 
     payload.colorAndDistance = float4(finalColor, RayTCurrent());
 }
