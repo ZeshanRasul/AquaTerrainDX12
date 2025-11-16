@@ -147,7 +147,7 @@ bool Renderer::InitializeD3D12(HWND& windowHandle)
 	CreateRaytracingOutputBuffer();
 	CreateShaderResourceHeap();
 	CreateShaderBindingTable();
-
+	CreateImGuiDescriptorHeap();
 	// Setup Dear ImGui context
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
@@ -160,22 +160,26 @@ bool Renderer::InitializeD3D12(HWND& windowHandle)
 	ImGui_ImplDX12_InitInfo init_info = {};
 	init_info.Device = m_Device.Get();
 	init_info.CommandQueue = m_CommandQueue.Get();
-	init_info.NumFramesInFlight = 1;
+	init_info.NumFramesInFlight = SwapChainBufferCount;
 	init_info.RTVFormat = m_BackBufferFormat; // Or your render target format.
 
-	// Allocating SRV descriptors (for textures) is up to the application, so we provide callbacks.
-	// The example_win32_directx12/main.cpp application include a simple free-list based allocator.
-	g_pd3dSrvDescHeapAlloc.Create(m_Device.Get(), m_SrvUavHeap.Get());
-	init_info.SrvDescriptorHeap = m_SrvUavHeap.Get();
+	 //Allocating SRV descriptors (for textures) is up to the application, so we provide callbacks.
+	 //The example_win32_directx12/main.cpp application include a simple free-list based allocator.
+	g_pd3dSrvDescHeapAlloc.Create(m_Device.Get(), m_ImGuiSrvHeap.Get());
+	init_info.SrvDescriptorHeap = m_ImGuiSrvHeap.Get();
 	init_info.SrvDescriptorAllocFn = [](ImGui_ImplDX12_InitInfo*, D3D12_CPU_DESCRIPTOR_HANDLE* out_cpu_handle, D3D12_GPU_DESCRIPTOR_HANDLE* out_gpu_handle) { return g_pd3dSrvDescHeapAlloc.Alloc(out_cpu_handle, out_gpu_handle); };
 	init_info.SrvDescriptorFreeFn = [](ImGui_ImplDX12_InitInfo*, D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle, D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle) { return g_pd3dSrvDescHeapAlloc.Free(cpu_handle, gpu_handle);  };
 
+	imguiCpuStart = m_ImGuiSrvHeap->GetCPUDescriptorHandleForHeapStart();
+	imguiGpuStart = m_ImGuiSrvHeap->GetGPUDescriptorHandleForHeapStart();
+
 	ImGui_ImplDX12_Init(&init_info);
+	//ImGui_ImplDX12_Init(&init_info);
 
-	ImGui::StyleColorsDark();
-	//ImGui::StyleColorsLight();
+	//	ImGui::StyleColorsDark();
+		//ImGui::StyleColorsLight();
 
-	// Setup scaling
+		// Setup scaling
 
 
 	ImGui_ImplWin32_Init(m_Hwnd);
@@ -246,6 +250,7 @@ void Renderer::Draw(bool useRaster)
 	ImGui::ShowDemoWindow(&showWindow);
 	ImGui::Render();
 
+
 	auto cmdListAlloc = m_CurrentFrameResource->CmdListAlloc;
 
 	ThrowIfFailed(cmdListAlloc->Reset());
@@ -269,8 +274,9 @@ void Renderer::Draw(bool useRaster)
 
 	m_CommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
 
-	if (true)
+	if (useRaster)
 	{
+
 		std::vector<ID3D12DescriptorHeap*> heaps = { m_SrvUavHeap.Get() };
 		m_CommandList->SetDescriptorHeaps(static_cast<UINT>(heaps.size()), heaps.data());
 
@@ -333,12 +339,23 @@ void Renderer::Draw(bool useRaster)
 		transition = CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		m_CommandList->ResourceBarrier(1, &transition);
 
+		m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
 
+		ID3D12DescriptorHeap* imguiHeaps[] = { m_ImGuiSrvHeap.Get() };
+		m_CommandList->SetDescriptorHeaps(_countof(imguiHeaps), imguiHeaps);
+
+		ImGui::Render();
+
+		ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), m_CommandList.Get());
+
+		//	m_CommandList->SetDescriptorHeaps(static_cast<UINT>(heaps.size()), heaps.data());
+		//
+		//	ImGui::Render();
+		//	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), m_CommandList.Get());
 
 	}
 
-
-	m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
+	//	std::vector<ID3D12DescriptorHeap*> imguiHeaps = { m_ImGuiSrvHeap.Get() };
 
 
 	ThrowIfFailed(m_CommandList->Close());
@@ -1802,5 +1819,17 @@ void Renderer::CreatePerInstanceBuffers()
 	ThrowIfFailed(m_UploadCBuffer->Map(0, nullptr, (void**)&pData));
 	memcpy(pData, m_MaterialsGPU.data(), bufferSize);
 	m_UploadCBuffer->Unmap(0, nullptr);
+
+}
+
+void Renderer::CreateImGuiDescriptorHeap()
+{
+	D3D12_DESCRIPTOR_HEAP_DESC desc = {};
+	desc.NumDescriptors = 1;
+	desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+	desc.NodeMask = 0;
+
+	ThrowIfFailed(m_Device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(m_ImGuiSrvHeap.GetAddressOf())));
 
 }

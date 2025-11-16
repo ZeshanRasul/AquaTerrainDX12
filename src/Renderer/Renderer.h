@@ -243,10 +243,15 @@ private:
 	UINT m_PerInstanceCBCount = 6;
 	UINT m_SkullCount = 4;
 	UINT m_SphereCount = 1;
-	
+
 	std::vector<MaterialDataGPU> m_MaterialsGPU;
 
 	SubmeshGeometry boxSubmesh;
 	SubmeshGeometry sphereSubmesh;
+
 	bool showWindow = true;
+	void CreateImGuiDescriptorHeap();
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_ImGuiSrvHeap;
+	D3D12_CPU_DESCRIPTOR_HANDLE imguiCpuStart;
+	D3D12_GPU_DESCRIPTOR_HANDLE imguiGpuStart;
 };
