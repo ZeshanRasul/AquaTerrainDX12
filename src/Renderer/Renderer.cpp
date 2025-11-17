@@ -163,8 +163,8 @@ bool Renderer::InitializeD3D12(HWND& windowHandle)
 	init_info.NumFramesInFlight = SwapChainBufferCount;
 	init_info.RTVFormat = m_BackBufferFormat; // Or your render target format.
 
-	 //Allocating SRV descriptors (for textures) is up to the application, so we provide callbacks.
-	 //The example_win32_directx12/main.cpp application include a simple free-list based allocator.
+	//Allocating SRV descriptors (for textures) is up to the application, so we provide callbacks.
+	//The example_win32_directx12/main.cpp application include a simple free-list based allocator.
 	g_pd3dSrvDescHeapAlloc.Create(m_Device.Get(), m_ImGuiSrvHeap.Get());
 	init_info.SrvDescriptorHeap = m_ImGuiSrvHeap.Get();
 	init_info.SrvDescriptorAllocFn = [](ImGui_ImplDX12_InitInfo*, D3D12_CPU_DESCRIPTOR_HANDLE* out_cpu_handle, D3D12_GPU_DESCRIPTOR_HANDLE* out_gpu_handle) { return g_pd3dSrvDescHeapAlloc.Alloc(out_cpu_handle, out_gpu_handle); };
@@ -229,9 +229,9 @@ void Renderer::Update(float dt, float mTheta, float mPhi, float mRadius, float m
 	}
 
 	m_AnimationCounter++;
-	m_Instances[0].second = XMMatrixRotationAxis({ 0.0f, 1.0f, 0.0f }, static_cast<float>(m_AnimationCounter) / 500.0f);
-	m_Instances[1].second = XMMatrixRotationAxis({ 0.0f, 1.0f, 0.0f }, static_cast<float>(m_AnimationCounter) / -500.0f) * XMMatrixTranslation(10.0f, -10.0f, 0.0f);;
-	m_Instances[2].second = XMMatrixRotationAxis({ 0.0f, 1.0f, 0.0f }, static_cast<float>(m_AnimationCounter) / -500.0f) * XMMatrixTranslation(-10.0f, -10.0f, 0.0f);;
+	m_Instances[1].second = XMMatrixRotationAxis({ 0.0f, 1.0f, 0.0f }, static_cast<float>(m_AnimationCounter) / 500.0f);
+	m_Instances[2].second = XMMatrixRotationAxis({ 0.0f, 1.0f, 0.0f }, static_cast<float>(m_AnimationCounter) / -500.0f) * XMMatrixTranslation(10.0f, -10.0f, 0.0f);;
+	m_Instances[3].second = XMMatrixRotationAxis({ 0.0f, 1.0f, 0.0f }, static_cast<float>(m_AnimationCounter) / -500.0f) * XMMatrixTranslation(-10.0f, -10.0f, 0.0f);;
 
 	UpdateCameraBuffer();
 	UpdateObjectCBs();
@@ -711,6 +711,7 @@ void Renderer::BuildMaterials()
 	skullMat->DiffuseAlbedo = XMFLOAT4(Colors::BlanchedAlmond);
 	skullMat->FresnelR0 = XMFLOAT3(0.05f, 0.05f, 0.05);
 	skullMat->Roughness = 0.7f;
+	skullMat->Ior = 0.0f;
 
 	auto sphereMat = std::make_unique<Material>();
 	sphereMat->Name = "sphere";
@@ -739,7 +740,7 @@ void Renderer::BuildMaterials()
 void Renderer::BuildShapeGeometry()
 {
 	GeometryGenerator geoGen;
-	GeometryGenerator::MeshData box = geoGen.CreateBox(1.5f, 0.5f, 1.5f, 3);
+	GeometryGenerator::MeshData box = geoGen.CreateBox(10.5f, 10.5f, 10.5f, 3);
 	GeometryGenerator::MeshData grid = geoGen.CreateGrid(20.0f, 30.0f, 60, 40);
 	GeometryGenerator::MeshData sphere = geoGen.CreateSphere(0.5f, 20, 20);
 	GeometryGenerator::MeshData cylinder = geoGen.CreateCylinder(0.5f, 0.3f, 3.0f, 20, 20);
@@ -1247,7 +1248,7 @@ void Renderer::UpdateMainPassCB()
 	m_MainPassCB.cbPerObjectPad3 = 0.5f;
 	m_MainPassCB.AmbientLight = { 0.25f, 0.25f, 0.35f, 1.0f };
 	m_MainPassCB.Lights[0].Strength = { 0.4f, 0.4f, 0.4f };
-	m_MainPassCB.Lights[0].Direction = { 0.3f, 0.46f, 0.7f };
+	m_MainPassCB.Lights[0].Direction = { 0.3f, -0.46f, 0.7f };
 	m_MainPassCB.Lights[1].Direction = { -0.57735f, -0.57735f, 0.57735f };
 
 	m_MainPassCB.Lights[1].Strength = { 0.3f, 0.3f, 0.3f };
@@ -1457,7 +1458,12 @@ void Renderer::CreateShaderBindingTable()
 	m_SbtHelper.AddMissProgram(L"Miss", {});
 	//	m_SbtHelper.AddMissProgram(L"ShadowMiss", {});
 
-	for (int i = 0; i < m_SkullCount; i++)
+	m_SbtHelper.AddHitGroup(L"HitGroup", { (void*)boxSubmesh.VertexBufferGPU->GetGPUVirtualAddress(),(void*)boxSubmesh.IndexBufferGPU->GetGPUVirtualAddress(), (void*)m_topLevelASBuffers.pResult->GetGPUVirtualAddress(),
+	(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(),  (void*)m_GlobalConstantBuffer->GetGPUVirtualAddress(), (void*)m_PerInstanceCBs[0]->GetGPUVirtualAddress(), heapPointer,
+	(void*)boxSubmesh.VertexBufferGPU->GetGPUVirtualAddress(),
+	(void*)boxSubmesh.IndexBufferGPU->GetGPUVirtualAddress() });
+
+	for (int i = 0; i < m_SkullCount - 1; i++)
 	{
 		m_SbtHelper.AddHitGroup(L"HitGroup", { (void*)m_Geometries["skullGeo"]->VertexBufferGPU->GetGPUVirtualAddress(), (void*)m_Geometries["skullGeo"]->IndexBufferGPU->GetGPUVirtualAddress(), (void*)m_topLevelASBuffers.pResult->GetGPUVirtualAddress(),
 			(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(), (void*)m_GlobalConstantBuffer->GetGPUVirtualAddress(), (void*)m_PerInstanceCBs[i]->GetGPUVirtualAddress(), heapPointer,
@@ -1469,17 +1475,23 @@ void Renderer::CreateShaderBindingTable()
 	for (int i = 0; i < m_SphereCount; i++)
 	{
 		m_SbtHelper.AddHitGroup(L"HitGroup", { (void*)sphereSubmesh.VertexBufferGPU->GetGPUVirtualAddress(), (void*)sphereSubmesh.IndexBufferGPU->GetGPUVirtualAddress(), (void*)m_topLevelASBuffers.pResult->GetGPUVirtualAddress(),
-			(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(), (void*)m_GlobalConstantBuffer->GetGPUVirtualAddress(), (void*)m_PerInstanceCBs[4]->GetGPUVirtualAddress(), heapPointer,
+			(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(), (void*)m_GlobalConstantBuffer->GetGPUVirtualAddress(), (void*)m_PerInstanceCBs[5]->GetGPUVirtualAddress(), heapPointer,
 			(void*)boxSubmesh.VertexBufferGPU->GetGPUVirtualAddress(),
 			(void*)boxSubmesh.IndexBufferGPU->GetGPUVirtualAddress() });
 
 	};
 	m_SbtHelper.AddHitGroup(L"ReflectionHitGroup", { (void*)m_Geometries["skullGeo"]->VertexBufferGPU->GetGPUVirtualAddress(),(void*)m_Geometries["skullGeo"]->IndexBufferGPU->GetGPUVirtualAddress(), (void*)m_topLevelASBuffers.pResult->GetGPUVirtualAddress(),
 	(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(),  (void*)m_GlobalConstantBuffer->GetGPUVirtualAddress(), (void*)m_PerInstanceCBs[5]->GetGPUVirtualAddress(), heapPointer,
+	(void*)m_Geometries["skullGeo"]->VertexBufferGPU->GetGPUVirtualAddress(),
+	(void*)m_Geometries["skullGeo"]->IndexBufferGPU->GetGPUVirtualAddress() });
+
+	m_SbtHelper.AddHitGroup(L"HitGroup", { (void*)boxSubmesh.VertexBufferGPU->GetGPUVirtualAddress(),(void*)boxSubmesh.IndexBufferGPU->GetGPUVirtualAddress(), (void*)m_topLevelASBuffers.pResult->GetGPUVirtualAddress(),
+	(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(),  (void*)m_GlobalConstantBuffer->GetGPUVirtualAddress(), (void*)m_PerInstanceCBs[0]->GetGPUVirtualAddress(), heapPointer,
 	(void*)boxSubmesh.VertexBufferGPU->GetGPUVirtualAddress(),
 	(void*)boxSubmesh.IndexBufferGPU->GetGPUVirtualAddress() });
 
-	for (int i = 0; i < m_SkullCount; i++)
+
+	for (int i = 0; i < m_SkullCount - 1; i++)
 	{
 		m_SbtHelper.AddHitGroup(L"HitGroup", { (void*)m_Geometries["skullGeo"]->VertexBufferGPU->GetGPUVirtualAddress(), (void*)m_Geometries["skullGeo"]->IndexBufferGPU->GetGPUVirtualAddress(), (void*)m_topLevelASBuffers.pResult->GetGPUVirtualAddress(),
 			(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(), (void*)m_GlobalConstantBuffer->GetGPUVirtualAddress(), (void*)m_PerInstanceCBs[i]->GetGPUVirtualAddress(), heapPointer,
@@ -1611,11 +1623,11 @@ void Renderer::CreateAccelerationStructures()
 
 
 	m_Instances = {
-		{ bottomLevelBuffers.pResult, XMMatrixTranslation(0.0f, -10.0f, 0.0f) }, {bottomLevelBuffers.pResult, XMMatrixTranslation(-6.0f, -10.0f, 0.0f)}, {bottomLevelBuffers.pResult, XMMatrixTranslation(6.0f, -10.0f, 0.0f)},
+		{ boxBottomLevelBuffers.pResult, XMMatrixScaling(50.0f, 5.0f, 50.0f) * XMMatrixTranslation(0.0f, -50.0f, 0.0f) },
+		{ bottomLevelBuffers.pResult, XMMatrixTranslation(0.0f, 10.0f, 0.0f) }, {bottomLevelBuffers.pResult, XMMatrixTranslation(-16.0f, -10.0f, 0.0f)}, {bottomLevelBuffers.pResult, XMMatrixTranslation(16.0f, -10.0f, 0.0f)},
 
-		{ planeBottomLevelBuffers.pResult, XMMatrixScaling(25.0f, 25.0f, 25.0f) * XMMatrixTranslation(0.0f, 10.0f, 0.0f) },
-		{ sphereBottomLevelBuffers.pResult, XMMatrixScaling(15.0f, 15.0f, 15.0f) * XMMatrixTranslation(-30.0f, -30.0f, -20.0f) },
-		{ boxBottomLevelBuffers.pResult, XMMatrixScaling(50.0f, 50.0f, 50.0f) * XMMatrixTranslation(0.0f, -80.0f, 0.0f) },
+		{ sphereBottomLevelBuffers.pResult, XMMatrixScaling(5.0f, 5.0f, 5.0f) * XMMatrixTranslation(-10.0f, -10.0f, -10.0f) },
+		{ planeBottomLevelBuffers.pResult, XMMatrixScaling(1.0f, 1.0f, 1.0f) * XMMatrixTranslation(0.0f, -20.0f, 0.0f) },
 	};
 	CreateTopLevelAS(m_Instances);
 

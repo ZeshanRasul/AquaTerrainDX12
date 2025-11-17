@@ -376,7 +376,7 @@ void ReflectionClosestHit(inout HitInfo payload, Attributes attrib)
         );
     }
     
-    float3 finalColor = lit + reflectionPayload.colorAndDistance.xyz;
+    float3 finalColor = reflectionPayload.colorAndDistance.xyz;
     
     if (refrPayload.colorAndDistance.w < tMax)
     {
