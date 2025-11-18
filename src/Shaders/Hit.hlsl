@@ -3,6 +3,7 @@
 struct ShadowHitInfo
 {
     bool isHit;
+    uint depth;
 };
 
 struct ReflectionHitInfo
@@ -155,6 +156,7 @@ void ClosestHit(inout HitInfo payload, Attributes attrib)
     float3 lit = ComputeDirectionalLight(L, nObj, toEye, materials[materialIndex]);
 
     payload.depth += 1;
+    
     payload.eta = materials[materialIndex].Ior;
     if (payload.depth >= 5)
     {
@@ -205,6 +207,7 @@ void PlaneClosestHit(inout HitInfo payload, Attributes attrib)
 
     ShadowHitInfo shadowPayload;
     shadowPayload.isHit = true;
+    shadowPayload.depth = payload.depth;
 
     TraceRay(
         SceneBVH,
@@ -212,7 +215,7 @@ void PlaneClosestHit(inout HitInfo payload, Attributes attrib)
         RAY_FLAG_SKIP_CLOSEST_HIT_SHADER,
         /*InstanceInclusionMask*/ 0xff,
         /*RayContributionToHitGroupIndex*/ 1,
-        /*MultiplierForGeometryContributionToHitGroupIndex*/ 1,
+        /*MultiplierForGeometryContributionToHitGroupIndex*/ 2,
         /*MissShaderIndex*/ 1, // ShadowMiss (2nd miss in SBT)
         shadowRay,
         shadowPayload
@@ -223,9 +226,9 @@ void PlaneClosestHit(inout HitInfo payload, Attributes attrib)
 
     float3 finalColor = lit * shadowFactor;
 
-    payload.depth += 1;
+    payload.depth++;
     payload.eta = materials[materialIndex].Ior;
-    if (payload.depth >= 5)
+    if (shadowPayload.depth >= 5 || payload.depth >= 5)
     {
         payload.colorAndDistance = float4(payload.colorAndDistance.xyz, RayTCurrent());
         return;
@@ -320,7 +323,7 @@ void ReflectionClosestHit(inout HitInfo payload, Attributes attrib)
         return;
     }
     reflectionPayload.depth++;
-    if (payload.depth >= 5)
+    if (reflectionPayload.depth >= 5)
     {
         payload.colorAndDistance = float4(lit, RayTCurrent());
         return;
@@ -338,7 +341,7 @@ void ReflectionClosestHit(inout HitInfo payload, Attributes attrib)
         SceneBVH,
         RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH,
         /*InstanceInclusionMask*/ 0xff,
-    /*RayContributionToHitGroupIndex*/ 6,
+    /*RayContributionToHitGroupIndex*/ 5,
         /*MultiplierForGeometryContributionToHitGroupIndex*/ 1,
         /*MissShaderIndex*/ 0,
         reflectionRay,
