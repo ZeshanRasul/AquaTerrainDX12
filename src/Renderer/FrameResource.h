@@ -54,6 +54,14 @@ public:
 	UINT Fence = 0;
 };
 
+struct PostProcessData
+{
+	float Exposure = 1.0f;
+	int ToneMapMode = 2;
+	int DebugMode = 0;
+	float pad;
+};
+
 struct MaterialDataGPU
 {
 	DirectX::XMFLOAT4 DiffuseAlbedo;

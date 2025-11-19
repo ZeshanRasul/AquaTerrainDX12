@@ -131,19 +131,12 @@ bool Renderer::InitializeD3D12(HWND& windowHandle)
 
 	BuildPSOs();
 	CreateCameraBuffer();
-	//XMVECTOR pos = XMVectorSet(0.0f, 1.0f, -27.0f, 1.0f);
-	//XMVECTOR target = XMVectorZero();
-	//XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-	//XMMATRIX view = XMMatrixLookAtLH(pos, target, up);
-	//XMStoreFloat4x4(&m_View, view);
-	//
-	//XMMATRIX P = XMMatrixPerspectiveFovLH(0.25f * MathHelper::Pi, (float)(m_ClientWidth / m_ClientHeight), 0.1f, 1000.0f);
-	//XMStoreFloat4x4(&m_Proj, P);
 
 	CreateAccelerationStructures();
 	CreateRaytracingPipeline();
 	CreatePerInstanceBuffers();
 	CreateGlobalConstantBuffer();
+	CreatePostProcessConstantBuffer();
 	CreateRaytracingOutputBuffer();
 	CreateShaderResourceHeap();
 	CreateShaderBindingTable();
@@ -215,9 +208,9 @@ void Renderer::Update(float dt, Camera& cam)
 	}
 
 	m_AnimationCounter++;
-	m_Instances[1].second = XMMatrixRotationAxis({ 0.0f, 1.0f, 0.0f }, static_cast<float>(m_AnimationCounter) / 500.0f);
-	m_Instances[2].second = XMMatrixRotationAxis({ 0.0f, 1.0f, 0.0f }, static_cast<float>(m_AnimationCounter) / -500.0f) * XMMatrixTranslation(10.0f, -10.0f, 0.0f);;
-	m_Instances[3].second = XMMatrixRotationAxis({ 0.0f, 1.0f, 0.0f }, static_cast<float>(m_AnimationCounter) / -500.0f) * XMMatrixTranslation(-10.0f, -10.0f, 0.0f);;
+	m_Instances[1].second = XMMatrixRotationAxis({ 0.0f, 1.0f, 0.0f }, static_cast<float>(m_AnimationCounter) / 1000.0f);
+	m_Instances[2].second = XMMatrixRotationAxis({ 0.0f, 1.0f, 0.0f }, static_cast<float>(m_AnimationCounter) / -1000.0f) * XMMatrixTranslation(10.0f, -10.0f, 0.0f);;
+	m_Instances[3].second = XMMatrixRotationAxis({ 0.0f, 1.0f, 0.0f }, static_cast<float>(m_AnimationCounter) / -1000.0f) * XMMatrixTranslation(-10.0f, -10.0f, 0.0f);;
 
 //	UpdateCameraBuffer();
 	UpdateObjectCBs();
@@ -1306,6 +1299,7 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> Renderer::CreateHitSignature()
 	rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_CBV, 0);
 	rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_CBV, 1);
 	rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_CBV, 2);
+	rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_CBV, 3);
 	rsc.AddHeapRangesParameter({ { 3, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2} });
 
 	return rsc.Generate(m_Device.Get(), true);
@@ -1482,6 +1476,7 @@ void Renderer::CreateShaderBindingTable()
 				(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(),
 				(void*)m_GlobalConstantBuffer->GetGPUVirtualAddress(),
 				(void*)perInstanceCB,
+				(void*)m_PostProcessConstantBuffer->GetGPUVirtualAddress(),
 				heapPointer
 				});
 
@@ -1492,6 +1487,7 @@ void Renderer::CreateShaderBindingTable()
 				(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(),
 				(void*)m_GlobalConstantBuffer->GetGPUVirtualAddress(),
 				(void*)perInstanceCB,
+				(void*)m_PostProcessConstantBuffer->GetGPUVirtualAddress(),
 				heapPointer
 				});
 		}
@@ -1502,6 +1498,7 @@ void Renderer::CreateShaderBindingTable()
 				(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(),
 				(void*)m_GlobalConstantBuffer->GetGPUVirtualAddress(),
 				(void*)perInstanceCB,
+				(void*)m_PostProcessConstantBuffer->GetGPUVirtualAddress(),
 				heapPointer
 				});
 
@@ -1512,103 +1509,12 @@ void Renderer::CreateShaderBindingTable()
 				(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(),
 				(void*)m_GlobalConstantBuffer->GetGPUVirtualAddress(),
 				(void*)perInstanceCB,
+				(void*)m_PostProcessConstantBuffer->GetGPUVirtualAddress(),
 				heapPointer
 				});
 
 		}
 	}
-
-	//m_SbtHelper.AddHitGroup(L"PlaneHitGroup", { (void*)boxSubmesh.VertexBufferGPU->GetGPUVirtualAddress(),(void*)boxSubmesh.IndexBufferGPU->GetGPUVirtualAddress(), (void*)m_topLevelASBuffers.pResult->GetGPUVirtualAddress(),
-	//(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(),  (void*)m_GlobalConstantBuffer->GetGPUVirtualAddress(), (void*)m_PerInstanceCBs[0]->GetGPUVirtualAddress(), heapPointer,
-	//(void*)boxSubmesh.VertexBufferGPU->GetGPUVirtualAddress(),
-	//(void*)boxSubmesh.IndexBufferGPU->GetGPUVirtualAddress() });
-	////m_SbtHelper.AddHitGroup(L"ShadowHitGroup", {});
-
-	//for (int i = 0; i < m_SkullCount - 1; i++)
-	//{
-	//	m_SbtHelper.AddHitGroup(L"HitGroup", { (void*)m_Geometries["skullGeo"]->VertexBufferGPU->GetGPUVirtualAddress(), (void*)m_Geometries["skullGeo"]->IndexBufferGPU->GetGPUVirtualAddress(), (void*)m_topLevelASBuffers.pResult->GetGPUVirtualAddress(),
-	//		(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(), (void*)m_GlobalConstantBuffer->GetGPUVirtualAddress(), (void*)m_PerInstanceCBs[i+1]->GetGPUVirtualAddress(), heapPointer,
-	//		(void*)boxSubmesh.VertexBufferGPU->GetGPUVirtualAddress(),
-	//		(void*)boxSubmesh.IndexBufferGPU->GetGPUVirtualAddress() });
-	//	//m_SbtHelper.AddHitGroup(L"ShadowHitGroup", {});
-
-
-	//};
-
-//	for (int i = 0; i < m_SphereCount; i++)
-//	{
-//		m_SbtHelper.AddHitGroup(L"HitGroup", { (void*)sphereSubmesh.VertexBufferGPU->GetGPUVirtualAddress(), (void*)sphereSubmesh.IndexBufferGPU->GetGPUVirtualAddress(), (void*)m_topLevelASBuffers.pResult->GetGPUVirtualAddress(),
-//			(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(), (void*)m_GlobalConstantBuffer->GetGPUVirtualAddress(), (void*)m_PerInstanceCBs[4]->GetGPUVirtualAddress(), heapPointer,
-//			(void*)boxSubmesh.VertexBufferGPU->GetGPUVirtualAddress(),
-//			(void*)boxSubmesh.IndexBufferGPU->GetGPUVirtualAddress() });
-//		m_SbtHelper.AddHitGroup(L"ShadowHitGroup", {});
-//
-//
-//	};
-//	m_SbtHelper.AddHitGroup(L"ReflectionHitGroup", { (void*)m_Geometries["skullGeo"]->VertexBufferGPU->GetGPUVirtualAddress(),(void*)m_Geometries["skullGeo"]->IndexBufferGPU->GetGPUVirtualAddress(), (void*)m_topLevelASBuffers.pResult->GetGPUVirtualAddress(),
-//	(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(),  (void*)m_GlobalConstantBuffer->GetGPUVirtualAddress(), (void*)m_PerInstanceCBs[5]->GetGPUVirtualAddress(), heapPointer,
-//	(void*)m_Geometries["skullGeo"]->VertexBufferGPU->GetGPUVirtualAddress(),
-//	(void*)m_Geometries["skullGeo"]->IndexBufferGPU->GetGPUVirtualAddress() });
-//	m_SbtHelper.AddHitGroup(L"ShadowHitGroup", {});
-//
-//	m_SbtHelper.AddHitGroup(L"PlaneHitGroup", { (void*)boxSubmesh.VertexBufferGPU->GetGPUVirtualAddress(),(void*)boxSubmesh.IndexBufferGPU->GetGPUVirtualAddress(), (void*)m_topLevelASBuffers.pResult->GetGPUVirtualAddress(),
-//	(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(),  (void*)m_GlobalConstantBuffer->GetGPUVirtualAddress(), (void*)m_PerInstanceCBs[0]->GetGPUVirtualAddress(), heapPointer,
-//	(void*)boxSubmesh.VertexBufferGPU->GetGPUVirtualAddress(),
-//	(void*)boxSubmesh.IndexBufferGPU->GetGPUVirtualAddress() });
-//	m_SbtHelper.AddHitGroup(L"ShadowHitGroup", {});
-//
-//
-//	for (int i = 0; i < m_SkullCount - 1; i++)
-//	{
-//		m_SbtHelper.AddHitGroup(L"HitGroup", { (void*)m_Geometries["skullGeo"]->VertexBufferGPU->GetGPUVirtualAddress(), (void*)m_Geometries["skullGeo"]->IndexBufferGPU->GetGPUVirtualAddress(), (void*)m_topLevelASBuffers.pResult->GetGPUVirtualAddress(),
-//			(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(), (void*)m_GlobalConstantBuffer->GetGPUVirtualAddress(), (void*)m_PerInstanceCBs[i+1]->GetGPUVirtualAddress(), heapPointer,
-//			(void*)boxSubmesh.VertexBufferGPU->GetGPUVirtualAddress(),
-//			(void*)boxSubmesh.IndexBufferGPU->GetGPUVirtualAddress() });
-//		m_SbtHelper.AddHitGroup(L"ShadowHitGroup", {});
-//
-//	};
-//
-//	for (int i = 0; i < m_SphereCount; i++)
-//	{
-//		m_SbtHelper.AddHitGroup(L"HitGroup", { (void*)sphereSubmesh.VertexBufferGPU->GetGPUVirtualAddress(), (void*)sphereSubmesh.IndexBufferGPU->GetGPUVirtualAddress(), (void*)m_topLevelASBuffers.pResult->GetGPUVirtualAddress(),
-//			(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(), (void*)m_GlobalConstantBuffer->GetGPUVirtualAddress(), (void*)m_PerInstanceCBs[4]->GetGPUVirtualAddress(), heapPointer,
-//			(void*)boxSubmesh.VertexBufferGPU->GetGPUVirtualAddress(),
-//			(void*)boxSubmesh.IndexBufferGPU->GetGPUVirtualAddress() });
-//		m_SbtHelper.AddHitGroup(L"ShadowHitGroup", {});
-//
-//	};
-//	m_SbtHelper.AddHitGroup(L"PlaneHitGroup", { (void*)m_Geometries["skullGeo"]->VertexBufferGPU->GetGPUVirtualAddress(),(void*)m_Geometries["skullGeo"]->IndexBufferGPU->GetGPUVirtualAddress(), (void*)m_topLevelASBuffers.pResult->GetGPUVirtualAddress(),
-//		(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(),  (void*)m_GlobalConstantBuffer->GetGPUVirtualAddress(), (void*)m_PerInstanceCBs[m_PerInstanceCBs.size() - 1]->GetGPUVirtualAddress(), heapPointer });
-//	m_SbtHelper.AddHitGroup(L"ShadowHitGroup", {});
-//
-//	m_SbtHelper.AddHitGroup(L"ReflectionHitGroup", { (void*)m_Geometries["skullGeo"]->VertexBufferGPU->GetGPUVirtualAddress(),(void*)m_Geometries["skullGeo"]->IndexBufferGPU->GetGPUVirtualAddress(), (void*)m_topLevelASBuffers.pResult->GetGPUVirtualAddress(),
-//(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(),  (void*)m_GlobalConstantBuffer->GetGPUVirtualAddress(), (void*)m_PerInstanceCBs[5]->GetGPUVirtualAddress(), heapPointer,
-//(void*)m_Geometries["skullGeo"]->VertexBufferGPU->GetGPUVirtualAddress(),
-//(void*)m_Geometries["skullGeo"]->IndexBufferGPU->GetGPUVirtualAddress() });
-//	
-	//for (int i = 0; i < m_PerInstanceCBCount; i++)
-	/*{
-
-	}*/
-
-
-	//for (int i = 0; i < m_SkullCount; i++)
-	//{
-	//	m_SbtHelper.AddHitGroup(L"HitGroup", { (void*)m_Geometries["skullGeo"]->VertexBufferGPU->GetGPUVirtualAddress(), (void*)m_Geometries["skullGeo"]->IndexBufferGPU->GetGPUVirtualAddress(), (void*)m_topLevelASBuffers.pResult->GetGPUVirtualAddress(),
-	//		(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(), (void*)m_GlobalConstantBuffer->GetGPUVirtualAddress(), (void*)m_PerInstanceCBs[i]->GetGPUVirtualAddress(), heapPointer,
-	//		(void*)boxSubmesh.VertexBufferGPU->GetGPUVirtualAddress(),
-	//		(void*)boxSubmesh.IndexBufferGPU->GetGPUVirtualAddress() });
-	//}
-
-	//for (int i = 0; i < m_SphereCount; i++)
-	//{
-	//	m_SbtHelper.AddHitGroup(L"HitGroup", { (void*)sphereSubmesh.VertexBufferGPU->GetGPUVirtualAddress(), (void*)sphereSubmesh.IndexBufferGPU->GetGPUVirtualAddress(), (void*)m_topLevelASBuffers.pResult->GetGPUVirtualAddress(),
-	//		(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(), (void*)m_GlobalConstantBuffer->GetGPUVirtualAddress(), (void*)m_PerInstanceCBs[i]->GetGPUVirtualAddress(), heapPointer,
-	//		(void*)boxSubmesh.VertexBufferGPU->GetGPUVirtualAddress(),
-	//		(void*)boxSubmesh.IndexBufferGPU->GetGPUVirtualAddress() });
-	//}
-
-
 
 	uint32_t sbtSize = m_SbtHelper.ComputeSBTSize();
 
@@ -1860,6 +1766,24 @@ void Renderer::CreateGlobalConstantBuffer()
 	ThrowIfFailed(m_GlobalConstantBuffer->Map(0, nullptr, (void**)&pData));
 	memcpy(pData, bufferData, sizeof(bufferData));
 	m_GlobalConstantBuffer->Unmap(0, nullptr);
+}
+
+void Renderer::CreatePostProcessConstantBuffer()
+{
+	m_PostProcessData.Exposure = 0.0f;
+	m_PostProcessData.ToneMapMode = 1;
+	m_PostProcessData.DebugMode = 0;
+	m_PostProcessData.pad = 1.0f;
+
+	m_PostProcessConstantBuffer = nv_helpers_dx12::CreateBuffer(
+		m_Device.Get(), sizeof(m_PostProcessData), D3D12_RESOURCE_FLAG_NONE,
+		D3D12_RESOURCE_STATE_GENERIC_READ, nv_helpers_dx12::kUploadHeapProps);
+
+	uint8_t* pData;
+	ThrowIfFailed(m_PostProcessConstantBuffer->Map(0, nullptr, (void**)&pData));
+	memcpy(pData, (void*)&m_PostProcessData, sizeof(m_PostProcessData));
+	m_PostProcessConstantBuffer->Unmap(0, nullptr);
+
 }
 
 void Renderer::CreatePerInstanceBuffers()

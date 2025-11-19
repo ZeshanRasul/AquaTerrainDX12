@@ -236,6 +236,10 @@ private:
 	void CreateGlobalConstantBuffer();
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_GlobalConstantBuffer;
 
+	void CreatePostProcessConstantBuffer();
+	PostProcessData m_PostProcessData;
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_PostProcessConstantBuffer;
+
 	uint32_t m_AnimationCounter = 0;
 
 	void CreatePerInstanceBuffers();
