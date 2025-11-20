@@ -244,10 +244,10 @@ void Renderer::Draw(bool useRaster)
 	{
 		ThrowIfFailed(m_CommandList->Reset(cmdListAlloc.Get(), m_PipelineStateObjects["opaque"].Get()));
 	}
-	D3D12_RESOURCE_BARRIER pBarriers[2] = {};
-	pBarriers[0] = CD3DX12_RESOURCE_BARRIER::Transition(m_GBufferAlbedoMetal.Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
-	pBarriers[1] = CD3DX12_RESOURCE_BARRIER::Transition(m_GBufferNormalRough.Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
-	m_CommandList->ResourceBarrier(2, pBarriers);
+	D3D12_RESOURCE_BARRIER pBarriers[1] = {};
+	pBarriers[0] = CD3DX12_RESOURCE_BARRIER::Transition(m_GBufferAlbedoMetal.Get(), D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	//pBarriers[1] = CD3DX12_RESOURCE_BARRIER::Transition(m_GBufferNormalRough.Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	m_CommandList->ResourceBarrier(1, pBarriers);
 
 	m_CommandList->RSSetViewports(1, &vp);
 
@@ -256,13 +256,16 @@ void Renderer::Draw(bool useRaster)
 
 	m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
 
-	pBarriers[0] = CD3DX12_RESOURCE_BARRIER::Transition(m_GBufferAlbedoMetal.Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-	pBarriers[1] = CD3DX12_RESOURCE_BARRIER::Transition(m_GBufferNormalRough.Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-	m_CommandList->ResourceBarrier(2, pBarriers);
-	
+	//pBarriers[0] = CD3DX12_RESOURCE_BARRIER::Transition(m_GBufferAlbedoMetal.Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	//pBarriers[1] = CD3DX12_RESOURCE_BARRIER::Transition(m_GBufferNormalRough.Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	//m_CommandList->ResourceBarrier(2, pBarriers);
+
 	D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = m_RtvHeap->GetCPUDescriptorHandleForHeapStart();
 
-	m_CommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
+	rtvHandle.ptr += (2 * m_RtvDescriptorSize);
+
+	m_CommandList->OMSetRenderTargets(1, &rtvHandle, true, &DepthStencilView());
+
 
 	if (true)
 	{
@@ -272,9 +275,9 @@ void Renderer::Draw(bool useRaster)
 
 		m_CommandList->ClearDepthStencilView(DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 		rtvHandle = m_RtvHeap->GetCPUDescriptorHandleForHeapStart();
+		rtvHandle.ptr += (2 * m_RtvDescriptorSize);
+		m_CommandList->ClearRenderTargetView(rtvHandle, DirectX::Colors::LightSteelBlue, 0, nullptr);
 		m_CommandList->ClearRenderTargetView(CurrentBackBufferView(), DirectX::Colors::LightSteelBlue, 0, nullptr);
-	//	rtvHandle.ptr += m_RtvDescriptorSize;
-	//	m_CommandList->ClearRenderTargetView(CurrentBackBufferView(), DirectX::Colors::LightSteelBlue, 0, nullptr);
 		m_CommandList->SetGraphicsRootSignature(m_RootSignature.Get());
 
 		auto passCB = m_CurrentFrameResource->PassCB->Resource();
@@ -283,6 +286,19 @@ void Renderer::Draw(bool useRaster)
 
 		DrawRenderItems(m_CommandList.Get(), m_OpaqueRenderItems);
 		ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), m_CommandList.Get());
+
+		rtvHandle = m_RtvHeap->GetCPUDescriptorHandleForHeapStart();
+
+		rtvHandle.ptr += (2 * m_RtvDescriptorSize);
+
+
+		pBarriers[0] = CD3DX12_RESOURCE_BARRIER::Transition(m_GBufferAlbedoMetal.Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_COPY_SOURCE);
+		m_CommandList->ResourceBarrier(1, pBarriers);
+		m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_COPY_DEST));
+		m_CommandList->CopyResource(CurrentBackBuffer(), m_GBufferAlbedoMetal.Get());
+		CD3DX12_RESOURCE_BARRIER transition = CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_RENDER_TARGET);
+		m_CommandList->ResourceBarrier(1, &transition);
+
 		m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
 
 		//	m_CommandList->IASetVertexBuffers(0, 1, &m_PlaneBufferView);
