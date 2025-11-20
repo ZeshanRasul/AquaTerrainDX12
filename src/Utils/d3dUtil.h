@@ -88,6 +88,8 @@ inline std::wstring AnsiToWString(const std::string& str)
 #endif
     */
 
+struct Material;
+
 class d3dUtil
 {
 public:
@@ -168,6 +170,10 @@ struct SubmeshGeometry
     Microsoft::WRL::ComPtr<ID3D12Resource> VertexBufferUploader = nullptr;
     Microsoft::WRL::ComPtr<ID3D12Resource> IndexBufferUploader = nullptr;
 
+    UINT ObjCBIndex;
+    Material* Material;
+
+    DirectX::XMMATRIX World;
     // Bounding box of the geometry defined by this submesh. 
     // This is used in later chapters of the book.
     DirectX::BoundingBox Bounds;

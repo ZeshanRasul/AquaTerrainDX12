@@ -329,9 +329,9 @@ void Renderer::Draw(bool useRaster)
 
 	CreateTopLevelAS(m_Instances, true);
 
-//	m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_COPY_DEST));
+	//	m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_COPY_DEST));
 
-	//	m_CommandList->SetDescriptorHeaps(static_cast<UINT>(heaps.size()), heaps.data());
+		//	m_CommandList->SetDescriptorHeaps(static_cast<UINT>(heaps.size()), heaps.data());
 
 	CD3DX12_RESOURCE_BARRIER transition = CD3DX12_RESOURCE_BARRIER::Transition(m_OutputResource.Get(), D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 	m_CommandList->ResourceBarrier(1, &transition);
@@ -375,7 +375,7 @@ void Renderer::Draw(bool useRaster)
 	transition = CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PRESENT);
 	m_CommandList->ResourceBarrier(1, &transition);
 
-//	m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
+	//	m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
 
 	pBarriers[0] = CD3DX12_RESOURCE_BARRIER::Transition(m_GBufferAlbedoMetal.Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_PRESENT);
 	pBarriers[1] = CD3DX12_RESOURCE_BARRIER::Transition(m_GBufferNormalRough.Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_PRESENT);
@@ -621,6 +621,17 @@ void Renderer::CreateDepthStencilView()
 	m_Device->CreateDepthStencilView(m_DepthStencilBuffer.Get(), &dsvDesc, DepthStencilView());
 
 	m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_DepthStencilBuffer.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE));
+}
+
+void Renderer::CreateIndexBufferView(const SubmeshGeometry& sg)
+{
+	m_IbView.BufferLocation = sg.IndexBufferGPU->GetGPUVirtualAddress();
+	m_IbView.Format = DXGI_FORMAT_R32_UINT;
+	m_IbView.SizeInBytes = sg.IndexCount * sizeof(uint32_t);
+
+	D3D12_INDEX_BUFFER_VIEW indexBuffers[1] = { m_IbView };
+	m_CommandList->IASetIndexBuffer(indexBuffers);
+
 }
 
 void Renderer::CreateIndexBufferView()
@@ -1093,23 +1104,22 @@ void Renderer::BuildSkullGeometry()
 
 void Renderer::BuildRenderItems()
 {
-	auto gridRitem = std::make_unique<RenderItem>();
-	gridRitem->World = MathHelper::Identity4x4();
-	XMStoreFloat4x4(&gridRitem->TexTransform, XMMatrixScaling(8.0f, 1.0f, .0f));
-	gridRitem->ObjCBIndex = 0;
-	gridRitem->Mat = m_Materials["tile0"].get();
-	gridRitem->Geo = m_Geometries["shapeGeo"].get();
-	gridRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	gridRitem->IndexCount = gridRitem->Geo->DrawArgs["grid"].IndexCount;
-	gridRitem->StartIndexLocation = gridRitem->Geo->DrawArgs["grid"].StartIndexLocation;
-	gridRitem->BaseVertexLocation = gridRitem->Geo->DrawArgs["grid"].BaseVertexLocation;
-	m_AllRenderItems.push_back(std::move(gridRitem));
+	//auto gridRitem = std::make_unique<RenderItem>();
+	//gridRitem->World = MathHelper::Identity4x4();
+	//XMStoreFloat4x4(&gridRitem->TexTransform, XMMatrixScaling(8.0f, 1.0f, .0f));
+	//gridRitem->ObjCBIndex = 0;
+	//gridRitem->Mat = m_Materials["tile0"].get();
+	//gridRitem->Geo = m_Geometries["shapeGeo"].get();
+	//gridRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	//gridRitem->IndexCount = gridRitem->Geo->DrawArgs["grid"].IndexCount;
+	//gridRitem->StartIndexLocation = gridRitem->Geo->DrawArgs["grid"].StartIndexLocation;
+	//gridRitem->BaseVertexLocation = gridRitem->Geo->DrawArgs["grid"].BaseVertexLocation;
+	//m_AllRenderItems.push_back(std::move(gridRitem));
 
 	auto boxRitem = std::make_unique<RenderItem>();
 	XMStoreFloat4x4(&boxRitem->World, XMMatrixScaling(2.0f, 2.0f, 2.0f) * XMMatrixTranslation(0.0f, 0.5f, 0.0f));
-	XMStoreFloat4x4(&boxRitem->TexTransform, XMMatrixScaling(1.0f, 1.0f, 1.0f));
-	boxRitem->ObjCBIndex = 1;
-	boxRitem->Mat = m_Materials["stone0"].get();
+	boxRitem->ObjCBIndex = 0;
+	boxRitem->Mat = m_Materials["box"].get();
 	boxRitem->Geo = m_Geometries["shapeGeo"].get();
 	boxRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 	boxRitem->IndexCount = boxRitem->Geo->DrawArgs["box"].IndexCount;
@@ -1204,22 +1214,35 @@ void Renderer::DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::ve
 	auto objectCB = m_CurrentFrameResource->ObjectCB->Resource();
 	auto matCB = m_CurrentFrameResource->MaterialCB->Resource();
 
-	for (size_t i = 0; i < riItems.size(); ++i)
-	{
-		auto ri = riItems[i];
+	//for (size_t i = 0; i < riItems.size(); ++i)
+	//{
+	//	auto ri = riItems[i];
+	//
+	//	cmdList->IASetVertexBuffers(0, 1, &ri->Geo->VertexBufferView());
+	//	cmdList->IASetIndexBuffer(&ri->Geo->IndexBufferView());
+	//	cmdList->IASetPrimitiveTopology(ri->PrimitiveType);
+	//
+	//	D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objectCB->GetGPUVirtualAddress() + ri->ObjCBIndex * objCBByteSize;
+	//	D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = matCB->GetGPUVirtualAddress() + ri->Mat->MatCBIndex * matCBByteSize;
+	//
+	//	cmdList->SetGraphicsRootConstantBufferView(0, objCBAddress);
+	//	cmdList->SetGraphicsRootConstantBufferView(1, matCBAddress);
+	//
+	//	cmdList->DrawIndexedInstanced(ri->IndexCount, 1, ri->StartIndexLocation, ri->BaseVertexLocation, 0);
+	//}
 
-		cmdList->IASetVertexBuffers(0, 1, &ri->Geo->VertexBufferView());
-		cmdList->IASetIndexBuffer(&ri->Geo->IndexBufferView());
-		cmdList->IASetPrimitiveTopology(ri->PrimitiveType);
+	CreateVertexBufferView(boxSubmesh);
+	CreateIndexBufferView(boxSubmesh);
+	cmdList->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-		D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objectCB->GetGPUVirtualAddress() + ri->ObjCBIndex * objCBByteSize;
-		D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = matCB->GetGPUVirtualAddress() + ri->Mat->MatCBIndex * matCBByteSize;
+	D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objectCB->GetGPUVirtualAddress() + m_AllRenderItems[0]->ObjCBIndex * objCBByteSize;
+	D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = matCB->GetGPUVirtualAddress() + 0 * matCBByteSize;
 
-		cmdList->SetGraphicsRootConstantBufferView(0, objCBAddress);
-		cmdList->SetGraphicsRootConstantBufferView(1, matCBAddress);
+	cmdList->SetGraphicsRootConstantBufferView(0, objCBAddress);
+	cmdList->SetGraphicsRootConstantBufferView(1, matCBAddress);
 
-		cmdList->DrawIndexedInstanced(ri->IndexCount, 1, ri->StartIndexLocation, ri->BaseVertexLocation, 0);
-	}
+	cmdList->DrawIndexedInstanced(boxSubmesh.IndexCount, 1, boxSubmesh.StartIndexLocation, boxSubmesh.BaseVertexLocation, 0);
+
 }
 
 void Renderer::BuildPSOs()
@@ -1281,9 +1304,17 @@ void Renderer::UpdateObjectCBs()
 
 			currObjectCB->CopyData(e->ObjCBIndex, objConstants);
 
+			currObjectCB->CopyData(e->ObjCBIndex, objConstants);
 			e->NumFramesDirty--;
 		}
 	}
+	/*boxSubmesh.World = XMMatrixScaling(50.0f, 5.0f, 50.0f) * XMMatrixTranslation(0.0f, -50.0f, 0.0f);
+	XMMATRIX world = boxSubmesh.World;
+	boxSubmesh.ObjCBIndex = 0;
+	ObjectConstants objConstants;
+	XMStoreFloat4x4(&objConstants.WorldViewProj, XMMatrixTranspose(world));*/
+
+
 }
 void Renderer::UpdateMaterialCBs()
 {
@@ -1362,6 +1393,17 @@ void Renderer::CreateVertexBufferView()
 
 	D3D12_VERTEX_BUFFER_VIEW vertexBuffers[1] = { m_VbView };
 	m_CommandList->IASetVertexBuffers(0, 1, vertexBuffers);
+}
+
+void Renderer::CreateVertexBufferView(const SubmeshGeometry& sg)
+{
+	m_VbView.BufferLocation = sg.VertexBufferGPU->GetGPUVirtualAddress();
+	m_VbView.StrideInBytes = sizeof(Vertex);
+	m_VbView.SizeInBytes = sg.VertexCount * sg.VertexByteStride;
+
+	D3D12_VERTEX_BUFFER_VIEW vertexBuffers[1] = { m_VbView };
+	m_CommandList->IASetVertexBuffers(0, 1, vertexBuffers);
+
 }
 
 void Renderer::FlushCommandQueue()

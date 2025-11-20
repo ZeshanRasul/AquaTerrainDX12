@@ -41,8 +41,10 @@ private:
 
 	void CreateVertexBuffer();
 	void CreateVertexBufferView();
+	void CreateVertexBufferView(const SubmeshGeometry& sg);
 
 	void CreateIndexBuffer();
+	void CreateIndexBufferView(const SubmeshGeometry& sg);
 	void CreateIndexBufferView();
 
 	void CreateCbvDescriptorHeaps();
@@ -150,6 +152,7 @@ private:
 	XMFLOAT3 m_EyePos;
 
 	std::vector<std::unique_ptr<RenderItem>> m_AllRenderItems;
+	std::vector<std::unique_ptr<SubmeshGeometry>> m_RenderGeometry;
 
 	std::vector<RenderItem*> m_OpaqueRenderItems;
 	std::vector<RenderItem*> m_TransparentRenderItems;
