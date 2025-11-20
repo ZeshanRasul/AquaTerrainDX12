@@ -298,7 +298,7 @@ void Renderer::Draw(bool useRaster)
 	m_CommandQueue->ExecuteCommandLists(_countof(cmdLists2), cmdLists2);
 
 	//	ThrowIfFailed(m_SwapChain->Present(0, 0));
-	m_CurrentBackBuffer = (m_CurrentBackBuffer + 1) % SwapChainBufferCount;
+	//m_CurrentBackBuffer = (m_CurrentBackBuffer + 1) % SwapChainBufferCount;
 
 	m_CurrentFrameResource->Fence = ++m_CurrentFence;
 
