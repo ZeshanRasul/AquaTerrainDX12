@@ -209,9 +209,9 @@ void Renderer::Update(float dt, Camera& cam)
 	}
 
 	m_AnimationCounter++;
-//	m_Instances[1].second = XMMatrixRotationAxis({ 0.0f, 1.0f, 0.0f }, static_cast<float>(m_AnimationCounter) / 1000.0f);
-//	m_Instances[2].second = XMMatrixRotationAxis({ 0.0f, 1.0f, 0.0f }, static_cast<float>(m_AnimationCounter) / -1000.0f) * XMMatrixTranslation(10.0f, -10.0f, 0.0f);;
-//	m_Instances[3].second = XMMatrixRotationAxis({ 0.0f, 1.0f, 0.0f }, static_cast<float>(m_AnimationCounter) / -1000.0f) * XMMatrixTranslation(-10.0f, -10.0f, 0.0f);;
+	m_Instances[1].second = XMMatrixRotationAxis({ 0.0f, 1.0f, 0.0f }, static_cast<float>(m_AnimationCounter) / 1000.0f);
+	m_Instances[2].second = XMMatrixRotationAxis({ 0.0f, 1.0f, 0.0f }, static_cast<float>(m_AnimationCounter) / -1000.0f) * XMMatrixTranslation(10.0f, -10.0f, 0.0f);;
+	m_Instances[3].second = XMMatrixRotationAxis({ 0.0f, 1.0f, 0.0f }, static_cast<float>(m_AnimationCounter) / -1000.0f) * XMMatrixTranslation(-10.0f, -10.0f, 0.0f);;
 
 	//	UpdateCameraBuffer();
 	UpdateObjectCBs();
@@ -277,9 +277,11 @@ void Renderer::Draw(bool useRaster)
 	rtvHandle = m_RtvHeap->GetCPUDescriptorHandleForHeapStart();
 	rtvHandle.ptr += (m_RtvDescriptorSize);
 	rtvHandle.ptr += (m_RtvDescriptorSize);
-	m_CommandList->ClearRenderTargetView(rtvHandle, DirectX::Colors::LightSteelBlue, 0, nullptr);
+	FLOAT colour[4] = { 0.22f, 0.33f, 0.44f, 0.f };
+
+	m_CommandList->ClearRenderTargetView(rtvHandle, colour, 0, nullptr);
 	rtvHandle.ptr += (m_RtvDescriptorSize);
-	m_CommandList->ClearRenderTargetView(rtvHandle, DirectX::Colors::LightSteelBlue, 0, nullptr);
+	m_CommandList->ClearRenderTargetView(rtvHandle, colour, 0, nullptr);
 	m_CommandList->SetGraphicsRootSignature(m_RootSignature.Get());
 
 	auto passCB = m_CurrentFrameResource->PassCB->Resource();
@@ -293,29 +295,29 @@ void Renderer::Draw(bool useRaster)
 	//pBarriers[1] = CD3DX12_RESOURCE_BARRIER::Transition(m_GBufferNormalRough.Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 	//m_CommandList->ResourceBarrier(2, pBarriers);
 
-	ThrowIfFailed(m_CommandList->Close());
-	ID3D12CommandList* cmdLists2[] = { m_CommandList.Get() };
-	m_CommandQueue->ExecuteCommandLists(_countof(cmdLists2), cmdLists2);
-
-	//	ThrowIfFailed(m_SwapChain->Present(0, 0));
-	//m_CurrentBackBuffer = (m_CurrentBackBuffer + 1) % SwapChainBufferCount;
-
-	m_CurrentFrameResource->Fence = ++m_CurrentFence;
-
-	m_CommandQueue->Signal(m_Fence.Get(), m_CurrentFence);
-
-	cmdListAlloc = m_CurrentFrameResource->CmdListAlloc;
-
-	ThrowIfFailed(cmdListAlloc->Reset());
-
-	if (m_IsWireframe)
-	{
-		ThrowIfFailed(m_CommandList->Reset(cmdListAlloc.Get(), m_PipelineStateObjects["opaque_wireframe"].Get()));
-	}
-	else
-	{
-		ThrowIfFailed(m_CommandList->Reset(cmdListAlloc.Get(), m_PipelineStateObjects["opaque"].Get()));
-	}
+	//ThrowIfFailed(m_CommandList->Close());
+	//ID3D12CommandList* cmdLists2[] = { m_CommandList.Get() };
+	//m_CommandQueue->ExecuteCommandLists(_countof(cmdLists2), cmdLists2);
+	//
+	////	ThrowIfFailed(m_SwapChain->Present(0, 0));
+	////m_CurrentBackBuffer = (m_CurrentBackBuffer + 1) % SwapChainBufferCount;
+	//
+	//m_CurrentFrameResource->Fence = ++m_CurrentFence;
+	//
+	//m_CommandQueue->Signal(m_Fence.Get(), m_CurrentFence);
+	//
+	//cmdListAlloc = m_CurrentFrameResource->CmdListAlloc;
+	//
+	//ThrowIfFailed(cmdListAlloc->Reset());
+	//
+	//if (m_IsWireframe)
+	//{
+	//	ThrowIfFailed(m_CommandList->Reset(cmdListAlloc.Get(), m_PipelineStateObjects["opaque_wireframe"].Get()));
+	//}
+	//else
+	//{
+	//	ThrowIfFailed(m_CommandList->Reset(cmdListAlloc.Get(), m_PipelineStateObjects["opaque"].Get()));
+	//}
 
 
 	pBarriers[0] = CD3DX12_RESOURCE_BARRIER::Transition(m_GBufferAlbedoMetal.Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
@@ -325,7 +327,7 @@ void Renderer::Draw(bool useRaster)
 
 
 
-//	CreateTopLevelAS(m_Instances, true);
+	CreateTopLevelAS(m_Instances, true);
 
 //	m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_COPY_DEST));
 
