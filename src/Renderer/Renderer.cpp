@@ -1759,27 +1759,27 @@ void Renderer::CreateAccelerationStructures()
 
 	CreateTopLevelAS(m_Instances);
 
-	m_CommandList->Close();
-	ID3D12CommandList* ppCommandLists[] = { m_CommandList.Get() };
-	m_CommandQueue->ExecuteCommandLists(1, ppCommandLists);
-
-	m_FrameResources[m_CurrentFrameResourceIndex].get()->Fence++;
-	m_CommandQueue->Signal(m_Fence.Get(), m_FrameResources[m_CurrentFrameResourceIndex].get()->Fence);
-
-	ThrowIfFailed(m_CommandQueue->Signal(m_Fence.Get(), m_FrameResources[m_CurrentFrameResourceIndex].get()->Fence));
-
-	if (m_Fence->GetCompletedValue() < m_FrameResources[m_CurrentFrameResourceIndex].get()->Fence)
-	{
-		HANDLE eventHandle = CreateEventEx(nullptr, false, false, EVENT_ALL_ACCESS);
-
-		ThrowIfFailed(m_Fence->SetEventOnCompletion(m_FrameResources[m_CurrentFrameResourceIndex].get()->Fence, eventHandle));
-
-		WaitForSingleObject(eventHandle, INFINITE);
-		CloseHandle(eventHandle);
-	}
-
-
-	ThrowIfFailed(m_CommandList->Reset(m_CommandAllocator.Get(), m_PipelineStateObjects["opaque"].Get()));
+	//m_CommandList->Close();
+	//ID3D12CommandList* ppCommandLists[] = { m_CommandList.Get() };
+	//m_CommandQueue->ExecuteCommandLists(1, ppCommandLists);
+	//
+	//m_FrameResources[m_CurrentFrameResourceIndex].get()->Fence++;
+	//m_CommandQueue->Signal(m_Fence.Get(), m_FrameResources[m_CurrentFrameResourceIndex].get()->Fence);
+	//
+	//ThrowIfFailed(m_CommandQueue->Signal(m_Fence.Get(), m_FrameResources[m_CurrentFrameResourceIndex].get()->Fence));
+	//
+	//if (m_Fence->GetCompletedValue() < m_FrameResources[m_CurrentFrameResourceIndex].get()->Fence)
+	//{
+	//	HANDLE eventHandle = CreateEventEx(nullptr, false, false, EVENT_ALL_ACCESS);
+	//
+	//	ThrowIfFailed(m_Fence->SetEventOnCompletion(m_FrameResources[m_CurrentFrameResourceIndex].get()->Fence, eventHandle));
+	//
+	//	WaitForSingleObject(eventHandle, INFINITE);
+	//	CloseHandle(eventHandle);
+	//}
+	//
+	//
+	//ThrowIfFailed(m_CommandList->Reset(m_CommandAllocator.Get(), m_PipelineStateObjects["opaque"].Get()));
 
 	m_BottomLevelAS = bottomLevelBuffers.pResult;
 	m_PlaneBottomLevelAS = planeBottomLevelBuffers.pResult;
