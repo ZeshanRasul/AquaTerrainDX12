@@ -253,6 +253,157 @@ bool BuildLightSample(
     return true;
 }
 
+float3 CosineSampleHemisphere(float2 xi)
+{
+    float r = sqrt(xi.x);
+    float phi = 2.0f * 3.14159265f * xi.y;
+
+    float x = r * cos(phi);
+    float y = r * sin(phi);
+    float z = sqrt(1.0f - xi.x);
+
+    return float3(x, y, z);
+}
+
+float3x3 BuildTangentFrame(float3 N)
+{
+    float3 up = abs(N.y) < 0.999f ? float3(0, 1, 0) : float3(1, 0, 0);
+    float3 T = normalize(cross(up, N));
+    float3 B = cross(N, T);
+    return float3x3(T, B, N);
+}
+
+float3 SampleGGXVNDF(float3 V, float2 xi, float roughness)
+{
+    // Convert view to hemisphere coords
+    float3 Vh = normalize(float3(roughness * V.x, roughness * V.y, V.z));
+
+    // Build orthonormal basis
+    float lensq = Vh.x * Vh.x + Vh.y * Vh.y;
+    float3 T1 = lensq > 0.0f ? normalize(float3(-Vh.y, Vh.x, 0.0f)) : float3(1.0f, 0.0f, 0.0f);
+    float3 T2 = cross(Vh, T1);
+
+    // Sample point with polar coordinates
+    float r = sqrt(xi.x);
+    float phi = 2.0f * 3.14159265f * xi.y;
+    float t1 = r * cos(phi);
+    float t2 = r * sin(phi);
+    float s = 0.5f * (1.0f + Vh.z);
+    t2 = (1.0f - s) * sqrt(1.0f - t1 * t1) + s * t2;
+
+    // Compute sampled normal
+    float3 Nh = t1 * T1 + t2 * T2 + sqrt(max(0.0f, 1.0f - t1 * t1 - t2 * t2)) * Vh;
+
+    // Transform back
+    float3 N = normalize(float3(roughness * Nh.x, roughness * Nh.y, max(0.0f, Nh.z)));
+
+    return N;
+}
+
+float GGX_G1(float3 N, float3 V, float alpha)
+{
+    float NdotV = saturate(dot(N, V));
+    float a = alpha;
+    float a2 = a * a;
+
+    float lambda = NdotV == 0.0f ? 0.0f :
+        (-1.0f + sqrt(1.0f + (a2 - 1.0f) * (1.0f - NdotV * NdotV) / (NdotV * NdotV))) * 0.5f;
+
+    return 1.0f / (1.0f + lambda);
+}
+
+float GGX_PDF(float3 N, float3 V, float3 L, float roughness)
+{
+    float3 H = normalize(V + L);
+    float NdotH = saturate(dot(N, H));
+    float alpha = RoughnessToAlpha(roughness);
+    float D = GGX_D(NdotH, alpha);
+    float G1V = GGX_G1(N, V, alpha);
+
+    float VdotH = saturate(dot(V, H));
+    float LdotH = saturate(dot(L, H));
+
+    // Convert from half-vector pdf to direction pdf
+    float pdf = (D * G1V * VdotH) / (4.0f * LdotH);
+
+    return pdf;
+}
+
+//float3 ComputeIndirectGI(float3 worldPos,
+//                         float3 N,
+//                         float3 V,
+//                         Material mat,
+//                         inout uint rng)
+//{
+//   // float2 xi = Random2D(rng);
+
+//    float3 L;
+//    float pdf;
+
+//    uint pixelSeed = (DispatchRaysIndex().x * 73856093u) ^
+//                 (DispatchRaysIndex().y * 19349663u);
+        
+//    float2 xi = SampleHammersley(4, 8, pixelSeed, 3);
+    
+//    // Mix diffuse and glossy sampling
+    
+//    float roughness = 1 - mat.Shininess;
+    
+//    float specWeight = saturate(mat.metallic);
+//    if (xi.x < specWeight)
+//    {
+//        float3 H = SampleGGXVNDF(V, xi, roughness);
+//        L = reflect(-V, H);
+//        pdf = GGX_PDF(N, V, L, roughness);
+//    }
+//    else
+//    {
+//        float3 Ts = CosineSampleHemisphere(xi);
+//        float3x3 frame = BuildTangentFrame(N);
+//        L = normalize(mul(Ts, frame));
+//        pdf = saturate(dot(N, L)) / 3.14159265f;
+//    }
+    
+//    float3 H = normalize(V + L);
+
+//    // Trace the indirect ray
+//    HitInfo giHit;
+//    giHit.isHit = false;
+//    RayDesc giRay;
+//    giRay.Origin = worldPos + N * 0.001f; // bias to avoid self-shadowing
+//    giRay.Direction = L;
+//    giRay.TMin = 0.01f;
+//    giRay.TMax = 100000.0f;
+    
+//    TraceRay(SceneBVH,
+//             RAY_FLAG_NONE,
+//             0xFF,
+//             0, 3, 0,
+//             worldPos, 
+//             L,
+//             giRay,
+//             giHit);
+
+//    if (!giHit.isHit)
+//        return 0.0f;
+
+//    float3 Li = giHit.colorAndDistance.xyz; // returned shading
+    
+//    float NdotV = saturate(dot(N, V));
+//    float NdotL = saturate(dot(N, L));
+//    float LdotH = saturate(dot(L, H));
+    
+//    float3 f = DisneyDiffuse(NdotV, NdotL, LdotH, roughness);
+
+    
+
+//    if (NdotL <= 0.0f)
+//        return 0.0f;
+
+//    // Monte Carlo estimator
+//    return (Li * f * NdotL) / pdf;
+//}
+
 
 float3 SchlickFresnel(float3 R0, float3 normal, float3 lightVec)
 {
@@ -356,7 +507,7 @@ void ClosestHit(inout HitInfo payload, Attributes attrib)
 
         Lo += f * Li * NdotL;
     }
-    
+     
     float3 radiance = 0.0;
     radiance += Lo;
 
@@ -365,9 +516,10 @@ void ClosestHit(inout HitInfo payload, Attributes attrib)
     radiance = PostProcess(radiance);
     
     payload.eta = materials[materialIndex].Ior;
+ //   payload.isHit = true;
     if (payload.depth >= 5)
     {
-        payload.colorAndDistance = float4(radiance, RayTCurrent());
+        payload.colorAndDistance = float4(payload.colorAndDistance.xyz += radiance, RayTCurrent());
         return;
     }
 
@@ -405,11 +557,92 @@ void PlaneClosestHit(inout HitInfo payload, Attributes attrib)
     //float3 lit = ComputeDirectionalLight(L, nObj, toEye, materials[materialIndex]);
 
     float3 toLight = normalize(-L.Direction);
+   // float3 finalColor;
+    
+    float3 LightDir;
+    float pdf;
+
+    uint pixelSeed = (DispatchRaysIndex().x * 73856093u) ^
+                 (DispatchRaysIndex().y * 19349663u);
+        
+    float2 xi = SampleHammersley(0, 8, pixelSeed, 4);
+    
+    // Mix diffuse and glossy sampling
+    
+    float roughness = 1 - materials[materialIndex].Shininess;
+    
+    float specWeight = saturate(materials[materialIndex].metallic);
+    if (xi.x < specWeight)
+    {
+        float3 H = SampleGGXVNDF(V, xi, roughness);
+        LightDir = reflect(-V, H);
+        pdf = GGX_PDF(N, V, LightDir, roughness);
+    }
+    else
+    {
+        float3 Ts = CosineSampleHemisphere(xi);
+        float3x3 frame = BuildTangentFrame(N);
+        LightDir = normalize(mul(Ts, frame));
+        pdf = saturate(dot(N, LightDir)) / 3.14159265f;
+    }
+    
+    float3 H = normalize(V + LightDir);
+   
+    payload.depth++;
+    payload.eta = materials[materialIndex].Ior;
+    HitInfo giHit;
+    giHit.depth = payload.depth;
+  //  giHit.isHit = false;
+    giHit.colorAndDistance = (1.0, 0.0, 1.0, 1.0);
+    RayDesc giRay;
+    giRay.Origin = pW + N * 0.001f; // bias to avoid self-shadowing
+    giRay.Direction = LightDir;
+    giRay.TMin = 0.01f;
+    giRay.TMax = 10000.0f;
+    
+         
+    if (payload.depth <= 5)
+    {
+        TraceRay(SceneBVH,
+             RAY_FLAG_NONE,
+             0xFF,
+             2, 3, 0,
+             giRay,
+             giHit);
 
         
-    float3 Lo = 0.0;
+    }
+
+    float NdotV = saturate(dot(N, V));
+    float NdotL = saturate(dot(N, LightDir));
+    float LdotH = saturate(dot(LightDir, H));
     
-    for (int i = 0; i < 1; ++i)
+    float3 f = DisneyDiffuse(NdotV, NdotL, LdotH, roughness);
+    float3 Lid = giHit.colorAndDistance.xyz;
+
+    float3 indirectGI = { 0.0, 0.0, 0.0 };
+    indirectGI = (Lid * f * NdotL) / pdf;
+   // payload.colorAndDistance = float4(indirectGI, RayTCurrent());
+   // return;
+   
+ //   if (!giHit.isHit)
+ //       indirectGI = 0.0f;
+    
+    if (NdotL <= 0.0f)
+        indirectGI = 0.0f;
+    
+  //  float3 finalColor = indirectGI;
+    
+    if (giHit.depth >= 6 || payload.depth >= 6)
+    {
+     //   payload.colorAndDistance.xyz += PostProcess(finalColor);
+        payload.colorAndDistance = float4(payload.colorAndDistance.xyz, RayTCurrent());
+        return;
+    }
+    float3 Lo = 0.0;
+    float3 radiance = 0.0;
+    
+    for (int i = 0; i < 1; i++)
     {
         float3 L;
         float3 Li = 0.0;
@@ -446,10 +679,8 @@ void PlaneClosestHit(inout HitInfo payload, Attributes attrib)
         Lo += f * Li * NdotL;
     }
     
-    float3 radiance = 0.0;
     radiance += Lo;
 
-//    radiance = PostProcess(radiance);
     
     float3 areaLightContribution = float3(0, 0, 0);
     uint samples = 32;
@@ -468,7 +699,7 @@ void PlaneClosestHit(inout HitInfo payload, Attributes attrib)
         float3 dir = toLight / dist;
 
         RayDesc shadowRay;
-        shadowRay.Origin = pW + nObj * 0.001f; // bias to avoid self-shadowing
+        shadowRay.Origin = pW + N * 0.001f; // bias to avoid self-shadowing
         shadowRay.Direction = dir;
         shadowRay.TMin = 0.01f;
         shadowRay.TMax = dist;
@@ -476,26 +707,25 @@ void PlaneClosestHit(inout HitInfo payload, Attributes attrib)
 
         payload.depth++;
         payload.eta = materials[materialIndex].Ior;
-        
         ShadowHitInfo shadowPayload;
         shadowPayload.isHit = true;
         shadowPayload.depth = payload.depth;
 
-        //if (shadowPayload.depth >= 5 || payload.depth >= 5)
+        //if (shadowPayload.depth >= 5)
         //{
-        //    payload.colorAndDistance = float4(payload.colorAndDistance.xyz, RayTCurrent());
+        //    payload.colorAndDistance += float4(payload.colorAndDistance.xyz, RayTCurrent());
         //    return;
         //}
         
         TraceRay(
         SceneBVH,
-        RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH | RAY_FLAG_SKIP_CLOSEST_HIT_SHADER,
+        RAY_FLAG_NONE,
         0xFF,
         1, 3, 1,
         shadowRay,
         shadowPayload
         );
-
+        
         if (!shadowPayload.isHit)
         {
             float NdotL = saturate(dot(N, dir));
@@ -504,36 +734,20 @@ void PlaneClosestHit(inout HitInfo payload, Attributes attrib)
                 float3 lightNormal = normalize(cross(gAreaLights[0].U, gAreaLights[0].V));
                 float LnDotL = saturate(dot(-dir, lightNormal));
                 float dist2 = dist * dist;
-
+        
                 float pdf = 1.0f / gAreaLights[0].Area;
-
+        
                 float3 Li = gAreaLights[0].Radiance * (LnDotL / dist2);
-
+        
                 areaLightContribution += Li * NdotL / pdf;
             }
         }
-    }
+}
 
     areaLightContribution /= samples;
 
-    
 
-    //TraceRay(
-    //    SceneBVH,
-    //    RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH |
-    //    RAY_FLAG_SKIP_CLOSEST_HIT_SHADER,
-    //    /*InstanceInclusionMask*/ 0xff,
-    //    /*RayContributionToHitGroupIndex*/ 1,
-    //    /*MultiplierForGeometryContributionToHitGroupIndex*/ 3,
-    //    /*MissShaderIndex*/ 1, // ShadowMiss (2nd miss in SBT)
-    //    shadowRay,
-    //    shadowPayload
-    //);
-
-    //// If we hit something between the plane and the light, we are in shadow
-    //float shadowFactor = shadowPayload.isHit ? 0.3f : 1.0f;
-
-    float3 finalColor = (radiance + areaLightContribution);
+    float3 finalColor = (radiance + areaLightContribution + indirectGI);
 
     finalColor = PostProcess(finalColor);
     
@@ -581,6 +795,7 @@ void ReflectionClosestHit(inout HitInfo payload, Attributes attrib)
     
     // Hit position in world space (from the ray)
     float3 pW = WorldRayOrigin() + RayTCurrent() * WorldRayDirection();
+  //  payload.isHit = true;
 
     float3 incidentRay = WorldRayDirection();
     HitInfo refrPayload = payload;
