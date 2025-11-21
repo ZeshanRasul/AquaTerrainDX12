@@ -8,6 +8,7 @@ using namespace DirectX;
 struct ObjectConstants
 {
 	XMFLOAT4X4 WorldViewProj;
+	int MatIndex;
 };
 
 struct PassConstants
@@ -50,6 +51,8 @@ public:
 	std::unique_ptr<UploadBuffer<PassConstants>> PassCB = nullptr;
 	std::unique_ptr<UploadBuffer<ObjectConstants>> ObjectCB = nullptr;
 	std::unique_ptr<UploadBuffer<MaterialConstants>> MaterialCB = nullptr;
+	std::vector<std::unique_ptr<UploadBuffer<MaterialConstants>>> Materials;
+	int matCount = 6;
 
 	UINT Fence = 0;
 };

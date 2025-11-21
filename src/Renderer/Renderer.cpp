@@ -131,6 +131,7 @@ bool Renderer::InitializeD3D12(HWND& windowHandle)
 
 	BuildPSOs();
 	CreateCameraBuffer();
+	UpdateMaterialCBs();
 
 	CreateAccelerationStructures();
 	CreateRaytracingPipeline();
@@ -337,7 +338,7 @@ void Renderer::Draw(bool useRaster)
 	desc.Depth = 1;
 
 	m_CommandList->SetPipelineState1(m_RtStateObject.Get());
-//	m_CommandList->DispatchRays(&desc);
+	//	m_CommandList->DispatchRays(&desc);
 
 
 	transition = CD3DX12_RESOURCE_BARRIER::Transition(m_OutputResource.Get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_SOURCE);
@@ -710,19 +711,21 @@ void Renderer::CreateConstantBufferViews()
 	//D3D12_GPU_VIRTUAL_ADDRESS camBufAddress = camCB->GetGPUVirtualAddress();
 
 	//int heapIndex = camBufOffset;
+	//int heapIndex = camBufOffset;
 	//auto handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_ConstHeap->GetCPUDescriptorHandleForHeapStart())
 }
 
 void Renderer::CreateRootSignature()
 {
-	CD3DX12_ROOT_PARAMETER slotRootParameter[3];
+	CD3DX12_ROOT_PARAMETER slotRootParameter[5];
 
 	slotRootParameter[0].InitAsConstantBufferView(0);
 	slotRootParameter[1].InitAsConstantBufferView(1);
 	slotRootParameter[2].InitAsConstantBufferView(2);
-//	slotRootParameter[3].InitAsConstantBufferView(3);
+	slotRootParameter[3].InitAsConstantBufferView(3);
+	slotRootParameter[4].InitAsShaderResourceView(0);
 
-	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(3, slotRootParameter, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(5, slotRootParameter, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
 	Microsoft::WRL::ComPtr<ID3DBlob> serializedRootSig = nullptr;
 	Microsoft::WRL::ComPtr<ID3DBlob> errorBlob = nullptr;
@@ -821,11 +824,17 @@ void Renderer::BuildMaterials()
 	sphereMat->IsReflective = true;
 
 	m_Materials["box"] = std::move(boxMat);
+	//	m_FrameResources[m_CurrentFrameResourceIndex]->matCount++;
 	m_Materials["bricks0"] = std::move(bricks0);
+	//	m_FrameResources[m_CurrentFrameResourceIndex]->matCount++;
 	m_Materials["stone0"] = std::move(stone0);
+	//	m_FrameResources[m_CurrentFrameResourceIndex]->matCount++;
 	m_Materials["tile0"] = std::move(tile0);
+	//	m_FrameResources[m_CurrentFrameResourceIndex]->matCount++;
 	m_Materials["skullMat"] = std::move(skullMat);
+	//	m_FrameResources[m_CurrentFrameResourceIndex]->matCount++;
 	m_Materials["sphere"] = std::move(sphereMat);
+	//	m_FrameResources[m_CurrentFrameResourceIndex]->matCount++;
 }
 void Renderer::BuildShapeGeometry()
 {
@@ -1248,7 +1257,10 @@ void Renderer::DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::ve
 	UINT matCBByteSize = d3dUtil::CalcConstantBufferByteSize(sizeof(MaterialConstants));
 
 	auto objectCB = m_CurrentFrameResource->ObjectCB->Resource();
-	auto matCB = m_CurrentFrameResource->MaterialCB->Resource();
+	auto matCB = m_MaterialsGPU;
+	auto matGPUCB = m_UploadCBuffer;
+	D3D12_GPU_VIRTUAL_ADDRESS matGPUAdrress = matGPUCB->GetGPUVirtualAddress();
+
 
 	for (size_t i = 0; i < renderGeo.size(); ++i)
 	{
@@ -1258,24 +1270,25 @@ void Renderer::DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::ve
 		cmdList->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 		D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objectCB->GetGPUVirtualAddress() + (rg->ObjCBIndex) * objCBByteSize;
-		D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = matCB->GetGPUVirtualAddress() + (rg->ObjCBIndex) * matCBByteSize;
+		D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = matGPUCB->GetGPUVirtualAddress();
 
 		cmdList->SetGraphicsRootConstantBufferView(0, objCBAddress);
 		cmdList->SetGraphicsRootConstantBufferView(1, matCBAddress);
+		cmdList->SetGraphicsRootShaderResourceView(4, matGPUAdrress);
 
 		cmdList->DrawIndexedInstanced(rg->IndexCount, rg->InstanceCount, rg->StartIndexLocation, rg->BaseVertexLocation, 0);
 	}
-//	CreateVertexBufferView(boxSubmesh);
-//	CreateIndexBufferView(boxSubmesh);
-//	cmdList->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-//
-//	D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objectCB->GetGPUVirtualAddress() + (boxSubmesh->ObjCBIndex) * objCBByteSize;
-////	D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = matCB->GetGPUVirtualAddress() + boxSubmesh->Material->MatCBIndex * matCBByteSize;
-//
-//	cmdList->SetGraphicsRootConstantBufferView(0, objCBAddress);
-////	cmdList->SetGraphicsRootConstantBufferView(1, matCBAddress);
-//
-//	cmdList->DrawIndexedInstanced(boxSubmesh->IndexCount, boxSubmesh->InstanceCount, boxSubmesh->StartIndexLocation, boxSubmesh->BaseVertexLocation, 0);
+	//	CreateVertexBufferView(boxSubmesh);
+	//	CreateIndexBufferView(boxSubmesh);
+	//	cmdList->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	//
+	//	D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objectCB->GetGPUVirtualAddress() + (boxSubmesh->ObjCBIndex) * objCBByteSize;
+	////	D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = matCB->GetGPUVirtualAddress() + boxSubmesh->Material->MatCBIndex * matCBByteSize;
+	//
+	//	cmdList->SetGraphicsRootConstantBufferView(0, objCBAddress);
+	////	cmdList->SetGraphicsRootConstantBufferView(1, matCBAddress);
+	//
+	//	cmdList->DrawIndexedInstanced(boxSubmesh->IndexCount, boxSubmesh->InstanceCount, boxSubmesh->StartIndexLocation, boxSubmesh->BaseVertexLocation, 0);
 
 }
 
@@ -1334,6 +1347,7 @@ void Renderer::UpdateObjectCBs()
 		{
 			ObjectConstants objConstants;
 			XMStoreFloat4x4(&objConstants.WorldViewProj, XMMatrixTranspose(e->World[0]));
+			objConstants.MatIndex = 0;
 			currObjectCB->CopyData(e->ObjCBIndex, objConstants);
 
 			e->NumFramesDirty--;
@@ -1344,7 +1358,7 @@ void Renderer::UpdateObjectCBs()
 
 void Renderer::UpdateMaterialCBs()
 {
-	auto currentMaterialCB = m_CurrentFrameResource->MaterialCB.get();
+	auto currentMaterialCB = m_CurrentFrameResource->Materials.data();
 
 	for (auto& e : m_Materials)
 	{
@@ -1366,7 +1380,7 @@ void Renderer::UpdateMaterialCBs()
 			matConstants.metallic = mat->metallic;
 			matConstants.IsReflective = mat->IsReflective;
 
-			currentMaterialCB->CopyData(mat->MatCBIndex, matConstants);
+			currentMaterialCB[mat->MatCBIndex]->CopyData(mat->MatCBIndex, matConstants);
 
 			mat->NumFramesDirty--;
 		}

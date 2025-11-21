@@ -11,6 +11,13 @@ struct PixelIn
     float3 NormalW : NORMAL;
 };
 
+cbuffer cbPerObject : register(b0)
+{
+    float4x4 gWorld;
+    float matIndex;
+}
+
+
 cbuffer cbMaterial : register(b1)
 {
     float4 DiffuseAlbedo;
@@ -46,6 +53,8 @@ cbuffer cbPass : register(b2)
     Light gLights[MaxLights];
 };
 
+StructuredBuffer<Material> materials : register(t0);
+
 struct GBuffer
 {
     float4 gBufferAlbedoMetal : SV_Target0;
@@ -56,11 +65,13 @@ GBuffer PS(PixelIn pIn)
 {   
     GBuffer gBuffer;
 
-    gBuffer.gBufferAlbedoMetal.xyz = DiffuseAlbedo.xyz;
-    gBuffer.gBufferAlbedoMetal.w = metallic;
+    Material mat = materials[matIndex];
+    
+    gBuffer.gBufferAlbedoMetal.xyz = mat.DiffuseAlbedo.xyz;
+    gBuffer.gBufferAlbedoMetal.w = mat.metallic;
     
     gBuffer.gBufferNormalRough.xyz = pIn.NormalW;
-    gBuffer.gBufferNormalRough.w = 1.0 - Shininess;
+    gBuffer.gBufferNormalRough.w = 1.0 - mat.Shininess;
     
     return gBuffer;
 
