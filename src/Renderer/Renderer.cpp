@@ -715,14 +715,14 @@ void Renderer::CreateConstantBufferViews()
 
 void Renderer::CreateRootSignature()
 {
-	CD3DX12_ROOT_PARAMETER slotRootParameter[4];
+	CD3DX12_ROOT_PARAMETER slotRootParameter[3];
 
 	slotRootParameter[0].InitAsConstantBufferView(0);
 	slotRootParameter[1].InitAsConstantBufferView(1);
 	slotRootParameter[2].InitAsConstantBufferView(2);
-	slotRootParameter[3].InitAsConstantBufferView(3);
+//	slotRootParameter[3].InitAsConstantBufferView(3);
 
-	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(4, slotRootParameter, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(3, slotRootParameter, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
 	Microsoft::WRL::ComPtr<ID3DBlob> serializedRootSig = nullptr;
 	Microsoft::WRL::ComPtr<ID3DBlob> errorBlob = nullptr;
@@ -774,8 +774,8 @@ void Renderer::BuildMaterials()
 
 	auto bricks0 = std::make_unique<Material>();
 	bricks0->Name = "bricks0";
-	bricks0->MatCBIndex = 0;
-	bricks0->DiffuseSrvHeapIndex = 0;
+	bricks0->MatCBIndex = 1;
+	bricks0->DiffuseSrvHeapIndex = 1;
 	bricks0->DiffuseAlbedo = XMFLOAT4(Colors::Sienna);
 	bricks0->FresnelR0 = XMFLOAT3(0.02f, 0.02f, 0.02f);
 	bricks0->Roughness = 0.1f;
@@ -783,8 +783,8 @@ void Renderer::BuildMaterials()
 
 	auto stone0 = std::make_unique<Material>();
 	stone0->Name = "stone0";
-	stone0->MatCBIndex = 1;
-	stone0->DiffuseSrvHeapIndex = 1;
+	stone0->MatCBIndex = 2;
+	stone0->DiffuseSrvHeapIndex = 2;
 	stone0->DiffuseAlbedo = XMFLOAT4(Colors::Crimson);
 	stone0->FresnelR0 = XMFLOAT3(0.05f, 0.05f, 0.05f);
 	stone0->Roughness = 0.6f;
@@ -802,8 +802,8 @@ void Renderer::BuildMaterials()
 
 	auto tile0 = std::make_unique<Material>();
 	tile0->Name = "tile0";
-	tile0->MatCBIndex = 2;
-	tile0->DiffuseSrvHeapIndex = 2;
+	tile0->MatCBIndex = 4;
+	tile0->DiffuseSrvHeapIndex = 4;
 	tile0->DiffuseAlbedo = XMFLOAT4(Colors::Aquamarine);
 	tile0->FresnelR0 = XMFLOAT3(0.02f, 0.02f, 0.02f);
 	tile0->Roughness = 0.3f;
@@ -963,6 +963,7 @@ void Renderer::BuildShapeGeometry()
 	boxSubmesh->Material = m_Materials["box"].get();
 	//XMMATRIX newWorld; 
 		//XMStoreMatrix(&newWorld, MathHelper::Identity4x4());
+	boxSubmesh->ObjCBIndex = 0;
 	boxSubmesh->World.push_back(XMMatrixScaling(1.0f, 1.0f, 1.0f));
 	m_RenderGeometry.push_back(boxSubmesh);
 
@@ -972,6 +973,7 @@ void Renderer::BuildShapeGeometry()
 	sphereSubmesh->IndexBufferByteSize = sphere.Indices32.size() * sizeof(uint32_t);
 	sphereSubmesh->IndexFormat = DXGI_FORMAT_R32_UINT;
 	sphereSubmesh->InstanceCount = 1;
+	sphereSubmesh->ObjCBIndex = 1;
 
 	ThrowIfFailed(D3DCreateBlob(sphereSubmesh->VertexBufferByteSize, &sphereSubmesh->VertexBufferCPU));
 	CopyMemory(sphereSubmesh->VertexBufferCPU->GetBufferPointer(), sphereVertices.data(), sphereSubmesh->VertexBufferByteSize);
@@ -1104,6 +1106,7 @@ void Renderer::BuildSkullGeometry()
 	skullSubmesh->IndexBufferByteSize = indices.size() * sizeof(uint32_t);
 	skullSubmesh->IndexFormat = DXGI_FORMAT_R32_UINT;
 	skullSubmesh->IndexCount = (UINT64)indices.size();
+	skullSubmesh->ObjCBIndex = 2;
 
 	ThrowIfFailed(D3DCreateBlob(skullSubmesh->VertexBufferByteSize, &skullSubmesh->VertexBufferCPU));
 	CopyMemory(skullSubmesh->VertexBufferCPU->GetBufferPointer(), vertices.data(), skullSubmesh->VertexBufferByteSize);
@@ -1255,10 +1258,10 @@ void Renderer::DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::ve
 		cmdList->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 		D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objectCB->GetGPUVirtualAddress() + (rg->ObjCBIndex) * objCBByteSize;
-		D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = matCB->GetGPUVirtualAddress() * matCBByteSize;
+		D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = matCB->GetGPUVirtualAddress() + (rg->ObjCBIndex) * matCBByteSize;
 
 		cmdList->SetGraphicsRootConstantBufferView(0, objCBAddress);
-//		cmdList->SetGraphicsRootConstantBufferView(1, matCBAddress);
+		cmdList->SetGraphicsRootConstantBufferView(1, matCBAddress);
 
 		cmdList->DrawIndexedInstanced(rg->IndexCount, rg->InstanceCount, rg->StartIndexLocation, rg->BaseVertexLocation, 0);
 	}
