@@ -41,10 +41,10 @@ private:
 
 	void CreateVertexBuffer();
 	void CreateVertexBufferView();
-	void CreateVertexBufferView(const SubmeshGeometry& sg);
+	void CreateVertexBufferView(SubmeshGeometry* sg);
 
 	void CreateIndexBuffer();
-	void CreateIndexBufferView(const SubmeshGeometry& sg);
+	void CreateIndexBufferView(SubmeshGeometry* sg);
 	void CreateIndexBufferView();
 
 	void CreateCbvDescriptorHeaps();
@@ -60,7 +60,7 @@ private:
 	void BuildShapeGeometry();
 	void BuildSkullGeometry();
 	void BuildRenderItems();
-	void DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::vector<RenderItem*>& riItems);
+	void DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::vector<SubmeshGeometry*>& renderGeo);
 
 	void BuildFrameResources();
 	void UpdateObjectCBs();
@@ -152,9 +152,9 @@ private:
 	XMFLOAT3 m_EyePos;
 
 	std::vector<std::unique_ptr<RenderItem>> m_AllRenderItems;
-	std::vector<std::unique_ptr<SubmeshGeometry>> m_RenderGeometry;
+	std::vector<SubmeshGeometry*> m_RenderGeometry;
 
-	std::vector<RenderItem*> m_OpaqueRenderItems;
+	std::vector<SubmeshGeometry*> m_OpaqueRenderGeometry;
 	std::vector<RenderItem*> m_TransparentRenderItems;
 
 	std::unordered_map<std::string, std::unique_ptr<MeshGeometry>> m_Geometries;
@@ -265,8 +265,9 @@ private:
 
 	std::vector<MaterialDataGPU> m_MaterialsGPU;
 
-	SubmeshGeometry boxSubmesh;
-	SubmeshGeometry sphereSubmesh;
+	SubmeshGeometry* boxSubmesh;
+	SubmeshGeometry* sphereSubmesh;
+	SubmeshGeometry* skullSubmesh;
 
 	bool showWindow = true;
 	void CreateImGuiDescriptorHeap();

@@ -7,7 +7,7 @@ using namespace DirectX;
 
 struct ObjectConstants
 {
-	XMFLOAT4X4 WorldViewProj = MathHelper::Identity4x4();
+	std::vector<XMFLOAT4X4> WorldViewProj;
 };
 
 struct PassConstants

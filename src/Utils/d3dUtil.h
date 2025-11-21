@@ -170,12 +170,16 @@ struct SubmeshGeometry
     Microsoft::WRL::ComPtr<ID3D12Resource> VertexBufferUploader = nullptr;
     Microsoft::WRL::ComPtr<ID3D12Resource> IndexBufferUploader = nullptr;
 
+    D3D12_VERTEX_BUFFER_VIEW VbView;
+    D3D12_INDEX_BUFFER_VIEW IbView;
+
     UINT ObjCBIndex;
     Material* Material;
+    UINT InstanceCount = 1;
 
-    DirectX::XMMATRIX World;
-    // Bounding box of the geometry defined by this submesh. 
-    // This is used in later chapters of the book.
+    std::vector<DirectX::XMMATRIX> World;
+    UINT NumFramesDirty = 3;
+
     DirectX::BoundingBox Bounds;
 };
 

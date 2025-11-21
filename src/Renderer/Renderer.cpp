@@ -246,6 +246,9 @@ void Renderer::Draw(bool useRaster)
 	}
 
 	D3D12_RESOURCE_BARRIER pBarriers[2] = {};
+	pBarriers[0] = CD3DX12_RESOURCE_BARRIER::Transition(m_GBufferAlbedoMetal.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	pBarriers[1] = CD3DX12_RESOURCE_BARRIER::Transition(m_GBufferNormalRough.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	m_CommandList->ResourceBarrier(2, pBarriers);
 	pBarriers[0] = CD3DX12_RESOURCE_BARRIER::Transition(m_GBufferAlbedoMetal.Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
 	pBarriers[1] = CD3DX12_RESOURCE_BARRIER::Transition(m_GBufferNormalRough.Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
 	m_CommandList->ResourceBarrier(2, pBarriers);
@@ -288,7 +291,7 @@ void Renderer::Draw(bool useRaster)
 	m_CommandList->SetGraphicsRootConstantBufferView(2, passCB->GetGPUVirtualAddress());
 	m_CommandList->SetGraphicsRootConstantBufferView(3, m_CameraBuffer->GetGPUVirtualAddress());
 
-	DrawRenderItems(m_CommandList.Get(), m_OpaqueRenderItems);
+	DrawRenderItems(m_CommandList.Get(), m_OpaqueRenderGeometry);
 	//	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), m_CommandList.Get());
 
 	//pBarriers[0] = CD3DX12_RESOURCE_BARRIER::Transition(m_GBufferAlbedoMetal.Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
@@ -327,7 +330,7 @@ void Renderer::Draw(bool useRaster)
 
 
 
-	CreateTopLevelAS(m_Instances, true);
+	//CreateTopLevelAS(m_Instances, true);
 
 	//	m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_COPY_DEST));
 
@@ -381,6 +384,9 @@ void Renderer::Draw(bool useRaster)
 	pBarriers[1] = CD3DX12_RESOURCE_BARRIER::Transition(m_GBufferNormalRough.Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_PRESENT);
 	m_CommandList->ResourceBarrier(2, pBarriers);
 
+	pBarriers[0] = CD3DX12_RESOURCE_BARRIER::Transition(m_GBufferAlbedoMetal.Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_COMMON);
+	pBarriers[1] = CD3DX12_RESOURCE_BARRIER::Transition(m_GBufferNormalRough.Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_COMMON);
+	m_CommandList->ResourceBarrier(2, pBarriers);
 
 	ThrowIfFailed(m_CommandList->Close());
 
@@ -496,7 +502,7 @@ void Renderer::CreateSwapChain(HWND& windowHandle)
 void Renderer::CreateRtvAndDsvDescriptorHeaps()
 {
 	D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc;
-	rtvHeapDesc.NumDescriptors = SwapChainBufferCount + 2;
+	rtvHeapDesc.NumDescriptors = SwapChainBufferCount;
 	rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
 	rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 	rtvHeapDesc.NodeMask = 0;
@@ -539,7 +545,7 @@ void Renderer::CreateGBufferPassRTVResources()
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 		D3D12_HEAP_FLAG_NONE,
 		&rtvDesc,
-		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+		D3D12_RESOURCE_STATE_COMMON,
 		&rtvClearCol,
 		IID_PPV_ARGS(&m_GBufferAlbedoMetal));
 
@@ -547,7 +553,7 @@ void Renderer::CreateGBufferPassRTVResources()
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 		D3D12_HEAP_FLAG_NONE,
 		&rtvDesc,
-		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+		D3D12_RESOURCE_STATE_COMMON,
 		&rtvClearCol,
 		IID_PPV_ARGS(&m_GBufferNormalRough));
 }
@@ -623,13 +629,14 @@ void Renderer::CreateDepthStencilView()
 	m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_DepthStencilBuffer.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE));
 }
 
-void Renderer::CreateIndexBufferView(const SubmeshGeometry& sg)
+void Renderer::CreateIndexBufferView(SubmeshGeometry* sg)
 {
-	m_IbView.BufferLocation = sg.IndexBufferGPU->GetGPUVirtualAddress();
-	m_IbView.Format = DXGI_FORMAT_R32_UINT;
-	m_IbView.SizeInBytes = sg.IndexCount * sizeof(uint32_t);
+	sg->IbView = {};
+	sg->IbView.BufferLocation = sg->IndexBufferGPU->GetGPUVirtualAddress();
+	sg->IbView.Format = DXGI_FORMAT_R32_UINT;
+	sg->IbView.SizeInBytes = sg->IndexCount * sizeof(uint32_t);
 
-	D3D12_INDEX_BUFFER_VIEW indexBuffers[1] = { m_IbView };
+	D3D12_INDEX_BUFFER_VIEW indexBuffers[1] = { sg->IbView };
 	m_CommandList->IASetIndexBuffer(indexBuffers);
 
 }
@@ -646,7 +653,7 @@ void Renderer::CreateIndexBufferView()
 
 void Renderer::CreateCbvDescriptorHeaps()
 {
-	UINT objectCount = (UINT)m_OpaqueRenderItems.size();
+	UINT objectCount = (UINT)m_OpaqueRenderGeometry.size();
 
 	UINT numDescriptors = (objectCount + 1) * gNumFrameResources;
 
@@ -665,7 +672,7 @@ void Renderer::CreateConstantBufferViews()
 {
 	UINT objCBByteSize = d3dUtil::CalcConstantBufferByteSize(sizeof(ObjectConstants));
 
-	UINT objectCount = m_OpaqueRenderItems.size();
+	UINT objectCount = m_OpaqueRenderGeometry.size();
 
 	for (int frameIndex = 0; frameIndex < gNumFrameResources; ++frameIndex)
 	{
@@ -764,7 +771,6 @@ void Renderer::BuildShadersAndInputLayout()
 	{
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 	};
 
 
@@ -864,10 +870,12 @@ void Renderer::BuildShapeGeometry()
 	// Define the SubmeshGeometry that cover different 
 	// regions of the vertex/index buffers.
 
-	boxSubmesh.IndexCount = (UINT)box.Indices32.size();
-	boxSubmesh.StartIndexLocation = boxIndexOffset;
-	boxSubmesh.BaseVertexLocation = boxVertexOffset;
-	boxSubmesh.VertexCount = (UINT)box.Vertices.size();
+	boxSubmesh = new SubmeshGeometry();
+
+	boxSubmesh->IndexCount = (UINT)box.Indices32.size();
+	boxSubmesh->StartIndexLocation = boxIndexOffset;
+	boxSubmesh->BaseVertexLocation = boxVertexOffset;
+	boxSubmesh->VertexCount = (UINT)box.Vertices.size();
 
 	SubmeshGeometry gridSubmesh;
 	gridSubmesh.IndexCount = (UINT)grid.Indices32.size();
@@ -881,10 +889,12 @@ void Renderer::BuildShapeGeometry()
 	//sphereSubmesh.BaseVertexLocation = sphereVertexOffset;
 	//sphereSubmesh.VertexCount = (UINT)sphere.Vertices.size();
 
-	sphereSubmesh.IndexCount = (UINT)sphere.Indices32.size();
-	sphereSubmesh.StartIndexLocation = sphereIndexOffset;
-	sphereSubmesh.BaseVertexLocation = sphereVertexOffset;
-	sphereSubmesh.VertexCount = (UINT)sphere.Vertices.size();
+	sphereSubmesh = new SubmeshGeometry();
+
+	sphereSubmesh->IndexCount = (UINT)sphere.Indices32.size();
+	sphereSubmesh->StartIndexLocation = 0;
+	sphereSubmesh->BaseVertexLocation = 0;
+	sphereSubmesh->VertexCount = (UINT)sphere.Vertices.size();
 
 	SubmeshGeometry cylinderSubmesh;
 	cylinderSubmesh.IndexCount = (UINT)cylinder.Indices32.size();
@@ -947,44 +957,49 @@ void Renderer::BuildShapeGeometry()
 	const UINT vbByteSize = (UINT)vertices.size() * sizeof(Vertex);
 	const UINT ibByteSize = (UINT)indices.size() * sizeof(std::uint16_t);
 
-	boxSubmesh.VertexByteStride = sizeof(Vertex);
-	boxSubmesh.BaseVertexLocation = 0;
-	boxSubmesh.VertexBufferByteSize = (UINT)boxVertices.size() * sizeof(Vertex);
-	boxSubmesh.IndexBufferByteSize = box.Indices32.size() * sizeof(uint32_t);
-	boxSubmesh.IndexFormat = DXGI_FORMAT_R32_UINT;
+	boxSubmesh->VertexByteStride = sizeof(Vertex);
+	boxSubmesh->BaseVertexLocation = 0;
+	boxSubmesh->VertexBufferByteSize = (UINT)boxVertices.size() * sizeof(Vertex);
+	boxSubmesh->IndexBufferByteSize = box.Indices32.size() * sizeof(uint32_t);
+	boxSubmesh->IndexFormat = DXGI_FORMAT_R32_UINT;
+	boxSubmesh->InstanceCount = 1;
 
-	ThrowIfFailed(D3DCreateBlob(boxSubmesh.VertexBufferByteSize, &boxSubmesh.VertexBufferCPU));
-	CopyMemory(boxSubmesh.VertexBufferCPU->GetBufferPointer(), boxVertices.data(), boxSubmesh.VertexBufferByteSize);
+	ThrowIfFailed(D3DCreateBlob(boxSubmesh->VertexBufferByteSize, &boxSubmesh->VertexBufferCPU));
+	CopyMemory(boxSubmesh->VertexBufferCPU->GetBufferPointer(), boxVertices.data(), boxSubmesh->VertexBufferByteSize);
 
-	ThrowIfFailed(D3DCreateBlob(boxSubmesh.IndexBufferByteSize, &boxSubmesh.IndexBufferCPU));
-	CopyMemory(boxSubmesh.IndexBufferCPU->GetBufferPointer(), box.Indices32.data(), boxSubmesh.IndexBufferByteSize);
+	ThrowIfFailed(D3DCreateBlob(boxSubmesh->IndexBufferByteSize, &boxSubmesh->IndexBufferCPU));
+	CopyMemory(boxSubmesh->IndexBufferCPU->GetBufferPointer(), box.Indices32.data(), boxSubmesh->IndexBufferByteSize);
 
-	boxSubmesh.VertexBufferGPU = d3dUtil::CreateDefaultBuffer(m_Device.Get(),
-		m_CommandList.Get(), boxVertices.data(), boxSubmesh.VertexBufferByteSize, boxSubmesh.VertexBufferUploader);
+	boxSubmesh->VertexBufferGPU = d3dUtil::CreateDefaultBuffer(m_Device.Get(),
+		m_CommandList.Get(), boxVertices.data(), boxSubmesh->VertexBufferByteSize, boxSubmesh->VertexBufferUploader);
 
-	boxSubmesh.IndexBufferGPU = d3dUtil::CreateDefaultBuffer(m_Device.Get(),
-		m_CommandList.Get(), box.Indices32.data(), boxSubmesh.IndexBufferByteSize, boxSubmesh.IndexBufferUploader);
+	boxSubmesh->IndexBufferGPU = d3dUtil::CreateDefaultBuffer(m_Device.Get(),
+		m_CommandList.Get(), box.Indices32.data(), boxSubmesh->IndexBufferByteSize, boxSubmesh->IndexBufferUploader);
 
+	boxSubmesh->World.push_back(XMMatrixScaling(50.0f, 5.0f, 50.0f) * XMMatrixTranslation(0.0f, -50.0f, 0.0f));
+	m_RenderGeometry.push_back(boxSubmesh);
 
-	sphereSubmesh.VertexByteStride = sizeof(Vertex);
-	sphereSubmesh.BaseVertexLocation = 0;
-	sphereSubmesh.VertexBufferByteSize = (UINT)sphereVertices.size() * sizeof(Vertex);
-	sphereSubmesh.IndexBufferByteSize = sphere.Indices32.size() * sizeof(uint32_t);
-	sphereSubmesh.IndexFormat = DXGI_FORMAT_R32_UINT;
+	sphereSubmesh->VertexByteStride = sizeof(Vertex);
+	sphereSubmesh->BaseVertexLocation = 0;
+	sphereSubmesh->VertexBufferByteSize = (UINT)sphereVertices.size() * sizeof(Vertex);
+	sphereSubmesh->IndexBufferByteSize = sphere.Indices32.size() * sizeof(uint32_t);
+	sphereSubmesh->IndexFormat = DXGI_FORMAT_R32_UINT;
+	sphereSubmesh->InstanceCount = 1;
 
-	ThrowIfFailed(D3DCreateBlob(sphereSubmesh.VertexBufferByteSize, &sphereSubmesh.VertexBufferCPU));
-	CopyMemory(sphereSubmesh.VertexBufferCPU->GetBufferPointer(), sphereVertices.data(), sphereSubmesh.VertexBufferByteSize);
+	ThrowIfFailed(D3DCreateBlob(sphereSubmesh->VertexBufferByteSize, &sphereSubmesh->VertexBufferCPU));
+	CopyMemory(sphereSubmesh->VertexBufferCPU->GetBufferPointer(), sphereVertices.data(), sphereSubmesh->VertexBufferByteSize);
 
-	ThrowIfFailed(D3DCreateBlob(sphereSubmesh.IndexBufferByteSize, &sphereSubmesh.IndexBufferCPU));
-	CopyMemory(sphereSubmesh.IndexBufferCPU->GetBufferPointer(), sphere.Indices32.data(), sphereSubmesh.IndexBufferByteSize);
+	ThrowIfFailed(D3DCreateBlob(sphereSubmesh->IndexBufferByteSize, &sphereSubmesh->IndexBufferCPU));
+	CopyMemory(sphereSubmesh->IndexBufferCPU->GetBufferPointer(), sphere.Indices32.data(), sphereSubmesh->IndexBufferByteSize);
 
-	sphereSubmesh.VertexBufferGPU = d3dUtil::CreateDefaultBuffer(m_Device.Get(),
-		m_CommandList.Get(), sphereVertices.data(), sphereSubmesh.VertexBufferByteSize, sphereSubmesh.VertexBufferUploader);
+	sphereSubmesh->VertexBufferGPU = d3dUtil::CreateDefaultBuffer(m_Device.Get(),
+		m_CommandList.Get(), sphereVertices.data(), sphereSubmesh->VertexBufferByteSize, sphereSubmesh->VertexBufferUploader);
 
-	sphereSubmesh.IndexBufferGPU = d3dUtil::CreateDefaultBuffer(m_Device.Get(),
-		m_CommandList.Get(), sphere.Indices32.data(), sphereSubmesh.IndexBufferByteSize, sphereSubmesh.IndexBufferUploader);
+	sphereSubmesh->IndexBufferGPU = d3dUtil::CreateDefaultBuffer(m_Device.Get(),
+		m_CommandList.Get(), sphere.Indices32.data(), sphereSubmesh->IndexBufferByteSize, sphereSubmesh->IndexBufferUploader);
+	sphereSubmesh->World.push_back(XMMatrixScaling(5.0f, 5.0f, 5.0f) * XMMatrixTranslation(-10.0f, -10.0f, -10.0f));
 
-
+	m_RenderGeometry.push_back(sphereSubmesh);
 
 	auto geo = std::make_unique<MeshGeometry>();
 	geo->Name = "shapeGeo";
@@ -1006,16 +1021,16 @@ void Renderer::BuildShapeGeometry()
 	geo->IndexFormat = DXGI_FORMAT_R16_UINT;
 	geo->IndexBufferByteSize = ibByteSize;
 
-	geo->DrawArgs["box"] = boxSubmesh;
+	//geo->DrawArgs["box"] = boxSubmesh;
 	geo->DrawArgs["grid"] = gridSubmesh;
-	geo->DrawArgs["sphere"] = sphereSubmesh;
+	//geo->DrawArgs["sphere"] = sphereSubmesh;
 	geo->DrawArgs["cylinder"] = cylinderSubmesh;
 
 	m_vertexCount += totalVertexCount;
 
-	geo->DrawArgs["box"] = boxSubmesh;
+	//geo->DrawArgs["box"] = boxSubmesh;
 	geo->DrawArgs["grid"] = gridSubmesh;
-	geo->DrawArgs["sphere"] = sphereSubmesh;
+	//geo->DrawArgs["sphere"] = sphereSubmesh;
 	geo->DrawArgs["cylinder"] = cylinderSubmesh;
 
 	m_Geometries[geo->Name] = std::move(geo);
@@ -1093,6 +1108,37 @@ void Renderer::BuildSkullGeometry()
 	submesh.IndexCount = (UINT)indices.size();
 	submesh.StartIndexLocation = 0;
 	submesh.BaseVertexLocation = 0;
+
+	skullSubmesh = new SubmeshGeometry();
+	skullSubmesh->VertexByteStride = sizeof(Vertex);
+	skullSubmesh->VertexCount = (UINT64)vertices.size();
+	skullSubmesh->BaseVertexLocation = 0;
+	skullSubmesh->VertexBufferByteSize = (UINT64)vertices.size() * sizeof(Vertex);
+	skullSubmesh->IndexBufferByteSize = indices.size() * sizeof(uint32_t);
+	skullSubmesh->IndexFormat = DXGI_FORMAT_R32_UINT;
+	skullSubmesh->IndexCount = (UINT64)indices.size();
+
+	ThrowIfFailed(D3DCreateBlob(skullSubmesh->VertexBufferByteSize, &skullSubmesh->VertexBufferCPU));
+	CopyMemory(skullSubmesh->VertexBufferCPU->GetBufferPointer(), vertices.data(), skullSubmesh->VertexBufferByteSize);
+
+	ThrowIfFailed(D3DCreateBlob(skullSubmesh->IndexBufferByteSize, &skullSubmesh->IndexBufferCPU));
+	CopyMemory(skullSubmesh->IndexBufferCPU->GetBufferPointer(), indices.data(), skullSubmesh->IndexBufferByteSize);
+
+	skullSubmesh->VertexBufferGPU = d3dUtil::CreateDefaultBuffer(m_Device.Get(),
+		m_CommandList.Get(), vertices.data(), skullSubmesh->VertexBufferByteSize, skullSubmesh->VertexBufferUploader);
+
+	skullSubmesh->IndexBufferGPU = d3dUtil::CreateDefaultBuffer(m_Device.Get(),
+		m_CommandList.Get(), indices.data(), skullSubmesh->IndexBufferByteSize, skullSubmesh->IndexBufferUploader);
+
+	skullSubmesh->InstanceCount = 4;
+
+	skullSubmesh->World.push_back(XMMatrixTranslation(-16.0f, -10.0f, 0.0f));
+	skullSubmesh->World.push_back(XMMatrixTranslation(16.0f, -10.0f, 0.0f));
+	skullSubmesh->World.push_back(XMMatrixTranslation(0.0f, 10.0f, 0.0f));
+	skullSubmesh->World.push_back(XMMatrixTranslation(0.0f, -20.0f, 0.0f));
+
+	m_RenderGeometry.push_back(skullSubmesh);
+
 
 	geo->DrawArgs["skull"] = submesh;
 
@@ -1202,11 +1248,11 @@ void Renderer::BuildRenderItems()
 	}
 
 	// All the render items are opaque.
-	for (auto& e : m_AllRenderItems)
-		m_OpaqueRenderItems.push_back(e.get());
+	for (auto& e : m_RenderGeometry)
+		m_OpaqueRenderGeometry.push_back(e);
 }
 
-void Renderer::DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::vector<RenderItem*>& riItems)
+void Renderer::DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::vector<SubmeshGeometry*>& renderGeo)
 {
 	UINT objCBByteSize = d3dUtil::CalcConstantBufferByteSize(sizeof(ObjectConstants));
 	UINT matCBByteSize = d3dUtil::CalcConstantBufferByteSize(sizeof(MaterialConstants));
@@ -1214,34 +1260,21 @@ void Renderer::DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::ve
 	auto objectCB = m_CurrentFrameResource->ObjectCB->Resource();
 	auto matCB = m_CurrentFrameResource->MaterialCB->Resource();
 
-	//for (size_t i = 0; i < riItems.size(); ++i)
-	//{
-	//	auto ri = riItems[i];
-	//
-	//	cmdList->IASetVertexBuffers(0, 1, &ri->Geo->VertexBufferView());
-	//	cmdList->IASetIndexBuffer(&ri->Geo->IndexBufferView());
-	//	cmdList->IASetPrimitiveTopology(ri->PrimitiveType);
-	//
-	//	D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objectCB->GetGPUVirtualAddress() + ri->ObjCBIndex * objCBByteSize;
-	//	D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = matCB->GetGPUVirtualAddress() + ri->Mat->MatCBIndex * matCBByteSize;
-	//
-	//	cmdList->SetGraphicsRootConstantBufferView(0, objCBAddress);
-	//	cmdList->SetGraphicsRootConstantBufferView(1, matCBAddress);
-	//
-	//	cmdList->DrawIndexedInstanced(ri->IndexCount, 1, ri->StartIndexLocation, ri->BaseVertexLocation, 0);
-	//}
+	for (size_t i = 0; i < renderGeo.size(); ++i)
+	{
+		auto* rg = renderGeo[i];
+		CreateVertexBufferView(rg);
+		CreateIndexBufferView(rg);
+		cmdList->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-	CreateVertexBufferView(boxSubmesh);
-	CreateIndexBufferView(boxSubmesh);
-	cmdList->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objectCB->GetGPUVirtualAddress() + (rg->ObjCBIndex) * objCBByteSize;
+		D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = matCB->GetGPUVirtualAddress() + matCBByteSize;
 
-	D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objectCB->GetGPUVirtualAddress() + m_AllRenderItems[0]->ObjCBIndex * objCBByteSize;
-	D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = matCB->GetGPUVirtualAddress() + 0 * matCBByteSize;
+		cmdList->SetGraphicsRootConstantBufferView(0, objCBAddress);
+		cmdList->SetGraphicsRootConstantBufferView(1, matCBAddress);
 
-	cmdList->SetGraphicsRootConstantBufferView(0, objCBAddress);
-	cmdList->SetGraphicsRootConstantBufferView(1, matCBAddress);
-
-	cmdList->DrawIndexedInstanced(boxSubmesh.IndexCount, 1, boxSubmesh.StartIndexLocation, boxSubmesh.BaseVertexLocation, 0);
+		cmdList->DrawIndexedInstanced(rg->IndexCount, rg->InstanceCount, rg->StartIndexLocation, rg->BaseVertexLocation, 0);
+	}
 
 }
 
@@ -1293,29 +1326,32 @@ void Renderer::UpdateObjectCBs()
 {
 	auto currObjectCB = m_CurrentFrameResource->ObjectCB.get();
 
-	for (auto& e : m_AllRenderItems)
+	for (auto& e : m_RenderGeometry)
 	{
 		if (e->NumFramesDirty)
 		{
-			XMMATRIX world = XMLoadFloat4x4(&e->World);
+			std::vector<XMMATRIX> world;
+
+			for (auto& mat : e->World)
+			{
+				world.push_back(mat);
+			}
 
 			ObjectConstants objConstants;
-			XMStoreFloat4x4(&objConstants.WorldViewProj, XMMatrixTranspose(world));
+			objConstants.WorldViewProj.resize(e->InstanceCount);
+			for (UINT i = 0; i < e->InstanceCount; i++)
+			{
+				XMStoreFloat4x4(&objConstants.WorldViewProj[i], XMMatrixTranspose(world[i]));
+				currObjectCB->CopyData(e->ObjCBIndex + i, objConstants);
+			}
 
-			currObjectCB->CopyData(e->ObjCBIndex, objConstants);
 
-			currObjectCB->CopyData(e->ObjCBIndex, objConstants);
+	//		currObjectCB->CopyData(e->ObjCBIndex, objConstants);
 			e->NumFramesDirty--;
 		}
 	}
-	/*boxSubmesh.World = XMMatrixScaling(50.0f, 5.0f, 50.0f) * XMMatrixTranslation(0.0f, -50.0f, 0.0f);
-	XMMATRIX world = boxSubmesh.World;
-	boxSubmesh.ObjCBIndex = 0;
-	ObjectConstants objConstants;
-	XMStoreFloat4x4(&objConstants.WorldViewProj, XMMatrixTranspose(world));*/
-
-
 }
+
 void Renderer::UpdateMaterialCBs()
 {
 	auto currentMaterialCB = m_CurrentFrameResource->MaterialCB.get();
@@ -1395,13 +1431,13 @@ void Renderer::CreateVertexBufferView()
 	m_CommandList->IASetVertexBuffers(0, 1, vertexBuffers);
 }
 
-void Renderer::CreateVertexBufferView(const SubmeshGeometry& sg)
+void Renderer::CreateVertexBufferView(SubmeshGeometry* sg)
 {
-	m_VbView.BufferLocation = sg.VertexBufferGPU->GetGPUVirtualAddress();
-	m_VbView.StrideInBytes = sizeof(Vertex);
-	m_VbView.SizeInBytes = sg.VertexCount * sg.VertexByteStride;
+	sg->VbView.BufferLocation = sg->VertexBufferGPU->GetGPUVirtualAddress();
+	sg->VbView.StrideInBytes = sizeof(Vertex);
+	sg->VbView.SizeInBytes = sg->VertexCount * sg->VertexByteStride;
 
-	D3D12_VERTEX_BUFFER_VIEW vertexBuffers[1] = { m_VbView };
+	D3D12_VERTEX_BUFFER_VIEW vertexBuffers[1] = { sg->VbView };
 	m_CommandList->IASetVertexBuffers(0, 1, vertexBuffers);
 
 }
@@ -1627,20 +1663,19 @@ void Renderer::CreateShaderBindingTable()
 
 		if (i == 0)
 		{
-			vb = boxSubmesh.VertexBufferGPU->GetGPUVirtualAddress();
-			ib = boxSubmesh.IndexBufferGPU->GetGPUVirtualAddress();
+			vb = boxSubmesh->VertexBufferGPU->GetGPUVirtualAddress();
+			ib = boxSubmesh->IndexBufferGPU->GetGPUVirtualAddress();
 		}
-		else if (i > 0 && i <= m_SkullCount)
+		else if (i > 0 && i < m_SkullCount)
 		{
-			vb = m_Geometries["skullGeo"]->VertexBufferGPU->GetGPUVirtualAddress();
-			ib = m_Geometries["skullGeo"]->IndexBufferGPU->GetGPUVirtualAddress();
+			vb = skullSubmesh->VertexBufferGPU->GetGPUVirtualAddress();
+			ib = skullSubmesh->IndexBufferGPU->GetGPUVirtualAddress();
 
 		}
-		else if (i > m_SkullCount && i <= m_SkullCount + m_SphereCount)
+		else if (i > m_SkullCount && i < m_SkullCount + m_SphereCount)
 		{
-			vb = sphereSubmesh.VertexBufferGPU->GetGPUVirtualAddress();
-			ib = sphereSubmesh.IndexBufferGPU->GetGPUVirtualAddress();
-
+			vb = sphereSubmesh->VertexBufferGPU->GetGPUVirtualAddress();
+			ib = sphereSubmesh->IndexBufferGPU->GetGPUVirtualAddress();
 		}
 
 
@@ -1738,7 +1773,7 @@ Renderer::AccelerationStructureBuffers Renderer::CreateBottomLevelAS(std::vector
 
 void Renderer::CreateTopLevelAS(std::vector<std::pair<Microsoft::WRL::ComPtr<ID3D12Resource>, DirectX::XMMATRIX>>& instances, bool updateOnly)
 {
-	if (!updateOnly)
+	if (true)
 	{
 		for (size_t i = 0; i < instances.size(); i++)
 		{
@@ -1774,20 +1809,20 @@ void Renderer::CreateTopLevelAS(std::vector<std::pair<Microsoft::WRL::ComPtr<ID3
 
 void Renderer::CreateAccelerationStructures()
 {
-	AccelerationStructureBuffers bottomLevelBuffers = CreateBottomLevelAS({ { m_Geometries["skullGeo"]->VertexBufferGPU, m_skullVertCount} }, { {m_Geometries["skullGeo"]->IndexBufferGPU, m_Geometries["skullGeo"]->DrawArgs["skull"].IndexCount }
+	AccelerationStructureBuffers bottomLevelBuffers = CreateBottomLevelAS({ { skullSubmesh->VertexBufferGPU, skullSubmesh->VertexCount} }, { {skullSubmesh->IndexBufferGPU, skullSubmesh->IndexCount }
 		});
-	AccelerationStructureBuffers planeBottomLevelBuffers = CreateBottomLevelAS({ { m_Geometries["skullGeo"]->VertexBufferGPU, m_skullVertCount} }, { {m_Geometries["skullGeo"]->IndexBufferGPU, m_Geometries["skullGeo"]->DrawArgs["skull"].IndexCount} });
+	AccelerationStructureBuffers planeBottomLevelBuffers = CreateBottomLevelAS({ { skullSubmesh->VertexBufferGPU, skullSubmesh->VertexCount} }, { {skullSubmesh->IndexBufferGPU, skullSubmesh->IndexCount} });
 
-	AccelerationStructureBuffers sphereBottomLevelBuffers = CreateBottomLevelAS({ { sphereSubmesh.VertexBufferGPU, sphereSubmesh.VertexCount} }, { {sphereSubmesh.IndexBufferGPU, sphereSubmesh.IndexCount} });
-	AccelerationStructureBuffers boxBottomLevelBuffers = CreateBottomLevelAS({ { boxSubmesh.VertexBufferGPU, boxSubmesh.VertexCount} }, { {boxSubmesh.IndexBufferGPU, boxSubmesh.IndexCount} });
+	AccelerationStructureBuffers sphereBottomLevelBuffers = CreateBottomLevelAS({ { sphereSubmesh->VertexBufferGPU, sphereSubmesh->VertexCount} }, { {sphereSubmesh->IndexBufferGPU, sphereSubmesh->IndexCount} });
+	AccelerationStructureBuffers boxBottomLevelBuffers = CreateBottomLevelAS({ { boxSubmesh->VertexBufferGPU, boxSubmesh->VertexCount} }, { {boxSubmesh->IndexBufferGPU, boxSubmesh->IndexCount} });
 
 
 	m_Instances = {
-		{ boxBottomLevelBuffers.pResult, XMMatrixScaling(50.0f, 5.0f, 50.0f) * XMMatrixTranslation(0.0f, -50.0f, 0.0f) },
-		{bottomLevelBuffers.pResult, XMMatrixTranslation(-16.0f, -10.0f, 0.0f)}, {bottomLevelBuffers.pResult, XMMatrixTranslation(16.0f, -10.0f, 0.0f)}, {bottomLevelBuffers.pResult, XMMatrixTranslation(0.0f, 10.0f, 0.0f)},
+		{ boxBottomLevelBuffers.pResult, boxSubmesh->World[0]},
+		{bottomLevelBuffers.pResult, skullSubmesh->World[0]}, {bottomLevelBuffers.pResult, skullSubmesh->World[1]}, {bottomLevelBuffers.pResult, skullSubmesh->World[2]},
 
-		{ planeBottomLevelBuffers.pResult, XMMatrixScaling(1.0f, 1.0f, 1.0f) * XMMatrixTranslation(0.0f, -20.0f, 0.0f) },
-		{ sphereBottomLevelBuffers.pResult, XMMatrixScaling(5.0f, 5.0f, 5.0f) * XMMatrixTranslation(-10.0f, -10.0f, -10.0f) },
+		{ planeBottomLevelBuffers.pResult, skullSubmesh->World[3] },
+		{ sphereBottomLevelBuffers.pResult, sphereSubmesh->World[0] },
 	};
 
 	m_IsInstanceReflective = {
