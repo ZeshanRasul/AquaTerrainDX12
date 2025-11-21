@@ -1013,7 +1013,7 @@ void Renderer::BuildShapeGeometry()
 
 	sphereSubmesh->IndexBufferGPU = d3dUtil::CreateDefaultBuffer(m_Device.Get(),
 		m_CommandList.Get(), sphere.Indices32.data(), sphereSubmesh->IndexBufferByteSize, sphereSubmesh->IndexBufferUploader);
-	sphereSubmesh->World.push_back(XMMatrixScaling(5.0f, 5.0f, 5.0f) * XMMatrixTranslation(-4.0f, 4.0f, -4.0f));
+	sphereSubmesh->World.push_back(XMMatrixScaling(5.0f, 5.0f, 5.0f) * XMMatrixTranslation(-14.0f, 4.0f, -4.0f));
 
 	for (UINT i = 0; i < sphereSubmesh->InstanceCount; i++)
 	{
@@ -1162,10 +1162,10 @@ void Renderer::BuildSkullGeometry()
 
 	skullSubmesh->InstanceCount = 4;
 
-	skullSubmesh->World.push_back(XMMatrixTranslation(-6.0f, 0.0f, 0.0f));
-	skullSubmesh->World.push_back(XMMatrixTranslation(6.0f, -0.0f, 0.0f));
-	skullSubmesh->World.push_back(XMMatrixTranslation(0.0f, 3.0f, 0.0f));
-	skullSubmesh->World.push_back(XMMatrixTranslation(0.0f, -2.0f, 0.0f));
+	skullSubmesh->World.push_back(XMMatrixTranslation(-6.0f, 10.0f, 0.0f));
+	skullSubmesh->World.push_back(XMMatrixTranslation(6.0f, -10.0f, 0.0f));
+	skullSubmesh->World.push_back(XMMatrixTranslation(0.0f, 3.0f, 10.0f));
+	skullSubmesh->World.push_back(XMMatrixTranslation(10.0f, -2.0f, 0.0f));
 
 	skullSubmesh->InstanceOffset = m_InstanceOffset;
 
