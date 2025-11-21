@@ -985,6 +985,7 @@ void Renderer::BuildShapeGeometry()
 		inst.World = boxSubmesh->World[i];
 
 		m_InstanceData.push_back(inst);
+		boxSubmesh->InstanceData.push_back(inst);
 		m_InstanceOffset++;
 	}
 
@@ -1020,6 +1021,7 @@ void Renderer::BuildShapeGeometry()
 		inst.InstanceID = i;
 		inst.MaterialIndex = sphereSubmesh->ObjCBIndex;
 		inst.World = sphereSubmesh->World[i];
+		sphereSubmesh->InstanceData.push_back(inst);
 
 		m_InstanceData.push_back(inst);
 		m_InstanceOffset++;
@@ -1164,7 +1166,7 @@ void Renderer::BuildSkullGeometry()
 	skullSubmesh->World.push_back(XMMatrixTranslation(6.0f, -0.0f, 0.0f));
 	skullSubmesh->World.push_back(XMMatrixTranslation(0.0f, 3.0f, 0.0f));
 	skullSubmesh->World.push_back(XMMatrixTranslation(0.0f, -2.0f, 0.0f));
-	
+
 	skullSubmesh->InstanceOffset = m_InstanceOffset;
 
 	for (UINT i = 0; i < skullSubmesh->InstanceCount; i++)
@@ -1173,6 +1175,7 @@ void Renderer::BuildSkullGeometry()
 		inst.InstanceID = i;
 		inst.MaterialIndex = skullSubmesh->ObjCBIndex;
 		inst.World = skullSubmesh->World[i];
+		skullSubmesh->InstanceData.push_back(inst);
 
 		m_InstanceData.push_back(inst);
 		m_InstanceOffset++;
@@ -1313,8 +1316,9 @@ void Renderer::DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::ve
 		CreateIndexBufferView(rg);
 		cmdList->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-		D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objectCB->GetGPUVirtualAddress() + (rg->ObjCBIndex) * objCBByteSize;
+		D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objectCB->GetGPUVirtualAddress() + (rg->ObjCBIndex * objCBByteSize);
 		D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = matGPUCB->GetGPUVirtualAddress();
+		D3D12_GPU_VIRTUAL_ADDRESS instGPUAdrress = instaGPUCB->GetGPUVirtualAddress();
 
 		cmdList->SetGraphicsRootConstantBufferView(0, objCBAddress);
 		cmdList->SetGraphicsRootConstantBufferView(1, matCBAddress);
@@ -1388,19 +1392,28 @@ void Renderer::UpdateObjectCBs()
 
 	for (auto& e : m_RenderGeometry)
 	{
-		if (e->NumFramesDirty)
+		std::vector<ObjectConstants> objConstants;
+		objConstants.resize(m_InstanceData.size());
+		if (e->NumFramesDirty > 0)
 		{
-			ObjectConstants objConstants;
-			XMStoreFloat4x4(&objConstants.WorldViewProj, XMMatrixTranspose(e->World[0]));
-			objConstants.MatIndex = e->ObjCBIndex;
-			objConstants.InstanceOffset = e->InstanceOffset;
-			currObjectCB->CopyData(e->ObjCBIndex, objConstants);
+			for (int i = 0; i < e->InstanceData.size(); i++)
+			{
 
+				XMStoreFloat4x4(&objConstants[i].WorldViewProj, XMMatrixTranspose(e->World[i]));
+				objConstants[i].MatIndex = e->InstanceData[i].MaterialIndex;
+				objConstants[i].InstanceOffset = e->InstanceOffset;
+				objConstants[i].InstanceID = i;
+
+
+				currObjectCB->CopyData(e->ObjCBIndex, objConstants[i]);
+			}
 			e->NumFramesDirty--;
 
 		}
 	}
 }
+
+
 
 void Renderer::UpdateMaterialCBs()
 {
@@ -2109,6 +2122,8 @@ void Renderer::CreatePerInstanceBuffers()
 		const uint32_t bufferSize = sizeof(int);
 
 		cb = nv_helpers_dx12::CreateBuffer(m_Device.Get(), bufferSize, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, nv_helpers_dx12::kUploadHeapProps);
+
+
 
 		uint8_t* pData;
 		ThrowIfFailed(cb->Map(0, nullptr, (void**)&pData));
