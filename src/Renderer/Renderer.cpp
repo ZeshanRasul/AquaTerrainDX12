@@ -337,7 +337,7 @@ void Renderer::Draw(bool useRaster)
 	desc.Depth = 1;
 
 	m_CommandList->SetPipelineState1(m_RtStateObject.Get());
-	//	m_CommandList->DispatchRays(&desc);
+//	m_CommandList->DispatchRays(&desc);
 
 
 	transition = CD3DX12_RESOURCE_BARRIER::Transition(m_OutputResource.Get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_SOURCE);
@@ -1249,30 +1249,30 @@ void Renderer::DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::ve
 
 	for (size_t i = 0; i < renderGeo.size(); ++i)
 	{
-		//auto* rg = renderGeo[i];
-		//CreateVertexBufferView(rg);
-		//CreateIndexBufferView(rg);
-		//cmdList->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		auto* rg = renderGeo[i];
+		CreateVertexBufferView(rg);
+		CreateIndexBufferView(rg);
+		cmdList->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-		//D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objectCB->GetGPUVirtualAddress() + (rg->ObjCBIndex) * objCBByteSize;
-		//D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = matCB->GetGPUVirtualAddress() * matCBByteSize;
+		D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objectCB->GetGPUVirtualAddress() + (rg->ObjCBIndex) * objCBByteSize;
+		D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = matCB->GetGPUVirtualAddress() * matCBByteSize;
 
-		//cmdList->SetGraphicsRootConstantBufferView(0, objCBAddress);
-		//cmdList->SetGraphicsRootConstantBufferView(1, matCBAddress);
+		cmdList->SetGraphicsRootConstantBufferView(0, objCBAddress);
+//		cmdList->SetGraphicsRootConstantBufferView(1, matCBAddress);
 
-		//cmdList->DrawIndexedInstanced(rg->IndexCount, rg->InstanceCount, rg->StartIndexLocation, rg->BaseVertexLocation, 0);
+		cmdList->DrawIndexedInstanced(rg->IndexCount, rg->InstanceCount, rg->StartIndexLocation, rg->BaseVertexLocation, 0);
 	}
-	CreateVertexBufferView(boxSubmesh);
-	CreateIndexBufferView(boxSubmesh);
-	cmdList->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-	D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objectCB->GetGPUVirtualAddress() + (boxSubmesh->ObjCBIndex) * objCBByteSize;
-//	D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = matCB->GetGPUVirtualAddress() + boxSubmesh->Material->MatCBIndex * matCBByteSize;
-
-	cmdList->SetGraphicsRootConstantBufferView(0, objCBAddress);
-//	cmdList->SetGraphicsRootConstantBufferView(1, matCBAddress);
-
-	cmdList->DrawIndexedInstanced(boxSubmesh->IndexCount, boxSubmesh->InstanceCount, boxSubmesh->StartIndexLocation, boxSubmesh->BaseVertexLocation, 0);
+//	CreateVertexBufferView(boxSubmesh);
+//	CreateIndexBufferView(boxSubmesh);
+//	cmdList->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+//
+//	D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objectCB->GetGPUVirtualAddress() + (boxSubmesh->ObjCBIndex) * objCBByteSize;
+////	D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = matCB->GetGPUVirtualAddress() + boxSubmesh->Material->MatCBIndex * matCBByteSize;
+//
+//	cmdList->SetGraphicsRootConstantBufferView(0, objCBAddress);
+////	cmdList->SetGraphicsRootConstantBufferView(1, matCBAddress);
+//
+//	cmdList->DrawIndexedInstanced(boxSubmesh->IndexCount, boxSubmesh->InstanceCount, boxSubmesh->StartIndexLocation, boxSubmesh->BaseVertexLocation, 0);
 
 }
 
