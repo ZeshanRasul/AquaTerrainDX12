@@ -69,7 +69,7 @@ private:
 
 	void FlushCommandQueue();
 
-	ID3D12Resource* CurrentBackBuffer() const;
+	ID3D12Resource* CurrentBackBuffer();
 
 	Microsoft::WRL::ComPtr<ID3D12Device5> m_Device;
 	Microsoft::WRL::ComPtr<IDXGIAdapter> m_WarpAdapter;
@@ -128,6 +128,8 @@ private:
 	UINT m_ClientWidth;
 	UINT m_ClientHeight;
 
+	std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> m_BackBufferHandles;
+	std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> m_GBufferHandles;
 
 	Microsoft::WRL::ComPtr<ID3DBlob> m_VsByteCode;
 	Microsoft::WRL::ComPtr<ID3DBlob> m_PsByteCode;

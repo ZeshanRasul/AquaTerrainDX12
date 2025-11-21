@@ -158,7 +158,7 @@ struct SubmeshGeometry
     // Data about the buffers.
     UINT VertexByteStride = 0;
     UINT VertexBufferByteSize = 0;
-    DXGI_FORMAT IndexFormat = DXGI_FORMAT_R16_UINT;
+    DXGI_FORMAT IndexFormat = DXGI_FORMAT_R32_UINT;
     UINT IndexBufferByteSize = 0;
 
     Microsoft::WRL::ComPtr<ID3DBlob> VertexBufferCPU = nullptr;

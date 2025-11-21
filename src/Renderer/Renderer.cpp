@@ -246,9 +246,9 @@ void Renderer::Draw(bool useRaster)
 	}
 
 	D3D12_RESOURCE_BARRIER pBarriers[2] = {};
-	pBarriers[0] = CD3DX12_RESOURCE_BARRIER::Transition(m_GBufferAlbedoMetal.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-	pBarriers[1] = CD3DX12_RESOURCE_BARRIER::Transition(m_GBufferNormalRough.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-	m_CommandList->ResourceBarrier(2, pBarriers);
+//	pBarriers[0] = CD3DX12_RESOURCE_BARRIER::Transition(m_GBufferAlbedoMetal.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+//	pBarriers[1] = CD3DX12_RESOURCE_BARRIER::Transition(m_GBufferNormalRough.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+//	m_CommandList->ResourceBarrier(2, pBarriers);
 	pBarriers[0] = CD3DX12_RESOURCE_BARRIER::Transition(m_GBufferAlbedoMetal.Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
 	pBarriers[1] = CD3DX12_RESOURCE_BARRIER::Transition(m_GBufferNormalRough.Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
 	m_CommandList->ResourceBarrier(2, pBarriers);
@@ -263,13 +263,13 @@ void Renderer::Draw(bool useRaster)
 	//pBarriers[1] = CD3DX12_RESOURCE_BARRIER::Transition(m_GBufferNormalRough.Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	//m_CommandList->ResourceBarrier(2, pBarriers);
 
-	D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = m_RtvHeap->GetCPUDescriptorHandleForHeapStart();
+	D3D12_CPU_DESCRIPTOR_HANDLE gbufferRtvs[2] =
+	{
+		m_GBufferHandles[0],
+		m_GBufferHandles[1]
+	};
 
-	rtvHandle.ptr += (m_RtvDescriptorSize);
-	rtvHandle.ptr += (m_RtvDescriptorSize);
-
-	m_CommandList->OMSetRenderTargets(2, &rtvHandle, true, &DepthStencilView());
-	rtvHandle.ptr += m_RtvDescriptorSize;
+	m_CommandList->OMSetRenderTargets(2, gbufferRtvs, true, &DepthStencilView());
 
 
 
@@ -277,14 +277,10 @@ void Renderer::Draw(bool useRaster)
 	m_CommandList->SetDescriptorHeaps(static_cast<UINT>(heaps.size()), heaps.data());
 
 	m_CommandList->ClearDepthStencilView(DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
-	rtvHandle = m_RtvHeap->GetCPUDescriptorHandleForHeapStart();
-	rtvHandle.ptr += (m_RtvDescriptorSize);
-	rtvHandle.ptr += (m_RtvDescriptorSize);
 	FLOAT colour[4] = { 0.22f, 0.33f, 0.44f, 0.f };
 
-	m_CommandList->ClearRenderTargetView(rtvHandle, colour, 0, nullptr);
-	rtvHandle.ptr += (m_RtvDescriptorSize);
-	m_CommandList->ClearRenderTargetView(rtvHandle, colour, 0, nullptr);
+	m_CommandList->ClearRenderTargetView(gbufferRtvs[0], colour, 0, nullptr);
+	m_CommandList->ClearRenderTargetView(gbufferRtvs[1], colour, 0, nullptr);
 	m_CommandList->SetGraphicsRootSignature(m_RootSignature.Get());
 
 	auto passCB = m_CurrentFrameResource->PassCB->Resource();
@@ -298,30 +294,7 @@ void Renderer::Draw(bool useRaster)
 	//pBarriers[1] = CD3DX12_RESOURCE_BARRIER::Transition(m_GBufferNormalRough.Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 	//m_CommandList->ResourceBarrier(2, pBarriers);
 
-	//ThrowIfFailed(m_CommandList->Close());
-	//ID3D12CommandList* cmdLists2[] = { m_CommandList.Get() };
-	//m_CommandQueue->ExecuteCommandLists(_countof(cmdLists2), cmdLists2);
-	//
-	////	ThrowIfFailed(m_SwapChain->Present(0, 0));
-	////m_CurrentBackBuffer = (m_CurrentBackBuffer + 1) % SwapChainBufferCount;
-	//
-	//m_CurrentFrameResource->Fence = ++m_CurrentFence;
-	//
-	//m_CommandQueue->Signal(m_Fence.Get(), m_CurrentFence);
-	//
-	//cmdListAlloc = m_CurrentFrameResource->CmdListAlloc;
-	//
-	//ThrowIfFailed(cmdListAlloc->Reset());
-	//
-	//if (m_IsWireframe)
-	//{
-	//	ThrowIfFailed(m_CommandList->Reset(cmdListAlloc.Get(), m_PipelineStateObjects["opaque_wireframe"].Get()));
-	//}
-	//else
-	//{
-	//	ThrowIfFailed(m_CommandList->Reset(cmdListAlloc.Get(), m_PipelineStateObjects["opaque"].Get()));
-	//}
-
+	
 
 	pBarriers[0] = CD3DX12_RESOURCE_BARRIER::Transition(m_GBufferAlbedoMetal.Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	pBarriers[1] = CD3DX12_RESOURCE_BARRIER::Transition(m_GBufferNormalRough.Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
@@ -330,7 +303,7 @@ void Renderer::Draw(bool useRaster)
 
 
 
-	//CreateTopLevelAS(m_Instances, true);
+//	CreateTopLevelAS(m_Instances, true);
 
 	//	m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_COPY_DEST));
 
@@ -375,18 +348,24 @@ void Renderer::Draw(bool useRaster)
 
 	m_CommandList->CopyResource(CurrentBackBuffer(), m_OutputResource.Get());
 
+//	rtvHandle = m_RtvHeap->GetCPUDescriptorHandleForHeapStart();
+//	D3D12_CPU_DESCRIPTOR_HANDLE backbufferRtv =
+//		m_BackBufferHandles[m_CurrentBackBuffer];
+//
+//	m_CommandList->OMSetRenderTargets(1, &backbufferRtv, true, &DepthStencilView());
+
 	transition = CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PRESENT);
 	m_CommandList->ResourceBarrier(1, &transition);
 
-	//	m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
+//	m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
 
-	pBarriers[0] = CD3DX12_RESOURCE_BARRIER::Transition(m_GBufferAlbedoMetal.Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_PRESENT);
-	pBarriers[1] = CD3DX12_RESOURCE_BARRIER::Transition(m_GBufferNormalRough.Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_PRESENT);
-	m_CommandList->ResourceBarrier(2, pBarriers);
+//	pBarriers[0] = CD3DX12_RESOURCE_BARRIER::Transition(m_GBufferAlbedoMetal.Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_PRESENT);
+//	pBarriers[1] = CD3DX12_RESOURCE_BARRIER::Transition(m_GBufferNormalRough.Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_PRESENT);
+//	m_CommandList->ResourceBarrier(2, pBarriers);
 
-	pBarriers[0] = CD3DX12_RESOURCE_BARRIER::Transition(m_GBufferAlbedoMetal.Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_COMMON);
-	pBarriers[1] = CD3DX12_RESOURCE_BARRIER::Transition(m_GBufferNormalRough.Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_COMMON);
-	m_CommandList->ResourceBarrier(2, pBarriers);
+//	pBarriers[0] = CD3DX12_RESOURCE_BARRIER::Transition(m_GBufferAlbedoMetal.Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_COMMON);
+//	pBarriers[1] = CD3DX12_RESOURCE_BARRIER::Transition(m_GBufferNormalRough.Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_COMMON);
+//	m_CommandList->ResourceBarrier(2, pBarriers);
 
 	ThrowIfFailed(m_CommandList->Close());
 
@@ -394,7 +373,7 @@ void Renderer::Draw(bool useRaster)
 	m_CommandQueue->ExecuteCommandLists(_countof(cmdLists), cmdLists);
 
 	HRESULT hr_present = m_SwapChain->Present(0, 0);
-	GetDeviceRemovedReasonString(hr_present);
+//	GetDeviceRemovedReasonString(hr_present);
 	m_CurrentBackBuffer = (m_CurrentBackBuffer + 1) % SwapChainBufferCount;
 
 	m_CurrentFrameResource->Fence = ++m_CurrentFence;
@@ -502,7 +481,7 @@ void Renderer::CreateSwapChain(HWND& windowHandle)
 void Renderer::CreateRtvAndDsvDescriptorHeaps()
 {
 	D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc;
-	rtvHeapDesc.NumDescriptors = SwapChainBufferCount;
+	rtvHeapDesc.NumDescriptors = SwapChainBufferCount + 2;
 	rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
 	rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 	rtvHeapDesc.NodeMask = 0;
@@ -572,20 +551,24 @@ void Renderer::CreateRenderTargetView()
 {
 	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHeapHandle(m_RtvHeap->GetCPUDescriptorHandleForHeapStart());
 
-
+	m_BackBufferHandles.resize(2);
+	m_GBufferHandles.resize(2);
 	for (UINT i = 0; i < SwapChainBufferCount; i++)
 	{
 		ThrowIfFailed(m_SwapChain->GetBuffer(i, IID_PPV_ARGS(&m_SwapChainBuffer[i])));
 
 		m_Device->CreateRenderTargetView(m_SwapChainBuffer[i].Get(), nullptr, rtvHeapHandle);
+		m_BackBufferHandles[i] = rtvHeapHandle;
 
 		rtvHeapHandle.Offset(m_RtvDescriptorSize);
 	}
 
 	m_Device->CreateRenderTargetView(m_GBufferAlbedoMetal.Get(), nullptr, rtvHeapHandle);
+	m_GBufferHandles[0] = rtvHeapHandle;
 	rtvHeapHandle.Offset(m_RtvDescriptorSize);
 	m_Device->CreateRenderTargetView(m_GBufferNormalRough.Get(), nullptr, rtvHeapHandle);
-	//	rtvHeapHandle.Offset(m_RtvDescriptorSize);
+	m_GBufferHandles[1] = rtvHeapHandle;
+	rtvHeapHandle.Offset(m_RtvDescriptorSize);
 
 
 }
@@ -599,7 +582,7 @@ void Renderer::CreateDepthStencilView()
 	depthStencilDesc.Height = m_ClientHeight;
 	depthStencilDesc.DepthOrArraySize = 1;
 	depthStencilDesc.MipLevels = 1;
-	depthStencilDesc.Format = DXGI_FORMAT_D32_FLOAT;
+	depthStencilDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
 	depthStencilDesc.SampleDesc.Count = 1;
 	depthStencilDesc.SampleDesc.Quality = 0;
 	depthStencilDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
@@ -613,14 +596,14 @@ void Renderer::CreateDepthStencilView()
 	heapProps.VisibleNodeMask = 0u;
 
 	D3D12_CLEAR_VALUE optClear = {};
-	optClear.Format = DXGI_FORMAT_D32_FLOAT;
+	optClear.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
 	optClear.DepthStencil.Depth = 1.0f;
 	optClear.DepthStencil.Stencil = 0;
 
 	ThrowIfFailed(m_Device->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &depthStencilDesc, D3D12_RESOURCE_STATE_COMMON, &optClear, IID_PPV_ARGS(&m_DepthStencilBuffer)));
 
 	D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
-	dsvDesc.Format = DXGI_FORMAT_D32_FLOAT;
+	dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
 	dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
 	dsvDesc.Flags = D3D12_DSV_FLAG_NONE;
 
@@ -1306,7 +1289,7 @@ void Renderer::BuildPSOs()
 	opaquePsoDesc.RTVFormats[1] = DXGI_FORMAT_R8G8B8A8_UNORM;
 	opaquePsoDesc.SampleDesc.Count = 1;
 	opaquePsoDesc.SampleDesc.Quality = 0;
-	opaquePsoDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
+	opaquePsoDesc.DSVFormat = m_DepthStencilFormat;
 
 	ThrowIfFailed(m_Device->CreateGraphicsPipelineState(&opaquePsoDesc, IID_PPV_ARGS(&m_PipelineStateObjects["opaque"])));
 
@@ -1459,7 +1442,7 @@ void Renderer::FlushCommandQueue()
 	}
 }
 
-ID3D12Resource* Renderer::CurrentBackBuffer() const
+ID3D12Resource* Renderer::CurrentBackBuffer()
 {
 	return m_SwapChainBuffer[m_CurrentBackBuffer].Get();
 }
