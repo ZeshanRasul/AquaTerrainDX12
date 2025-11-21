@@ -14,7 +14,7 @@ struct PixelIn
 cbuffer cbPerObject : register(b0)
 {
     float4x4 gWorld;
-    float matIndex;
+    int matIndex;
 }
 
 

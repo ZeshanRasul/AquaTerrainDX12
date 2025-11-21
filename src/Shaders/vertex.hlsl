@@ -3,7 +3,7 @@
 cbuffer cbPerObject : register(b0)
 {
     float4x4 gWorld;
-    float matIndex;
+    int matIndex;
 }
 
 cbuffer cbMaterial : register(b1)

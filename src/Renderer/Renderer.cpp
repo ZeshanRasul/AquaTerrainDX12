@@ -969,10 +969,11 @@ void Renderer::BuildShapeGeometry()
 
 	boxSubmesh->IndexBufferGPU = d3dUtil::CreateDefaultBuffer(m_Device.Get(),
 		m_CommandList.Get(), box.Indices32.data(), boxSubmesh->IndexBufferByteSize, boxSubmesh->IndexBufferUploader);
-	boxSubmesh->Material = m_Materials["box"].get();
+//	boxSubmesh->Material = m_Materials["box"].get();
 	//XMMATRIX newWorld; 
 		//XMStoreMatrix(&newWorld, MathHelper::Identity4x4());
 	boxSubmesh->ObjCBIndex = 0;
+
 	boxSubmesh->World.push_back(XMMatrixScaling(1.0f, 1.0f, 1.0f));
 	m_RenderGeometry.push_back(boxSubmesh);
 
@@ -983,6 +984,7 @@ void Renderer::BuildShapeGeometry()
 	sphereSubmesh->IndexFormat = DXGI_FORMAT_R32_UINT;
 	sphereSubmesh->InstanceCount = 1;
 	sphereSubmesh->ObjCBIndex = 1;
+//	sphereSubmesh->Material->MatCBIndex = 1;
 
 	ThrowIfFailed(D3DCreateBlob(sphereSubmesh->VertexBufferByteSize, &sphereSubmesh->VertexBufferCPU));
 	CopyMemory(sphereSubmesh->VertexBufferCPU->GetBufferPointer(), sphereVertices.data(), sphereSubmesh->VertexBufferByteSize);
@@ -1116,6 +1118,7 @@ void Renderer::BuildSkullGeometry()
 	skullSubmesh->IndexFormat = DXGI_FORMAT_R32_UINT;
 	skullSubmesh->IndexCount = (UINT64)indices.size();
 	skullSubmesh->ObjCBIndex = 2;
+//	skullSubmesh->Material->MatCBIndex = 2;
 
 	ThrowIfFailed(D3DCreateBlob(skullSubmesh->VertexBufferByteSize, &skullSubmesh->VertexBufferCPU));
 	CopyMemory(skullSubmesh->VertexBufferCPU->GetBufferPointer(), vertices.data(), skullSubmesh->VertexBufferByteSize);
@@ -1347,7 +1350,7 @@ void Renderer::UpdateObjectCBs()
 		{
 			ObjectConstants objConstants;
 			XMStoreFloat4x4(&objConstants.WorldViewProj, XMMatrixTranspose(e->World[0]));
-			objConstants.MatIndex = 0;
+			objConstants.MatIndex = e->ObjCBIndex;
 			currObjectCB->CopyData(e->ObjCBIndex, objConstants);
 
 			e->NumFramesDirty--;
