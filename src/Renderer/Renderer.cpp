@@ -84,7 +84,7 @@ bool Renderer::InitializeD3D12(HWND& windowHandle)
 	//nv_helpers_dx12::Manipulator::Singleton().setLookat(glm::vec3(0.0f, 1.0f, -27.0f), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
 
 #if defined(DEBUG) || defined(_DEBUG)
-//	CreateDebugController();
+	CreateDebugController();
 #endif
 	ThrowIfFailed(CreateDXGIFactory1(IID_PPV_ARGS(&m_DxgiFactory)));
 
@@ -338,7 +338,7 @@ void Renderer::Draw(bool useRaster)
 	desc.Depth = 1;
 
 	m_CommandList->SetPipelineState1(m_RtStateObject.Get());
-	//	m_CommandList->DispatchRays(&desc);
+	m_CommandList->DispatchRays(&desc);
 
 
 	transition = CD3DX12_RESOURCE_BARRIER::Transition(m_OutputResource.Get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_SOURCE);
@@ -717,15 +717,16 @@ void Renderer::CreateConstantBufferViews()
 
 void Renderer::CreateRootSignature()
 {
-	CD3DX12_ROOT_PARAMETER slotRootParameter[5];
+	CD3DX12_ROOT_PARAMETER slotRootParameter[6];
 
 	slotRootParameter[0].InitAsConstantBufferView(0);
 	slotRootParameter[1].InitAsConstantBufferView(1);
 	slotRootParameter[2].InitAsConstantBufferView(2);
 	slotRootParameter[3].InitAsConstantBufferView(3);
 	slotRootParameter[4].InitAsShaderResourceView(0);
+	slotRootParameter[5].InitAsShaderResourceView(1);
 
-	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(5, slotRootParameter, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(6, slotRootParameter, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
 	Microsoft::WRL::ComPtr<ID3DBlob> serializedRootSig = nullptr;
 	Microsoft::WRL::ComPtr<ID3DBlob> errorBlob = nullptr;
@@ -969,12 +970,24 @@ void Renderer::BuildShapeGeometry()
 
 	boxSubmesh->IndexBufferGPU = d3dUtil::CreateDefaultBuffer(m_Device.Get(),
 		m_CommandList.Get(), box.Indices32.data(), boxSubmesh->IndexBufferByteSize, boxSubmesh->IndexBufferUploader);
-//	boxSubmesh->Material = m_Materials["box"].get();
-	//XMMATRIX newWorld; 
-		//XMStoreMatrix(&newWorld, MathHelper::Identity4x4());
+	//	boxSubmesh->Material = m_Materials["box"].get();
+		//XMMATRIX newWorld; 
+			//XMStoreMatrix(&newWorld, MathHelper::Identity4x4());
 	boxSubmesh->ObjCBIndex = 0;
 
 	boxSubmesh->World.push_back(XMMatrixScaling(1.0f, 1.0f, 1.0f));
+	boxSubmesh->InstanceOffset = m_InstanceOffset;
+	for (UINT i = 0; i < boxSubmesh->InstanceCount; i++)
+	{
+		InstanceData inst{};
+		inst.InstanceID = i;
+		inst.MaterialIndex = boxSubmesh->ObjCBIndex;
+		inst.World = boxSubmesh->World[i];
+
+		m_InstanceData.push_back(inst);
+		m_InstanceOffset++;
+	}
+
 	m_RenderGeometry.push_back(boxSubmesh);
 
 	sphereSubmesh->VertexByteStride = sizeof(Vertex);
@@ -984,7 +997,9 @@ void Renderer::BuildShapeGeometry()
 	sphereSubmesh->IndexFormat = DXGI_FORMAT_R32_UINT;
 	sphereSubmesh->InstanceCount = 1;
 	sphereSubmesh->ObjCBIndex = 1;
-//	sphereSubmesh->Material->MatCBIndex = 1;
+	//	sphereSubmesh->Material->MatCBIndex = 1;
+	sphereSubmesh->InstanceOffset = m_InstanceOffset;
+
 
 	ThrowIfFailed(D3DCreateBlob(sphereSubmesh->VertexBufferByteSize, &sphereSubmesh->VertexBufferCPU));
 	CopyMemory(sphereSubmesh->VertexBufferCPU->GetBufferPointer(), sphereVertices.data(), sphereSubmesh->VertexBufferByteSize);
@@ -997,7 +1012,18 @@ void Renderer::BuildShapeGeometry()
 
 	sphereSubmesh->IndexBufferGPU = d3dUtil::CreateDefaultBuffer(m_Device.Get(),
 		m_CommandList.Get(), sphere.Indices32.data(), sphereSubmesh->IndexBufferByteSize, sphereSubmesh->IndexBufferUploader);
-	sphereSubmesh->World.push_back(XMMatrixScaling(5.0f, 5.0f, 5.0f) * XMMatrixTranslation(-10.0f, -10.0f, -10.0f));
+	sphereSubmesh->World.push_back(XMMatrixScaling(5.0f, 5.0f, 5.0f) * XMMatrixTranslation(0.0f, 4.0f, 0.0f));
+
+	for (UINT i = 0; i < sphereSubmesh->InstanceCount; i++)
+	{
+		InstanceData inst{};
+		inst.InstanceID = i;
+		inst.MaterialIndex = sphereSubmesh->ObjCBIndex;
+		inst.World = sphereSubmesh->World[i];
+
+		m_InstanceData.push_back(inst);
+		m_InstanceOffset++;
+	}
 
 	m_RenderGeometry.push_back(sphereSubmesh);
 
@@ -1118,7 +1144,7 @@ void Renderer::BuildSkullGeometry()
 	skullSubmesh->IndexFormat = DXGI_FORMAT_R32_UINT;
 	skullSubmesh->IndexCount = (UINT64)indices.size();
 	skullSubmesh->ObjCBIndex = 2;
-//	skullSubmesh->Material->MatCBIndex = 2;
+	//	skullSubmesh->Material->MatCBIndex = 2;
 
 	ThrowIfFailed(D3DCreateBlob(skullSubmesh->VertexBufferByteSize, &skullSubmesh->VertexBufferCPU));
 	CopyMemory(skullSubmesh->VertexBufferCPU->GetBufferPointer(), vertices.data(), skullSubmesh->VertexBufferByteSize);
@@ -1138,6 +1164,19 @@ void Renderer::BuildSkullGeometry()
 	skullSubmesh->World.push_back(XMMatrixTranslation(16.0f, -10.0f, 0.0f));
 	skullSubmesh->World.push_back(XMMatrixTranslation(0.0f, 10.0f, 0.0f));
 	skullSubmesh->World.push_back(XMMatrixTranslation(0.0f, -20.0f, 0.0f));
+	
+	skullSubmesh->InstanceOffset = m_InstanceOffset;
+
+	for (UINT i = 0; i < skullSubmesh->InstanceCount; i++)
+	{
+		InstanceData inst{};
+		inst.InstanceID = i;
+		inst.MaterialIndex = skullSubmesh->ObjCBIndex;
+		inst.World = skullSubmesh->World[i];
+
+		m_InstanceData.push_back(inst);
+		m_InstanceOffset++;
+	}
 
 	m_RenderGeometry.push_back(skullSubmesh);
 
@@ -1262,7 +1301,9 @@ void Renderer::DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::ve
 	auto objectCB = m_CurrentFrameResource->ObjectCB->Resource();
 	auto matCB = m_MaterialsGPU;
 	auto matGPUCB = m_UploadCBuffer;
+	auto instaGPUCB = m_InstanceBuffer;
 	D3D12_GPU_VIRTUAL_ADDRESS matGPUAdrress = matGPUCB->GetGPUVirtualAddress();
+	D3D12_GPU_VIRTUAL_ADDRESS instGPUAdrress = instaGPUCB->GetGPUVirtualAddress();
 
 
 	for (size_t i = 0; i < renderGeo.size(); ++i)
@@ -1278,6 +1319,7 @@ void Renderer::DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::ve
 		cmdList->SetGraphicsRootConstantBufferView(0, objCBAddress);
 		cmdList->SetGraphicsRootConstantBufferView(1, matCBAddress);
 		cmdList->SetGraphicsRootShaderResourceView(4, matGPUAdrress);
+		cmdList->SetGraphicsRootShaderResourceView(5, instGPUAdrress);
 
 		cmdList->DrawIndexedInstanced(rg->IndexCount, rg->InstanceCount, rg->StartIndexLocation, rg->BaseVertexLocation, 0);
 	}
@@ -1351,6 +1393,7 @@ void Renderer::UpdateObjectCBs()
 			ObjectConstants objConstants;
 			XMStoreFloat4x4(&objConstants.WorldViewProj, XMMatrixTranspose(e->World[0]));
 			objConstants.MatIndex = e->ObjCBIndex;
+			objConstants.InstanceOffset = e->InstanceOffset;
 			currObjectCB->CopyData(e->ObjCBIndex, objConstants);
 
 			e->NumFramesDirty--;
@@ -1498,8 +1541,8 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> Renderer::CreateHitSignature()
 	rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_CBV, 3);
 	rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_CBV, 4);
 	rsc.AddHeapRangesParameter({ { 3, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2} });
-	rsc.AddHeapRangesParameter({ { 4, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4} });
-	rsc.AddHeapRangesParameter({ { 5, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 5} });
+	rsc.AddHeapRangesParameter({ { 4, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 5} });
+	rsc.AddHeapRangesParameter({ { 5, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 6} });
 
 	return rsc.Generate(m_Device.Get(), true);
 }
@@ -1578,7 +1621,7 @@ void Renderer::CreateRaytracingOutputBuffer()
 
 void Renderer::CreateShaderResourceHeap()
 {
-	m_SrvUavHeap = nv_helpers_dx12::CreateDescriptorHeap(m_Device.Get(), 6, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
+	m_SrvUavHeap = nv_helpers_dx12::CreateDescriptorHeap(m_Device.Get(), 7, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
 
 	D3D12_CPU_DESCRIPTOR_HANDLE srvHandle = m_SrvUavHeap->GetCPUDescriptorHandleForHeapStart();
 
@@ -1612,6 +1655,19 @@ void Renderer::CreateShaderResourceHeap()
 
 	srvHandle.ptr += m_Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
+
+	srvDesc = {};
+	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	srvDesc.Format = DXGI_FORMAT_UNKNOWN;
+	srvDesc.Buffer.FirstElement = 0;
+	srvDesc.Buffer.NumElements = static_cast<UINT>(m_InstanceData.size());
+	srvDesc.Buffer.StructureByteStride = sizeof(InstanceData);
+	srvDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
+
+	m_Device->CreateShaderResourceView(m_InstanceBuffer.Get(), &srvDesc, srvHandle);
+
+	srvHandle.ptr += m_Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
 	D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
 	cbvDesc.BufferLocation = m_FrameResources[m_CurrentFrameResourceIndex]->PassCB->Resource()->GetGPUVirtualAddress();
@@ -2081,7 +2137,7 @@ void Renderer::CreatePerInstanceBuffers()
 		m_MaterialsGPU.push_back(std::move(matGpu));
 	}
 
-	const uint32_t bufferSize = m_MaterialsGPU.size() * sizeof(MaterialDataGPU);
+	uint32_t bufferSize = m_MaterialsGPU.size() * sizeof(MaterialDataGPU);
 
 	m_UploadCBuffer = nv_helpers_dx12::CreateBuffer(m_Device.Get(), bufferSize, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, nv_helpers_dx12::kUploadHeapProps);
 
@@ -2089,6 +2145,16 @@ void Renderer::CreatePerInstanceBuffers()
 	ThrowIfFailed(m_UploadCBuffer->Map(0, nullptr, (void**)&pData));
 	memcpy(pData, m_MaterialsGPU.data(), bufferSize);
 	m_UploadCBuffer->Unmap(0, nullptr);
+
+
+
+	bufferSize = m_InstanceData.size() * sizeof(InstanceData);
+	m_InstanceBuffer = nv_helpers_dx12::CreateBuffer(m_Device.Get(), bufferSize, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, nv_helpers_dx12::kUploadHeapProps);
+
+	uint8_t* pData2;
+	ThrowIfFailed(m_InstanceBuffer->Map(0, nullptr, (void**)&pData2));
+	memcpy(pData2, m_InstanceData.data(), bufferSize);
+	m_InstanceBuffer->Unmap(0, nullptr);
 
 }
 

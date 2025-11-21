@@ -15,6 +15,8 @@ cbuffer cbPerObject : register(b0)
 {
     float4x4 gWorld;
     int matIndex;
+    int InstanceID;
+    int InstanceOffset;
 }
 
 

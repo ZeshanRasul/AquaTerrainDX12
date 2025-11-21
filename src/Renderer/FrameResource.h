@@ -9,6 +9,8 @@ struct ObjectConstants
 {
 	XMFLOAT4X4 WorldViewProj;
 	int MatIndex;
+	int InstanceID;
+	int InstanceOffset;
 };
 
 struct PassConstants

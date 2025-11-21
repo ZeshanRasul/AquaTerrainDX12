@@ -4,7 +4,18 @@ cbuffer cbPerObject : register(b0)
 {
     float4x4 gWorld;
     int matIndex;
+    int InstanceID;
+    int InstanceOffset;
 }
+
+struct InstanceData
+{
+    float4x4 instWorld;
+    uint MaterialIndex;
+    uint InstanceID;
+    uint pad;
+    uint pad2;
+};
 
 cbuffer cbMaterial : register(b1)
 {
@@ -47,6 +58,9 @@ cbuffer cbCamera : register(b3)
     float4x4 projection;
 }
 
+StructuredBuffer<InstanceData> instancesData : register(t1);
+
+
 struct VertexIn
 {
     float3 PosL : POSITION;
@@ -61,12 +75,14 @@ struct VSOutput
 };
 
 VSOutput VS(VertexIn vIn)
-{  
+{
     VSOutput vso;
 
-    matrix worldView = mul(gWorld, gView);
-
-    float4 homogPosW = mul(float4(vIn.PosL, 1.0f), gWorld);
+    uint idx = InstanceOffset + InstanceID;
+    
+    InstanceData inst = instancesData[idx];
+    
+    float4 homogPosW = mul(float4(vIn.PosL, 1.0f), inst.instWorld);
 
     vso.PosW = homogPosW.xyz / homogPosW.w;
 

@@ -163,6 +163,10 @@ private:
 	std::unordered_map<std::string, std::unique_ptr<MeshGeometry>> m_Geometries;
 	std::unordered_map<std::string, std::shared_ptr<Material>> m_Materials;
 
+	std::vector<InstanceData> m_InstanceData;
+	UINT m_InstanceOffset = 0;
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_InstanceBuffer;
+
 	PassConstants m_MainPassCB;
 	UINT m_skullVertCount = 0;
 

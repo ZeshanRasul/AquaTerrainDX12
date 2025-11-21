@@ -144,6 +144,15 @@ public:
     int LineNumber = -1;
 };
 
+struct InstanceData
+{
+    DirectX::XMMATRIX World;
+    UINT MaterialIndex;
+    UINT InstanceID;
+    UINT pad = 0;
+    UINT pad2 = 0;
+};
+
 // Defines a subrange of geometry in a MeshGeometry.  This is for when multiple
 // geometries are stored in one vertex and index buffer.  It provides the offsets
 // and data needed to draw a subset of geometry stores in the vertex and index 
@@ -176,6 +185,8 @@ struct SubmeshGeometry
     UINT ObjCBIndex;
     Material* Material;
     UINT InstanceCount = 1;
+    UINT InstanceOffset = 0;
+    std::vector<InstanceData> InstanceData;
 
     std::vector<DirectX::XMMATRIX> World;
     UINT NumFramesDirty = 3;
