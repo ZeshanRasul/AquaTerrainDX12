@@ -7,7 +7,7 @@ using namespace DirectX;
 
 struct ObjectConstants
 {
-	std::vector<XMFLOAT4X4> WorldViewProj;
+	XMFLOAT4X4 WorldViewProj;
 };
 
 struct PassConstants

@@ -87,6 +87,7 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_CbvHeap;
 
 	Microsoft::WRL::ComPtr<IDXGISwapChain> m_SwapChain;
+	Microsoft::WRL::ComPtr<IDXGISwapChain3> m_SwapChain3;
 	static const int SwapChainBufferCount = 2;
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_SwapChainBuffer[SwapChainBufferCount];
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_DepthStencilBuffer;
