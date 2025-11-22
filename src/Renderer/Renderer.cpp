@@ -278,10 +278,10 @@ void Renderer::Draw(bool useRaster)
 	m_CommandList->SetDescriptorHeaps(static_cast<UINT>(heaps.size()), heaps.data());
 
 	m_CommandList->ClearDepthStencilView(DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
-	FLOAT colour[4] = { 0.22f, 0.33f, 0.44f, 0.f };
+	FLOAT color[4] = { 0.22f, 0.33f, 0.44f, 0.f };
 
-	m_CommandList->ClearRenderTargetView(gbufferRtvs[0], colour, 0, nullptr);
-	m_CommandList->ClearRenderTargetView(gbufferRtvs[1], colour, 0, nullptr);
+	m_CommandList->ClearRenderTargetView(gbufferRtvs[0], color, 0, nullptr);
+	m_CommandList->ClearRenderTargetView(gbufferRtvs[1], color, 0, nullptr);
 	m_CommandList->SetGraphicsRootSignature(m_RootSignature.Get());
 
 	auto passCB = m_CurrentFrameResource->PassCB->Resource();
@@ -306,18 +306,18 @@ void Renderer::Draw(bool useRaster)
 	m_CommandList->ResourceBarrier(1, &transition);
 
 
-//	CreateTopLevelAS(m_Instances, true);
+	//	CreateTopLevelAS(m_Instances, true);
 
-		//	m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_COPY_DEST));
+			//	m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_COPY_DEST));
 
-			//	m_CommandList->SetDescriptorHeaps(static_cast<UINT>(heaps.size()), heaps.data());
+				//	m_CommandList->SetDescriptorHeaps(static_cast<UINT>(heaps.size()), heaps.data());
 
 
 	transition = CD3DX12_RESOURCE_BARRIER::Transition(m_OutputResource.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 	m_CommandList->ResourceBarrier(1, &transition);
 
 
-	heaps = { m_SrvUavHeap.Get(), m_SamplerHeap.Get()};
+	heaps = { m_SrvUavHeap.Get(), m_SamplerHeap.Get() };
 	m_CommandList->SetDescriptorHeaps(static_cast<UINT>(heaps.size()), heaps.data());
 
 	D3D12_DISPATCH_RAYS_DESC desc = {};
@@ -342,6 +342,14 @@ void Renderer::Draw(bool useRaster)
 	desc.Depth = 1;
 
 	m_CommandList->SetPipelineState1(m_RtStateObject.Get());
+	auto handleGPU = m_SrvUavHeap->GetGPUDescriptorHandleForHeapStart();
+	auto handleCPU = m_SrvUavHeap->GetCPUDescriptorHandleForHeapStart();
+	m_CommandList->ClearUnorderedAccessViewFloat(handleGPU, // GPU handle
+		handleCPU, // CPU handle
+		m_OutputResource.Get(),
+		color,
+		0,
+		nullptr);
 	m_CommandList->DispatchRays(&desc);
 
 
@@ -1482,7 +1490,7 @@ void Renderer::UpdateMainPassCB()
 	m_MainPassCB.cbPerObjectPad2 = 0.5f;
 	m_MainPassCB.cbPerObjectPad3 = 0.5f;
 	m_MainPassCB.AmbientLight = { 0.25f, 0.25f, 0.35f, 1.0f };
-	m_MainPassCB.Lights[0].Strength = { 4.6f, 4.6f, 4.6f };
+	m_MainPassCB.Lights[0].Strength = { 44.6f, 44.6f, 44.6f };
 	m_MainPassCB.Lights[0].Direction = { 0.3f, -0.46f, 0.7f };
 	m_MainPassCB.Lights[1].Direction = { -0.57735f, -0.57735f, 0.57735f };
 
@@ -1771,7 +1779,7 @@ void Renderer::CreateShaderBindingTable()
 	auto samplerHeapPointer = reinterpret_cast<void*>(samplerHeapHandle.ptr);
 
 	m_SbtHelper.AddRayGenerationProgram(L"RayGen", {
-	heapPointer, 
+	heapPointer,
 		(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(),
 	(void*)m_PostProcessConstantBuffer->GetGPUVirtualAddress(),
 	(void*)m_AreaLightConstantBuffer->GetGPUVirtualAddress(),
@@ -2116,7 +2124,7 @@ void Renderer::CreateGlobalConstantBuffer()
 
 void Renderer::CreatePostProcessConstantBuffer()
 {
-	m_PostProcessData.Exposure = 0.0f;
+	m_PostProcessData.Exposure = 1.0f;
 	m_PostProcessData.ToneMapMode = 2;
 	m_PostProcessData.DebugMode = 0;
 	m_PostProcessData.pad = 1.0f;
@@ -2134,10 +2142,10 @@ void Renderer::CreatePostProcessConstantBuffer()
 
 void Renderer::CreateAreaLightConstantBuffer()
 {
-	m_AreaLightData.Position = XMFLOAT3(0.0f, 50.0f, -25.0f);
-	m_AreaLightData.Radiance = XMFLOAT3(15.0f, 15.0f, 15.0f);
-	m_AreaLightData.U = XMFLOAT3(5.0f, 0.0f, 0.0f);
-	m_AreaLightData.V = XMFLOAT3(0.0f, 0.0f, 5.0f);
+	m_AreaLightData.Position = XMFLOAT3(0.0f, 10.0f, 0.0f);
+	m_AreaLightData.Radiance = XMFLOAT3(45.0f, 45.0f, 45.0f);
+	m_AreaLightData.U = XMFLOAT3(2.0f, 0.0f, 0.0f);
+	m_AreaLightData.V = XMFLOAT3(0.0f, 0.0f, 2.0f);
 
 	float lenU = sqrtf(m_AreaLightData.U.x * m_AreaLightData.U.x +
 		m_AreaLightData.U.y * m_AreaLightData.U.y +

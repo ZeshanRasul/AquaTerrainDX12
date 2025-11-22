@@ -315,6 +315,15 @@ void RayGen()
     float3 normal = GBufferNormalRough.SampleLevel(gLinearClampSampler, pixelCenter, 1).xyz;
     float roughness = GBufferNormalRough.SampleLevel(gLinearClampSampler, pixelCenter, 1).w;
 
+    if (depth >= 1.0f - 1e-5f)
+    {
+        float ramp = launchIndex.y / dims.y;
+    
+        float3 skyColor = float3(0.1f, 0.3f, 0.7f - 0.3f * ramp);
+        gOutput[launchIndex] = float4(skyColor, 1.0f);
+        return;
+    }
+    
     float4 clipPos = float4(pixelCenter.x, pixelCenter.y, depth, 1.0);
     
     float4 worldPosH = mul(clipPos, gInvViewProj);
@@ -326,7 +335,7 @@ void RayGen()
     
     float3 Lo = 0.0;
     
-    for (int i = 0; i < 1; ++i)
+    for (int i = 0; i < 3; ++i)
     {
         float3 L;
         float3 Li = 0.0;
@@ -362,7 +371,7 @@ void RayGen()
     float3 radiance = 0.0;
     radiance += Lo;
     
-    uint samples = 32;
+    uint samples = 8;
 
     
     for (uint s = 0; s < samples; s++)
