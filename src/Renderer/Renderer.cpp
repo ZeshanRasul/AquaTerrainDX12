@@ -794,8 +794,8 @@ void Renderer::BuildMaterials()
 	bricks0->DiffuseSrvHeapIndex = 1;
 	bricks0->DiffuseAlbedo = XMFLOAT4(Colors::Sienna);
 	bricks0->FresnelR0 = XMFLOAT3(0.02f, 0.02f, 0.02f);
-	bricks0->Roughness = 0.1f;
-	bricks0->metallic = 0.8f;
+	bricks0->Roughness = 0.9f;
+	bricks0->metallic = 0.1f;
 
 	auto stone0 = std::make_unique<Material>();
 	stone0->Name = "stone0";
@@ -803,8 +803,8 @@ void Renderer::BuildMaterials()
 	stone0->DiffuseSrvHeapIndex = 2;
 	stone0->DiffuseAlbedo = XMFLOAT4(Colors::Crimson);
 	stone0->FresnelR0 = XMFLOAT3(0.05f, 0.05f, 0.05f);
-	stone0->Roughness = 0.6f;
-	stone0->metallic = 0.4f;
+	stone0->Roughness = 0.9f;
+	stone0->metallic = 0.1f;
 
 	auto skullMat = std::make_unique<Material>();
 	skullMat->Name = "skullMat";
@@ -987,7 +987,7 @@ void Renderer::BuildShapeGeometry()
 			//XMStoreMatrix(&newWorld, MathHelper::Identity4x4());
 	boxSubmesh->ObjCBIndex = 0;
 
-	boxSubmesh->World.push_back(XMMatrixScaling(1.0f, 1.0f, 1.0f));
+	boxSubmesh->World.push_back(XMMatrixScaling(30.0f, 1.0f, 30.0f) * XMMatrixTranslation(0.0f, -15.0f, 0.0f));
 	boxSubmesh->InstanceOffset = m_InstanceOffset;
 	for (UINT i = 0; i < boxSubmesh->InstanceCount; i++)
 	{
@@ -1175,9 +1175,9 @@ void Renderer::BuildSkullGeometry()
 	skullSubmesh->InstanceCount = 4;
 
 	skullSubmesh->World.push_back(XMMatrixTranslation(-6.0f, 10.0f, 0.0f));
-	skullSubmesh->World.push_back(XMMatrixTranslation(6.0f, -10.0f, 0.0f));
-	skullSubmesh->World.push_back(XMMatrixTranslation(0.0f, 3.0f, 10.0f));
-	skullSubmesh->World.push_back(XMMatrixTranslation(10.0f, -2.0f, 0.0f));
+	skullSubmesh->World.push_back(XMMatrixTranslation(6.0f, 20.0f, 0.0f));
+	skullSubmesh->World.push_back(XMMatrixTranslation(0.0f, 13.0f, 10.0f));
+	skullSubmesh->World.push_back(XMMatrixTranslation(10.0f, 11.0f, 0.0f));
 
 	skullSubmesh->InstanceOffset = m_InstanceOffset;
 
@@ -1485,13 +1485,13 @@ void Renderer::UpdateMainPassCB()
 	m_MainPassCB.cbPerObjectPad2 = 0.5f;
 	m_MainPassCB.cbPerObjectPad3 = 0.5f;
 	m_MainPassCB.AmbientLight = { 0.25f, 0.25f, 0.35f, 1.0f };
-	m_MainPassCB.Lights[0].Strength = { 44.6f, 44.6f, 44.6f };
+	m_MainPassCB.Lights[0].Strength = { 4.6f, 4.6f, 4.6f };
 	m_MainPassCB.Lights[0].Direction = { 0.3f, -0.46f, 0.7f };
 	m_MainPassCB.Lights[1].Direction = { -0.57735f, -0.57735f, 0.57735f };
 
-	m_MainPassCB.Lights[1].Strength = { 0.3f, 0.3f, 0.3f };
-	m_MainPassCB.Lights[2].Direction = { 0.0f, -0.707f, -0.707f };
-	m_MainPassCB.Lights[2].Strength = { 0.15f, 0.15f, 0.15f };
+	m_MainPassCB.Lights[1].Strength = { 2.6f, 2.6f, 2.6f };
+	m_MainPassCB.Lights[2].Direction = { 0.0f, 0.707f, -0.707f };
+	m_MainPassCB.Lights[2].Strength = { 2.6f, 2.6f, 2.6f };
 
 	auto currPassCB = m_CurrentFrameResource->PassCB.get();
 	currPassCB->CopyData(0, m_MainPassCB);
@@ -2119,7 +2119,7 @@ void Renderer::CreateGlobalConstantBuffer()
 
 void Renderer::CreatePostProcessConstantBuffer()
 {
-	m_PostProcessData.Exposure = 1.0f;
+	m_PostProcessData.Exposure = 0.0f;
 	m_PostProcessData.ToneMapMode = 2;
 	m_PostProcessData.DebugMode = 0;
 	m_PostProcessData.pad = 1.0f;
@@ -2137,10 +2137,10 @@ void Renderer::CreatePostProcessConstantBuffer()
 
 void Renderer::CreateAreaLightConstantBuffer()
 {
-	m_AreaLightData.Position = XMFLOAT3(0.0f, 10.0f, 0.0f);
-	m_AreaLightData.Radiance = XMFLOAT3(45.0f, 45.0f, 45.0f);
-	m_AreaLightData.U = XMFLOAT3(2.0f, 0.0f, 0.0f);
-	m_AreaLightData.V = XMFLOAT3(0.0f, 0.0f, 2.0f);
+	m_AreaLightData.Position = XMFLOAT3(0.0f, 20.0f, -5.0f);
+	m_AreaLightData.Radiance = XMFLOAT3(1.0f, 1.0f, 1.0f);
+	m_AreaLightData.U = XMFLOAT3(5.0f, 0.0f, 0.0f);
+	m_AreaLightData.V = XMFLOAT3(0.0f, 0.0f, 5.0f);
 
 	float lenU = sqrtf(m_AreaLightData.U.x * m_AreaLightData.U.x +
 		m_AreaLightData.U.y * m_AreaLightData.U.y +

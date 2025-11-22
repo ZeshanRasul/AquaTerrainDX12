@@ -74,7 +74,10 @@ GBuffer PS(PixelIn pIn)
     gBuffer.gBufferAlbedoMetal.xyz = mat.DiffuseAlbedo.xyz;
     gBuffer.gBufferAlbedoMetal.w = mat.metallic;
     
-    gBuffer.gBufferNormalRough.xyz = pIn.NormalW;
+    float3 NormalW = normalize(pIn.NormalW);
+    NormalW = mul((float3x3) gInvWorld, NormalW);
+    
+    gBuffer.gBufferNormalRough.xyz = NormalW;
     gBuffer.gBufferNormalRough.w = 1.0 - mat.Shininess;
     
     return gBuffer;

@@ -2,7 +2,7 @@
 #include "MicrofacetBRDFUtils.hlsl"
 
 #define MaxLights 16
-#define NumLights 1
+#define NumLights 3
 
 struct AreaLight
 {
@@ -45,7 +45,7 @@ cbuffer cbPass : register(b0)
     float cbPerObjectPad3;
     float4 gAmbientLight;
     
-    Light gLights[MaxLights];
+    Light gLights[NumLights];
 };
 
 cbuffer PostProcess : register(b3)
@@ -319,8 +319,9 @@ void RayGen()
     {
         float ramp = launchIndex.y / dims.y;
     
-        float3 skyColor = float3(0.1f, 0.3f, 0.7f - 0.3f * ramp);
-        gOutput[launchIndex] = float4(skyColor, 1.0f);
+        float3 skyColor = float3(0.8f, 0.3f, 0.7f - 0.3f * ramp);
+        skyColor = PostProcess(skyColor);
+        gOutput[launchIndex] = float4(skyColor, -1.0f);
         return;
     }
     

@@ -1,7 +1,7 @@
 #include "Common.hlsl"
 #include "MicrofacetBRDFUtils.hlsl"
 
-#define NumLights 1
+#define NumLights 3
 
 struct ShadowHitInfo
 {
@@ -473,7 +473,7 @@ void ClosestHit(inout HitInfo payload, Attributes attrib)
     
     float3 Lo = 0.0;
     
-    for (int i = 0; i < 1; ++i)
+    for (int i = 0; i < NumLights; ++i)
     {
         float3 L;
         float3 Li = 0.0;

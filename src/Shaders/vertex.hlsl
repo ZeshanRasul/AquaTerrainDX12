@@ -89,7 +89,7 @@ VSOutput VS(VertexIn vIn)
 
     vso.PosW = homogPosW.xyz / homogPosW.w;
 
-    vso.NormalW = mul((float3x3) gInvWorld, vIn.NormalL);
+    vso.NormalW = vIn.NormalL;
 
     matrix viewProj = mul(gView, gProj);
 
