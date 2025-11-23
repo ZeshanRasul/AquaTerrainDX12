@@ -425,17 +425,6 @@ void RayGen()
         shadowPayload
         );
         
-        
-        if (shadowPayload.isHit)
-        {
-            gOutput[launchIndex] = float4(1, 0, 0, 1); // red where anything occludes the light
-            return;
-        }
-        else
-        {
-            gOutput[launchIndex] = float4(0, 1, 0, 1); // green where visible
-            return;
-        }
         if (!shadowPayload.isHit)
         {
             float NdotL = saturate(dot(normal, dir));
