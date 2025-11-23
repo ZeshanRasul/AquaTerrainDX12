@@ -64,6 +64,7 @@ private:
 
 	void BuildFrameResources();
 	void UpdateObjectCBs();
+	void UpdateInstanceCBs();
 	void UpdateMaterialCBs();
 	void UpdateMainPassCB();
 
@@ -165,7 +166,7 @@ private:
 
 	std::vector<InstanceData> m_InstanceData;
 	UINT m_InstanceOffset = 0;
-	Microsoft::WRL::ComPtr<ID3D12Resource> m_InstanceBuffer;
+	std::unique_ptr<UploadBuffer<InstanceData>> m_InstanceBuffer;
 
 	PassConstants m_MainPassCB;
 	UINT m_skullVertCount = 0;

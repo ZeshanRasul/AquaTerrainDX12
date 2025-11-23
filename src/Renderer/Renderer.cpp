@@ -209,14 +209,19 @@ void Renderer::Update(float dt, Camera& cam)
 	}
 
 	m_AnimationCounter++;
-	//m_Instances[1].second = XMMatrixRotationAxis({ 0.0f, 1.0f, 0.0f }, static_cast<float>(m_AnimationCounter) / 1000.0f);
-	//m_Instances[2].second = XMMatrixRotationAxis({ 0.0f, 1.0f, 0.0f }, static_cast<float>(m_AnimationCounter) / -1000.0f) * XMMatrixTranslation(10.0f, -10.0f, 0.0f);;
-	//m_Instances[3].second = XMMatrixRotationAxis({ 0.0f, 1.0f, 0.0f }, static_cast<float>(m_AnimationCounter) / -1000.0f) * XMMatrixTranslation(-10.0f, -10.0f, 0.0f);;
+	m_Instances[1].second = XMMatrixRotationAxis({ 0.0f, 1.0f, 0.0f }, static_cast<float>(m_AnimationCounter) / 1000.0f) * XMMatrixTranslation(6.0f, 20.0f, 0.0f);
+	m_Instances[2].second = XMMatrixRotationAxis({ 0.0f, 1.0f, 0.0f }, static_cast<float>(m_AnimationCounter) / -1000.0f) * XMMatrixTranslation(0.0f, 13.0f, 10.0f);
+	m_Instances[3].second = XMMatrixRotationAxis({ 0.0f, 1.0f, 0.0f }, static_cast<float>(m_AnimationCounter) / -1000.0f) * XMMatrixTranslation(10.0f, 11.0f, 0.0f);;
 
-	//	UpdateCameraBuffer();
+	skullSubmesh->World[1] = m_Instances[1].second;
+	skullSubmesh->World[2] = m_Instances[2].second;
+	skullSubmesh->World[3] = m_Instances[3].second;
+	skullSubmesh->NumFramesDirty = 3;
+
 	UpdateObjectCBs();
 	UpdateMainPassCB();
 	UpdateMaterialCBs();
+	UpdateInstanceCBs();
 }
 
 void Renderer::Draw(bool useRaster)
@@ -305,7 +310,7 @@ void Renderer::Draw(bool useRaster)
 	m_CommandList->ResourceBarrier(1, &transition);
 
 
-	//	CreateTopLevelAS(m_Instances, true);
+	CreateTopLevelAS(m_Instances, true);
 
 			//	m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_COPY_DEST));
 
@@ -1316,7 +1321,7 @@ void Renderer::DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::ve
 	auto objectCB = m_CurrentFrameResource->ObjectCB->Resource();
 	auto matCB = m_MaterialsGPU;
 	auto matGPUCB = m_UploadCBuffer;
-	auto instaGPUCB = m_InstanceBuffer;
+	auto instaGPUCB = m_InstanceBuffer->Resource();
 	D3D12_GPU_VIRTUAL_ADDRESS matGPUAdrress = matGPUCB->GetGPUVirtualAddress();
 	D3D12_GPU_VIRTUAL_ADDRESS instGPUAdrress = instaGPUCB->GetGPUVirtualAddress();
 
@@ -1425,6 +1430,50 @@ void Renderer::UpdateObjectCBs()
 	}
 }
 
+void Renderer::UpdateInstanceCBs()
+{
+	m_InstanceData.clear();
+
+	for (UINT i = 0; i < boxSubmesh->InstanceCount; i++)
+	{
+		InstanceData inst;
+		inst.InstanceID = i;
+		inst.MaterialIndex = boxSubmesh->ObjCBIndex;
+		inst.World = boxSubmesh->World[i];
+		inst.InvWorld = XMMatrixInverse(&XMMatrixDeterminant(inst.World), inst.World);
+		m_InstanceData.push_back(inst);
+		boxSubmesh->InstanceData[i] = inst;
+	}
+
+	for (UINT i = 0; i < sphereSubmesh->InstanceCount; i++)
+	{
+		InstanceData inst;
+		inst.InstanceID = i;
+		inst.MaterialIndex = sphereSubmesh->ObjCBIndex;
+		inst.World = sphereSubmesh->World[i];
+		inst.InvWorld = XMMatrixInverse(&XMMatrixDeterminant(inst.World), inst.World);
+		m_InstanceData.push_back(inst);
+		sphereSubmesh->InstanceData[i] = inst;
+	}
+
+	for (UINT i = 0; i < skullSubmesh->InstanceCount; i++)
+	{
+		InstanceData inst;
+		inst.InstanceID = i;
+		inst.MaterialIndex = skullSubmesh->ObjCBIndex;
+		inst.World = skullSubmesh->World[i];
+		inst.InvWorld = XMMatrixInverse(&XMMatrixDeterminant(inst.World), inst.World);
+		m_InstanceData.push_back(inst);
+		skullSubmesh->InstanceData[i] = inst;
+	}
+
+	auto instanceCB = m_InstanceBuffer.get();
+
+	for (int i = 0; i < m_InstanceData.size(); i++)
+	{
+		instanceCB->CopyData(i, m_InstanceData[i]);
+	}
+}
 
 
 void Renderer::UpdateMaterialCBs()
@@ -1694,7 +1743,7 @@ void Renderer::CreateShaderResourceHeap()
 	srvDesc.Buffer.StructureByteStride = sizeof(InstanceData);
 	srvDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
 
-	m_Device->CreateShaderResourceView(m_InstanceBuffer.Get(), &srvDesc, srvHandle);
+	m_Device->CreateShaderResourceView(m_InstanceBuffer->Resource(), &srvDesc, srvHandle);
 
 	srvHandle.ptr += m_Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
@@ -1899,7 +1948,7 @@ Renderer::AccelerationStructureBuffers Renderer::CreateBottomLevelAS(std::vector
 
 void Renderer::CreateTopLevelAS(std::vector<std::pair<Microsoft::WRL::ComPtr<ID3D12Resource>, DirectX::XMMATRIX>>& instances, bool updateOnly)
 {
-	if (true)
+	if (!updateOnly)
 	{
 		for (size_t i = 0; i < instances.size(); i++)
 		{
@@ -2138,7 +2187,7 @@ void Renderer::CreateAreaLightConstantBuffer()
 	m_AreaLightDataCollection.reserve(1);
 	m_AreaLightData = new AreaLight();
 	m_AreaLightData->Position = XMFLOAT3(0.0f, 60.0f, -25.0f);
-	m_AreaLightData->Radiance = XMFLOAT3(0.5f, 2.5f, 4.5f);
+	m_AreaLightData->Radiance = XMFLOAT3(2.5f, 2.5f, 2.5f);
 	m_AreaLightData->U = XMFLOAT3(8.0f, 0.0f, 0.0f);
 	m_AreaLightData->V = XMFLOAT3(0.0f, 0.0f, 8.0f);
 
@@ -2220,15 +2269,11 @@ void Renderer::CreatePerInstanceBuffers()
 	m_UploadCBuffer->Unmap(0, nullptr);
 
 
+	m_InstanceBuffer = std::make_unique<UploadBuffer<InstanceData>>(m_Device.Get(), m_InstanceData.size(), false);
 
 	bufferSize = m_InstanceData.size() * sizeof(InstanceData);
-	m_InstanceBuffer = nv_helpers_dx12::CreateBuffer(m_Device.Get(), bufferSize, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, nv_helpers_dx12::kUploadHeapProps);
 
-	uint8_t* pData2;
-	ThrowIfFailed(m_InstanceBuffer->Map(0, nullptr, (void**)&pData2));
-	memcpy(pData2, m_InstanceData.data(), bufferSize);
-	m_InstanceBuffer->Unmap(0, nullptr);
-
+	UpdateInstanceCBs();
 }
 
 void Renderer::CreateImGuiDescriptorHeap()

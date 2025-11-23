@@ -293,7 +293,6 @@ float GGX_PDF(float3 N, float3 V, float3 L, float roughness)
 [shader("raygeneration")]
 void RayGen()
 {
-  // Initialize the ray payload
     HitInfo payload;
     payload.colorAndDistance = float4(0.8, 0.0, 0.2, 1.0);
     payload.depth = 0;
@@ -397,7 +396,7 @@ void RayGen()
   
         RayDesc shadowRay;
 
-        shadowRay.Origin = worldPos.xyz + normal * 0.001f; // bias to avoid self-shadowing
+        shadowRay.Origin = worldPos.xyz + normal * 0.001f; 
         shadowRay.Direction = dir;
         shadowRay.TMin = 0.01f;
         shadowRay.TMax = dist;
@@ -408,13 +407,7 @@ void RayGen()
         payload.eta = 1.0;
         shadowPayload.isHit = true;
         shadowPayload.depth = 0;
-
-       // if (shadowPayload.depth >= 5)
-       // {
-       //     payload.colorAndDistance += float4(radiance.xyz, RayTCurrent());
-       //     return;
-       // }
-        
+      
         TraceRay(
         SceneBVH,
         RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH
