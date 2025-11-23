@@ -13,6 +13,7 @@ cbuffer cbPerObject : register(b0)
 struct InstanceData
 {
     float4x4 instWorld;
+    float4x4 instInvWorld;
     uint MaterialIndex;
     uint InstanceID;
     uint pad;
@@ -67,13 +68,15 @@ VSOutput VS(VertexIn vIn)
     
     InstanceData inst = instancesData[idx];
     
-    float4 homogPosW = mul(inst.instWorld, float4(vIn.PosL, 1.0f));
+    float4 homogPosW = mul(float4(vIn.PosL, 1.0f), transpose(inst.instWorld));
 
     vso.PosW = homogPosW.xyz / homogPosW.w;
   
-    float3 NormalW = mul((float3x3) gWorld, vIn.NormalL);
-    vso.NormalW = normalize(NormalW);
-
+    float3x3 instW3x3 = (float3x3) inst.instWorld;
+    
+    float3x3 invTrans = transpose(instW3x3);
+    vso.NormalW = normalize(mul(vIn.NormalL, invTrans));
+    
     matrix viewProj = mul(gProj, gView);
 
     vso.PosH = mul(float4(vso.PosW, 1.0f), gViewProj);

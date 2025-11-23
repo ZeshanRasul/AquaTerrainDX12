@@ -133,9 +133,9 @@ float2 Hammersley2D(uint i, uint N)
     return float2(u, v);
 }
 
-float2 SampleHammersley(uint sampleIdx, uint numSamples, uint pixelSeed, uint frameIndex)
+float2 SampleHammersley(uint sampleIdx, uint numSamples)
 {
-    uint index = sampleIdx + pixelSeed * 1315423911u + frameIndex * 2654435761u;
+    uint index = sampleIdx + 1315423911u + 2654435761u;
     index %= numSamples;
 
     return Hammersley2D(index, numSamples);
@@ -309,10 +309,10 @@ void RayGen()
     d.y = -d.y;
     
     float depth = GBufferDepth.SampleLevel(gLinearClampSampler, pixelCenter, 0).x;
-    float3 albedo = GBufferAlbedoMetal.SampleLevel(gLinearClampSampler, pixelCenter, 1).xyz;
-    float metal = GBufferAlbedoMetal.SampleLevel(gLinearClampSampler, pixelCenter, 1).w;
-    float3 normal = GBufferNormalRough.SampleLevel(gLinearClampSampler, pixelCenter, 1).xyz;
-    float roughness = GBufferNormalRough.SampleLevel(gLinearClampSampler, pixelCenter, 1).w;
+    float3 albedo = GBufferAlbedoMetal.SampleLevel(gLinearClampSampler, pixelCenter, 0).xyz;
+    float metal = GBufferAlbedoMetal.SampleLevel(gLinearClampSampler, pixelCenter, 0).w;
+    float3 normal = GBufferNormalRough.SampleLevel(gLinearClampSampler, pixelCenter, 0).xyz;
+    float roughness = GBufferNormalRough.SampleLevel(gLinearClampSampler, pixelCenter, 0).w;
 
     if (depth >= 1.0f - 1e-5f)
     {
@@ -387,7 +387,7 @@ void RayGen()
         uint pixelSeed = (DispatchRaysIndex().x * 73856093u) ^
                  (DispatchRaysIndex().y * 19349663u);
         
-        float2 xi = SampleHammersley(s, samples, pixelSeed, 0);
+        float2 xi = SampleHammersley(s, samples);
 
         float3 lightPoint = SampleAreaLight(0, xi);
         float3 toLight = lightPoint - worldPos.xyz;
@@ -397,7 +397,7 @@ void RayGen()
   
         RayDesc shadowRay;
 
-        shadowRay.Origin = worldPos.xyz; // bias to avoid self-shadowing
+        shadowRay.Origin = worldPos.xyz + normal * 0.001f; // bias to avoid self-shadowing
         shadowRay.Direction = dir;
         shadowRay.TMin = 0.01f;
         shadowRay.TMax = dist;
@@ -417,18 +417,25 @@ void RayGen()
         
         TraceRay(
         SceneBVH,
-        RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH,
+        RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH
+        | RAY_FLAG_SKIP_CLOSEST_HIT_SHADER | RAY_FLAG_FORCE_OPAQUE,
         0xFF,
         1, 3, 1,
         shadowRay,
         shadowPayload
         );
         
-        //if (shadowPayload.isHit)
-        //{
-        //    gOutput[launchIndex] = float4(1, 0, 0, 1); // pure red where occluded
-        //    return;
-        //}
+        
+        if (shadowPayload.isHit)
+        {
+            gOutput[launchIndex] = float4(1, 0, 0, 1); // red where anything occludes the light
+            return;
+        }
+        else
+        {
+            gOutput[launchIndex] = float4(0, 1, 0, 1); // green where visible
+            return;
+        }
         if (!shadowPayload.isHit)
         {
             float NdotL = saturate(dot(normal, dir));
@@ -451,7 +458,7 @@ void RayGen()
     areaLightContribution /= samples;
 
 
-    float3 finalColor = areaLightContribution;
+    float3 finalColor = radiance + areaLightContribution;
 
     finalColor = PostProcess(finalColor);
     

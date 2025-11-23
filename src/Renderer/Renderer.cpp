@@ -292,6 +292,7 @@ void Renderer::Draw(bool useRaster)
 	//pBarriers[0] = CD3DX12_RESOURCE_BARRIER::Transition(m_GBufferAlbedoMetal.Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 	//pBarriers[1] = CD3DX12_RESOURCE_BARRIER::Transition(m_GBufferNormalRough.Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 	//m_CommandList->ResourceBarrier(2, pBarriers);
+	//m_CommandList->ResourceBarrier(2, pBarriers);
 
 
 
@@ -992,7 +993,7 @@ void Renderer::BuildShapeGeometry()
 		inst.InstanceID = i;
 		inst.MaterialIndex = boxSubmesh->ObjCBIndex;
 		inst.World = boxSubmesh->World[i];
-
+		inst.InvWorld = XMMatrixInverse(&XMMatrixDeterminant(inst.World), inst.World);
 		m_InstanceData.push_back(inst);
 		boxSubmesh->InstanceData.push_back(inst);
 		m_InstanceOffset++;
@@ -1022,13 +1023,14 @@ void Renderer::BuildShapeGeometry()
 
 	sphereSubmesh->IndexBufferGPU = d3dUtil::CreateDefaultBuffer(m_Device.Get(),
 		m_CommandList.Get(), sphere.Indices32.data(), sphereSubmesh->IndexBufferByteSize, sphereSubmesh->IndexBufferUploader);
-	sphereSubmesh->World.push_back(XMMatrixScaling(5.0f, 5.0f, 5.0f) * XMMatrixTranslation(-14.0f, 4.0f, -4.0f));
+	sphereSubmesh->World.push_back(XMMatrixScaling(5.0f, 5.0f, 5.0f) * XMMatrixTranslation(-14.0f, 20.0f, -4.0f));
 
 	for (UINT i = 0; i < sphereSubmesh->InstanceCount; i++)
 	{
 		InstanceData inst;
 		inst.InstanceID = i + m_InstanceOffset;
 		inst.World = sphereSubmesh->World[i];
+		inst.InvWorld = XMMatrixInverse(&XMMatrixDeterminant(inst.World), inst.World);
 		inst.MaterialIndex = sphereSubmesh->ObjCBIndex;
 		sphereSubmesh->InstanceData.push_back(inst);
 
@@ -1184,6 +1186,7 @@ void Renderer::BuildSkullGeometry()
 		inst.InstanceID = i + m_InstanceOffset;
 		inst.MaterialIndex = skullSubmesh->ObjCBIndex;
 		inst.World = skullSubmesh->World[i];
+		inst.InvWorld = XMMatrixInverse(&XMMatrixDeterminant(inst.World), inst.World);
 		skullSubmesh->InstanceData.push_back(inst);
 
 		m_InstanceData.push_back(inst);
@@ -1371,10 +1374,9 @@ void Renderer::BuildPSOs()
 	opaquePsoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
 	opaquePsoDesc.SampleMask = UINT_MAX;
 	opaquePsoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-	opaquePsoDesc.NumRenderTargets = 3;
+	opaquePsoDesc.NumRenderTargets = 2;
 	opaquePsoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
 	opaquePsoDesc.RTVFormats[1] = DXGI_FORMAT_R8G8B8A8_UNORM;
-	opaquePsoDesc.RTVFormats[2] = DXGI_FORMAT_R8G8B8A8_UNORM;
 	opaquePsoDesc.SampleDesc.Count = 1;
 	opaquePsoDesc.SampleDesc.Quality = 0;
 	opaquePsoDesc.DSVFormat = m_DepthStencilFormat;
@@ -1383,7 +1385,7 @@ void Renderer::BuildPSOs()
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC opaqueWireframePsoDesc = opaquePsoDesc;
 	opaqueWireframePsoDesc.RasterizerState.FillMode = D3D12_FILL_MODE_WIREFRAME;
-	ThrowIfFailed(m_Device->CreateGraphicsPipelineState(&opaquePsoDesc, IID_PPV_ARGS(&m_PipelineStateObjects["opaque_wireframe"])));
+	ThrowIfFailed(m_Device->CreateGraphicsPipelineState(&opaqueWireframePsoDesc, IID_PPV_ARGS(&m_PipelineStateObjects["opaque_wireframe"])));
 
 }
 void Renderer::BuildFrameResources()
@@ -1942,11 +1944,11 @@ void Renderer::CreateAccelerationStructures()
 
 
 	m_Instances = {
-		{ boxBottomLevelBuffers.pResult, XMMatrixTranspose(boxSubmesh->World[0])},
-		{bottomLevelBuffers.pResult, XMMatrixTranspose(skullSubmesh->World[0])}, {bottomLevelBuffers.pResult, XMMatrixTranspose(skullSubmesh->World[1])}, {bottomLevelBuffers.pResult, XMMatrixTranspose(skullSubmesh->World[2])},
+		{ boxBottomLevelBuffers.pResult, boxSubmesh->World[0]},
+		{bottomLevelBuffers.pResult, skullSubmesh->World[0]}, {bottomLevelBuffers.pResult, skullSubmesh->World[1]}, {bottomLevelBuffers.pResult, skullSubmesh->World[2]},
 
-		{ planeBottomLevelBuffers.pResult, XMMatrixTranspose(skullSubmesh->World[3]) },
-		{ sphereBottomLevelBuffers.pResult, XMMatrixTranspose(sphereSubmesh->World[0]) },
+		{ planeBottomLevelBuffers.pResult, skullSubmesh->World[3] },
+		{ sphereBottomLevelBuffers.pResult, sphereSubmesh->World[0] },
 	};
 
 	m_IsInstanceReflective = {
@@ -2135,10 +2137,10 @@ void Renderer::CreateAreaLightConstantBuffer()
 {
 	m_AreaLightDataCollection.reserve(1);
 	m_AreaLightData = new AreaLight();
-	m_AreaLightData->Position = XMFLOAT3(0.0f, 70.0f, 0.0f);
-	m_AreaLightData->Radiance = XMFLOAT3(0.5f, 0.5f, 0.5f);
-	m_AreaLightData->U = XMFLOAT3(5.0f, 0.0f, 0.0f);
-	m_AreaLightData->V = XMFLOAT3(0.0f, 0.0f, 5.0f);
+	m_AreaLightData->Position = XMFLOAT3(0.0f, 60.0f, -25.0f);
+	m_AreaLightData->Radiance = XMFLOAT3(0.5f, 2.5f, 4.5f);
+	m_AreaLightData->U = XMFLOAT3(8.0f, 0.0f, 0.0f);
+	m_AreaLightData->V = XMFLOAT3(0.0f, 0.0f, 8.0f);
 
 	float lenU = sqrtf(m_AreaLightData->U.x * m_AreaLightData->U.x +
 		m_AreaLightData->U.y * m_AreaLightData->U.y +

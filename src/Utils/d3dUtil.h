@@ -169,6 +169,7 @@ public:
 struct InstanceData
 {
     DirectX::XMMATRIX World;
+    DirectX::XMMATRIX InvWorld;
     UINT MaterialIndex;
     UINT InstanceID;
     UINT pad = 0;
