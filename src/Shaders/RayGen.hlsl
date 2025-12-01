@@ -104,9 +104,12 @@ void RayGen()
 {
   // Initialize the ray payload
     HitInfo payload;
-    payload.colorAndDistance = float4(0, 0, 0, 0);
+    payload.radiance = float3(0, 0, 0);
+    payload.throughput = float3(1, 1, 1);
     payload.depth = 0;
-    payload.eta = 1.0f;
+    payload.done = 0;
+    
+    
 
     uint2 launchIndex = DispatchRaysIndex().xy;
     uint2 dims = DispatchRaysDimensions().xy;
@@ -129,20 +132,54 @@ void RayGen()
     RayDesc ray;
     ray.Origin = originWS;
     ray.Direction = dirWS;
-    ray.TMin = 0.1f;
+    ray.TMin = 0.001f;
     ray.TMax = 1e38f;
     
-    TraceRay(
-    SceneBVH,
-    RAY_FLAG_NONE,
-    0XFF,
-    0,
-    3,
-    0,
-    ray,
-    payload);
+    float3 finalRadiance = float3(0, 0, 0);
     
-    float3 finalColor = PostProcess(payload.colorAndDistance.rgb);
+    for (int bounce = 0; bounce < 8; bounce++)
+    {
+        payload.done = 0;
+      
+        TraceRay(
+        SceneBVH,
+        RAY_FLAG_NONE,
+        0XFF,
+        0,
+        3,
+        0,
+        ray,
+        payload);
+        
+        if (payload.done == 1)
+        {
+            break;
+        }
+        
+        finalRadiance += payload.throughput * payload.emission;
+        
+        float NdotL = saturate(dot(payload.normal, payload.nextDir));
+        payload.throughput *= payload.albedo * (NdotL / max(payload.pdf, 1e-6));
+        
+        //Russian Roulette
+        if (bounce > 2)
+        {
+            float pCont = max(payload.throughput.x, max(payload.throughput.y, payload.throughput.z));
+            
+            if (rand() > pCont)
+            {
+                break;
+            }
+            
+            payload.throughput /= pCont;
+        }
+        
+        ray.Origin = payload.hitPos + payload.normal * 0.001;
+        ray.Direction = payload.nextDir;
+    }
     
-    gOutput[launchIndex] = float4(finalColor, 1.f);
+    
+    float3 color = PostProcess(payload.radiance.rgb);
+    
+    gOutput[launchIndex] = float4(color, 1.f);
 }

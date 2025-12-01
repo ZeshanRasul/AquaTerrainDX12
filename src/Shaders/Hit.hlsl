@@ -11,7 +11,7 @@ struct ShadowHitInfo
 
 struct ReflectionHitInfo
 {
-    float4 colorAndDistance;
+    float4 radiance;
 };
 
 struct AreaLight
@@ -541,11 +541,11 @@ void ClosestHit(inout HitInfo payload, Attributes attrib)
     payload.eta = materials[materialIndex].Ior;
     if (payload.depth >= 5)
     {
-        payload.colorAndDistance = float4(payload.colorAndDistance.xyz += radiance, RayTCurrent());
+        payload.radiance = float4(payload.radiance.xyz += radiance, RayTCurrent());
         return;
     }
 
-    payload.colorAndDistance = float4(radiance, RayTCurrent());
+    payload.radiance = float4(radiance, RayTCurrent());
 }
 
 [shader("closesthit")]
@@ -613,7 +613,7 @@ void PlaneClosestHit(inout HitInfo payload, Attributes attrib)
     payload.eta = materials[materialIndex].Ior;
     HitInfo giHit;
     giHit.depth = payload.depth;
-    giHit.colorAndDistance = (1.0, 0.0, 1.0, 1.0);
+    giHit.radiance = (1.0, 0.0, 1.0, 1.0);
     RayDesc giRay;
     giRay.Origin = pW + N * 0.001f; 
     giRay.Direction = LightDir;
@@ -638,7 +638,7 @@ void PlaneClosestHit(inout HitInfo payload, Attributes attrib)
     float LdotH = saturate(dot(LightDir, H));
     
     float3 f = DisneyDiffuse(NdotV, NdotL, LdotH, roughness);
-    float3 Lid = giHit.colorAndDistance.xyz;
+    float3 Lid = giHit.radiance.xyz;
 
     float3 indirectGI = { 0.0, 0.0, 0.0 };
     indirectGI = (Lid * f * NdotL) / max(pdf, 1e-6f);
@@ -656,7 +656,7 @@ void PlaneClosestHit(inout HitInfo payload, Attributes attrib)
     if (giHit.depth >= 6 || payload.depth >= 6)
     {
  //       payload.colorAndDistance.xyz += PostProcess(finalColor);
-        payload.colorAndDistance = float4(payload.colorAndDistance.xyz, RayTCurrent());
+        payload.radiance = float4(payload.radiance.xyz, RayTCurrent());
         return;
     }
     float3 Lo = 0.0;
@@ -711,7 +711,7 @@ void PlaneClosestHit(inout HitInfo payload, Attributes attrib)
         uint pixelSeed = (DispatchRaysIndex().x * 73856093u) ^
                  (DispatchRaysIndex().y * 19349663u);
         
-        float2 xi = SampleHammersley(s, samples, pixelSeed, 3);
+   //     float2 xi = SampleHammersley(s, samples, pixelSeed, 3);
 
         float3 lightPoint = SampleAreaLight(0, xi);
         float3 toLight = lightPoint - pW;
@@ -771,7 +771,7 @@ void PlaneClosestHit(inout HitInfo payload, Attributes attrib)
 
  //   finalColor = PostProcess(finalColor);
     
-    payload.colorAndDistance = float4(finalColor, RayTCurrent());
+    payload.radiance = float4(finalColor, RayTCurrent());
     
 }
 
@@ -857,13 +857,13 @@ void ReflectionClosestHit(inout HitInfo payload, Attributes attrib)
 
     if (payload.depth >= 3)
     {
-        payload.colorAndDistance = float4(payload.colorAndDistance.xyz, RayTCurrent());
+        payload.radiance = float4(payload.radiance.xyz, RayTCurrent());
         return;
     }
     reflectionPayload.depth++;
     if (reflectionPayload.depth >= 3)
     {
-        payload.colorAndDistance = float4(lit, RayTCurrent());
+        payload.radiance = float4(lit, RayTCurrent());
         return;
     }
     
@@ -887,12 +887,12 @@ void ReflectionClosestHit(inout HitInfo payload, Attributes attrib)
     );
     if (reflectionPayload.depth >= 3)
     {
-        payload.colorAndDistance = float4(payload.colorAndDistance.xyz, RayTCurrent());
+        payload.radiance = float4(payload.radiance.xyz, RayTCurrent());
         return;
     }
     if (refrPayload.depth >= 3)
     {
-        payload.colorAndDistance = float4(payload.colorAndDistance.xyz, RayTCurrent());
+        payload.radiance = float4(payload.radiance.xyz, RayTCurrent());
         return;
     }
     
@@ -922,14 +922,14 @@ void ReflectionClosestHit(inout HitInfo payload, Attributes attrib)
         );
     }
     
-    float3 finalColor = reflectionPayload.colorAndDistance.xyz;
+    float3 finalColor = reflectionPayload.radiance.xyz;
     
-    if (refrPayload.colorAndDistance.w < tMax)
+    if (refrPayload.radiance.w < tMax)
     {
-        finalColor += refrPayload.colorAndDistance.xyz;
+        finalColor += refrPayload.radiance.xyz;
     }
     
     
 
-    payload.colorAndDistance = float4(finalColor, RayTCurrent());
+    payload.radiance = float4(finalColor, RayTCurrent());
 }
