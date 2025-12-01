@@ -442,7 +442,7 @@ void ClosestHit(inout HitInfo payload, Attributes attrib)
 {
 
 
-    payload.colorAndDistance = float4(0.0, 1.0, 1.0, RayTCurrent());
+    payload.colorAndDistance = float4(0.0, 0.0, 1.0, RayTCurrent());
 }
 
 [shader("closesthit")]
@@ -457,72 +457,75 @@ void PlaneClosestHit(inout HitInfo payload, Attributes attrib)
 [shader("closesthit")]
 void ReflectionClosestHit(inout HitInfo payload, Attributes attrib)
 {
-      // Triangle index in this geometry
     const uint triIndex = PrimitiveIndex();
     const uint vbase = triIndex * 3;
 
-    // Fetch the triangle’s vertices (object space)
     STriVertex v0 = BTriVertex[indices[vbase + 0]];
-
     STriVertex v1 = BTriVertex[indices[vbase + 1]];
-
     STriVertex v2 = BTriVertex[indices[vbase + 2]];
 
-    // Full barycentric triple
-    float3 bary = float3(1.0f - attrib.bary.x - attrib.bary.y, attrib.bary.x, attrib.bary.y);
+    float3 bary = float3(1.0f - attrib.bary.x - attrib.bary.y,
+                         attrib.bary.x,
+                         attrib.bary.y);
 
-    // Interpolate vertex normal in object space
-    float3 nObj = normalize(v0.Normal * bary.x + v1.Normal * bary.y + v2.Normal * bary.z);
+    float3 nObj = normalize(v0.Normal * bary.x +
+                            v1.Normal * bary.y +
+                            v2.Normal * bary.z);
+
     float3 N = normalize(mul((float3x3) ObjectToWorld3x4(), nObj));
-    float3 wo = -normalize(WorldRayDirection());
-    
-    // Hit position in world space (from the ray)
-    float3 pW = WorldRayOrigin() + RayTCurrent() * WorldRayDirection();
-  //  payload.isHit = true;
+    float3 wo = -normalize(WorldRayDirection()); // from surface toward ray origin
 
-    float3 V = normalize(gEyePosW - pW.xyz);
-    
-    float3 areaLightContribution = float3(0, 0, 0);
-    
-    float3 Lo = 0.0;
-    
+    float3 pW = WorldRayOrigin() + RayTCurrent() * WorldRayDirection();
+
+    Material mat = materials[materialIndex];
+
+    // Map shininess to a [0,1] roughness; clamp aggressively to avoid degenerate GGX
+    float roughness = 1.0f - mat.Shininess;
+    roughness = saturate(roughness);
+    roughness = max(roughness, 0.02f); // avoid exact 0
+
+    float3 Cd;
+    float3 F0;
+    ComputeDisneyMetalWorkflow(mat.DiffuseAlbedo.xyz, mat.metallic, Cd, F0);
+
+    float3 Lo = 0.0f;
+
+    // Just use the first light for now
+    [unroll]
     for (int i = 0; i < 1; ++i)
     {
         float3 L;
-        float3 Li = 0.0;
-        float NdotL = 0.0;
-        
-        if (!BuildLightSample(i, pW.xyz, N, L, Li, NdotL))
+        float3 Li;
+        float NdotL;
+
+        if (!BuildLightSample(i, pW, N, L, Li, NdotL))
             continue;
-        
-        float3 H = normalize(V + L);
-        float NdotV = saturate(dot(N, V));
+
+        float3 H = normalize(wo + L);
+        float NdotV = saturate(dot(N, wo));
         float NdotH = saturate(dot(N, H));
         float LdotH = saturate(dot(L, H));
-        
-        float3 Cd;
-        float3 F0;
-        ComputeDisneyMetalWorkflow(materials[materialIndex].DiffuseAlbedo.xyz, materials[materialIndex].Shininess, Cd, F0);
-        
+
+        // Guard against degenerate view/light
+        if (NdotL <= 0.0f || NdotV <= 0.0f)
+            continue;
+
         float3 F = Fresnel_Schlick(F0, LdotH);
-        float D = GGX_D(NdotH, 1 - materials[materialIndex].Shininess);
-        float G = GGX_G_Smith(NdotV, NdotL, 1 - materials[materialIndex].Shininess);
-        
-        float denom = max(4.0 * NdotL * NdotV, 1e-4);
+        float D = GGX_D(NdotH, RoughnessToAlpha(roughness));
+        float G = GGX_G_Smith(NdotV, NdotL, roughness);
+
+        float denom = max(4.0f * NdotL * NdotV, 1e-4f);
         float3 specBRDF = (D * G * F) / denom;
-        
-        float diffBRDF = DisneyDiffuse(NdotV, NdotL, LdotH, 1 - materials[materialIndex].Shininess);
+
+        float diffBRDF = DisneyDiffuse(NdotV, NdotL, LdotH, roughness);
         float3 diffTerm = Cd * diffBRDF;
 
         float3 f = diffTerm + specBRDF;
 
         Lo += f * Li * NdotL;
     }
-    
-    float3 radiance = 0.0;
-    radiance += Lo;
-    
-    
 
-    payload.colorAndDistance = float4(materials[materialIndex].DiffuseAlbedo.xyz, RayTCurrent());
+    float3 radiance = Lo;
+
+    payload.colorAndDistance = float4(radiance, RayTCurrent());
 }

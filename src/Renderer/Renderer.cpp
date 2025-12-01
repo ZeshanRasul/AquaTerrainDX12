@@ -1855,16 +1855,16 @@ samplerHeapPointer });
 			vb = boxSubmesh->VertexBufferGPU->GetGPUVirtualAddress();
 			ib = boxSubmesh->IndexBufferGPU->GetGPUVirtualAddress();
 		}
-		else if (i > 0 && i < m_SkullCount)
-		{
-			vb = skullSubmesh->VertexBufferGPU->GetGPUVirtualAddress();
-			ib = skullSubmesh->IndexBufferGPU->GetGPUVirtualAddress();
-
-		}
-		else if (i > m_SkullCount && i < m_SkullCount + m_SphereCount)
+		else if (i > 0 && i <= m_SphereCount)
 		{
 			vb = sphereSubmesh->VertexBufferGPU->GetGPUVirtualAddress();
 			ib = sphereSubmesh->IndexBufferGPU->GetGPUVirtualAddress();
+
+		}
+		else if (i > m_SphereCount && i < 7)
+		{
+			vb = skullSubmesh->VertexBufferGPU->GetGPUVirtualAddress();
+			ib = skullSubmesh->IndexBufferGPU->GetGPUVirtualAddress();
 		}
 
 
@@ -1897,28 +1897,28 @@ samplerHeapPointer });
 		}
 		else
 		{
-			m_SbtHelper.AddHitGroup(L"PlaneHitGroup", { (void*)vb,(void*)ib,
-		//		(void*)m_topLevelASBuffers.pResult->GetGPUVirtualAddress(),
-				(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(),
-				(void*)m_GlobalConstantBuffer->GetGPUVirtualAddress(),
-				(void*)perInstanceCB,
-				(void*)m_PostProcessConstantBuffer->GetGPUVirtualAddress(),
-				(void*)m_AreaLightConstantBuffer->GetGPUVirtualAddress(),
-				heapPointer,
-				samplerHeapPointer,
+			m_SbtHelper.AddHitGroup(L"ReflectionHitGroup", { (void*)vb,(void*)ib,
+				//		(void*)m_topLevelASBuffers.pResult->GetGPUVirtualAddress(),
+						(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(),
+						(void*)m_GlobalConstantBuffer->GetGPUVirtualAddress(),
+						(void*)perInstanceCB,
+						(void*)m_PostProcessConstantBuffer->GetGPUVirtualAddress(),
+						(void*)m_AreaLightConstantBuffer->GetGPUVirtualAddress(),
+						heapPointer,
+						samplerHeapPointer,
 				});
 
 			m_SbtHelper.AddHitGroup(L"ShadowHitGroup", {});
 
-			m_SbtHelper.AddHitGroup(L"HitGroup", { (void*)vb,(void*)ib,
-		//		(void*)m_topLevelASBuffers.pResult->GetGPUVirtualAddress(),
-				(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(),
-				(void*)m_GlobalConstantBuffer->GetGPUVirtualAddress(),
-				(void*)perInstanceCB,
-				(void*)m_PostProcessConstantBuffer->GetGPUVirtualAddress(),
-				(void*)m_AreaLightConstantBuffer->GetGPUVirtualAddress(),
-				heapPointer,
-				samplerHeapPointer,
+			m_SbtHelper.AddHitGroup(L"ReflectionHitGroup", { (void*)vb,(void*)ib,
+				//		(void*)m_topLevelASBuffers.pResult->GetGPUVirtualAddress(),
+						(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(),
+						(void*)m_GlobalConstantBuffer->GetGPUVirtualAddress(),
+						(void*)perInstanceCB,
+						(void*)m_PostProcessConstantBuffer->GetGPUVirtualAddress(),
+						(void*)m_AreaLightConstantBuffer->GetGPUVirtualAddress(),
+						heapPointer,
+						samplerHeapPointer,
 				});
 
 		}
@@ -2010,10 +2010,10 @@ void Renderer::CreateAccelerationStructures()
 	};
 
 	m_IsInstanceReflective = {
-		true,
-		true,
-		true,
-		true,
+		false,
+		false,
+		false,
+		false,
 		true,
 		true
 	};
@@ -2196,7 +2196,7 @@ void Renderer::CreateAreaLightConstantBuffer()
 	m_AreaLightDataCollection.reserve(1);
 	m_AreaLightData = new AreaLight();
 	m_AreaLightData->Position = XMFLOAT3(0.0f, 60.0f, -25.0f);
-	m_AreaLightData->Radiance = XMFLOAT3(2.5f, 2.5f, 2.5f);
+	m_AreaLightData->Radiance = XMFLOAT3(0.5f, 0.5f, 0.5f);
 	m_AreaLightData->U = XMFLOAT3(8.0f, 0.0f, 0.0f);
 	m_AreaLightData->V = XMFLOAT3(0.0f, 0.0f, 8.0f);
 
