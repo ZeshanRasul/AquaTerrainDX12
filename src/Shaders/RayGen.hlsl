@@ -468,5 +468,5 @@ void RayGen()
 
  //   finalColor = PostProcess(finalColor);
     
-    gOutput[launchIndex] = float4(reflectionColor, 1.0);
+    gOutput[launchIndex] = float4(finalColor, 1.0);
 }
