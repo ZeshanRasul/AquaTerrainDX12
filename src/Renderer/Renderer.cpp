@@ -663,8 +663,8 @@ void Renderer::BuildMaterials()
 
 	auto boxMat = std::make_unique<Material>();
 	boxMat->Name = "box";
-	boxMat->MatCBIndex = 4;
-	boxMat->DiffuseSrvHeapIndex = 4;
+	boxMat->MatCBIndex = 0;
+	boxMat->DiffuseSrvHeapIndex = 0;
 	boxMat->DiffuseAlbedo = XMFLOAT4(Colors::ForestGreen);
 	boxMat->FresnelR0 = XMFLOAT3(0.02f, 0.02f, 0.02f);
 	boxMat->Roughness = 0.7f;
@@ -672,8 +672,8 @@ void Renderer::BuildMaterials()
 
 	auto bricks0 = std::make_unique<Material>();
 	bricks0->Name = "bricks0";
-	bricks0->MatCBIndex = 0;
-	bricks0->DiffuseSrvHeapIndex = 0;
+	bricks0->MatCBIndex = 1;
+	bricks0->DiffuseSrvHeapIndex = 1;
 	bricks0->DiffuseAlbedo = XMFLOAT4(Colors::Sienna);
 	bricks0->FresnelR0 = XMFLOAT3(0.02f, 0.02f, 0.02f);
 	bricks0->Roughness = 0.1f;
@@ -681,8 +681,8 @@ void Renderer::BuildMaterials()
 
 	auto stone0 = std::make_unique<Material>();
 	stone0->Name = "stone0";
-	stone0->MatCBIndex = 1;
-	stone0->DiffuseSrvHeapIndex = 1;
+	stone0->MatCBIndex = 5;
+	stone0->DiffuseSrvHeapIndex = 5;
 	stone0->DiffuseAlbedo = XMFLOAT4(Colors::Crimson);
 	stone0->FresnelR0 = XMFLOAT3(0.05f, 0.05f, 0.05f);
 	stone0->Roughness = 0.6f;
@@ -1537,7 +1537,7 @@ void Renderer::CreateTopLevelAS(std::vector<std::pair<Microsoft::WRL::ComPtr<ID3
 			//	hitGroupIndex = i;
 			//}
 
-			m_topLevelASGenerator.AddInstance(instances[i].first.Get(), instances[i].second, static_cast<UINT>(i), static_cast<UINT>(1));
+			m_topLevelASGenerator.AddInstance(instances[i].first.Get(), instances[i].second, static_cast<UINT>(i), static_cast<UINT>(i));
 		}
 
 		UINT64 scratchSizeInBytes = 0;
@@ -1784,17 +1784,19 @@ void Renderer::CreatePerInstanceBuffers()
 
 	int i(0);
 
-	for (auto& cb : m_PerInstanceCBs)
+	for (int i = 0; i < m_PerInstanceCBCount; ++i)
 	{
-		const uint32_t bufferSize = sizeof(int);
+		const uint32_t bufferSize = sizeof(PerInstanceData);
 
-		cb = nv_helpers_dx12::CreateBuffer(m_Device.Get(), bufferSize, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, nv_helpers_dx12::kUploadHeapProps);
+		m_PerInstanceCBs[i] = nv_helpers_dx12::CreateBuffer(m_Device.Get(), bufferSize, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, nv_helpers_dx12::kUploadHeapProps);
+
+		PerInstanceData data{};
+		data.materialIndex = i;
 
 		uint8_t* pData;
-		ThrowIfFailed(cb->Map(0, nullptr, (void**)&pData));
-		memcpy(pData, &i, bufferSize);
-		cb->Unmap(0, nullptr);
-		++i;
+		ThrowIfFailed(m_PerInstanceCBs[i]->Map(0, nullptr, (void**)&pData));
+		memcpy(pData, &data, bufferSize);
+		m_PerInstanceCBs[i]->Unmap(0, nullptr);
 	}
 
 	m_MaterialsGPU.reserve(m_PerInstanceCBCount);

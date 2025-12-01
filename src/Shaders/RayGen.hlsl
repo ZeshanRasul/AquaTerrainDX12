@@ -45,20 +45,17 @@ void RayGen()
     uint2 launchIndex = DispatchRaysIndex().xy;
     uint2 dims = DispatchRaysDimensions().xy;
 
-    // Normalized screen coords
-    float2 pixelCenter = (float2) launchIndex + 0.5f;
-    float2 uv = pixelCenter / float2(dims);
-    float2 d = uv * 2.0f - 1.0f;
-    d.y = -d.y;
+    float2 pixel = (float2) DispatchRaysIndex() + 0.5f;
+    float2 ndc = pixel / float2(DispatchRaysDimensions().xy);
+    ndc = ndc * 2.0f - 1.0f;
+    ndc.y = -ndc.y;
 
-    // Primary ray (identical to what you had, but simplified)
-    float4 originVS = float4(0, 0, 0, 1);
-    float4 targetVS = mul(float4(d.x, d.y, 1.0f, 1.0f), gInvProj);
-    targetVS /= targetVS.w;
+    float4 pClip = float4(ndc, 1, 1);
+    float4 pView = mul(pClip, gInvProj);
+    pView /= pView.w;
 
-    float3 originWS = mul(originVS, gInvView).xyz;
-    float3 targetWS = mul(targetVS, gInvView).xyz;
-    float3 dirWS = normalize(targetWS - originWS);
+    float3 originWS = gEyePosW;
+    float3 dirWS = normalize(mul(float4(pView.xyz, 0), gInvView).xyz);
 
     // Initialize payload
     PathPayload payload;

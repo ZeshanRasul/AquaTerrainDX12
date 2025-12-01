@@ -270,3 +270,9 @@ private:
 	D3D12_GPU_DESCRIPTOR_HANDLE imguiGpuStart;
 	std::vector<bool> m_IsInstanceReflective;
 };
+
+struct PerInstanceData
+{
+	int materialIndex;
+	float pad[3];
+};

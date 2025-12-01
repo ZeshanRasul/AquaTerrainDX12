@@ -2,6 +2,7 @@
 #include "MicrofacetBRDFUtils.hlsl"
 #include "PathTracerCommon.hlsl"
 
+
 #define NumLights 1
 
 struct ShadowHitInfo
@@ -71,6 +72,7 @@ cbuffer Colors : register(b1)
 cbuffer PerInstance : register(b2)
 {
     int materialIndex;
+    float3 padding;
 }
 
 
@@ -226,6 +228,18 @@ void ClosestHit(inout PathPayload payload, Attributes attrib)
 
     Material mat = materials[materialIndex];
 
+//    // After you fetch Material mat
+//    float3 Cd, F0;
+//    ComputeDisneyMetalWorkflow(mat.DiffuseAlbedo.xyz, mat.metallic, Cd, F0);
+
+//// DEBUG: show baseColor and stop
+//    payload.emission = float3((materialIndex + 1) / 5.0, 0, 0);
+//    payload.done = 1;
+//    return;
+//    payload.bsdfOverPdf = 0;
+//    return;
+
+    
     // Emissive term (if you use it; otherwise keep 0)
     // Here we just use alpha as emissive multiplier placeholder.
     float emissiveIntensity = mat.DiffuseAlbedo.w;

@@ -1,5 +1,3 @@
-// PathTracerCommon.hlsl
-
 #ifndef PATHTRACER_COMMON_HLSL
 #define PATHTRACER_COMMON_HLSL
 
@@ -26,19 +24,7 @@ struct PathPayload
     uint pad; // keep payload size aligned
 };
 
-struct Material
-{
-    float4 DiffuseAlbedo;
-    float3 FresnelR0;
-    float Ior;
-    float Reflectivity;
-    float3 Absorption;
-    float Shininess;
-    float pad;
-    float pad1;
-    float metallic;
-    bool IsReflective;
-};
+
 
 struct Attributes
 {
@@ -80,10 +66,9 @@ float2 Rand2(inout uint state)
 //---------------------------------------------------------------------
 float3 TransformNormalToWorld(float3 nObj)
 {
-    // If your WorldToObject3x4() is guaranteed orthonormal inverse:
-    float3x3 worldToObj = (float3x3) WorldToObject3x4();
-    float3x3 objToWorld = transpose(worldToObj);
-    return normalize(mul(nObj, objToWorld));
+    float3x3 objToWorld = (float3x3) ObjectToWorld3x4();
+    float3 N = normalize(mul(nObj, objToWorld));
+    return N;
 }
 
 //---------------------------------------------------------------------

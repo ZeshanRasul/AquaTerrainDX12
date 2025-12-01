@@ -11,6 +11,20 @@ cbuffer PostProcess : register(b3)
     float pad;
 }
 
+struct Material
+{
+    float4 DiffuseAlbedo;
+    float3 FresnelR0;
+    float Ior;
+    float Reflectivity;
+    float3 Absorption;
+    float Shininess;
+    float pad;
+    float pad1;
+    float metallic;
+    bool IsReflective;
+};
+
 float3 LinearToSRGB(float3 x)
 {
     const float a = 0.055f;
