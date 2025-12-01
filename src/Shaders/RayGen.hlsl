@@ -313,6 +313,13 @@ void RayGen()
     float3 normal = GBufferNormalRough.SampleLevel(gLinearClampSampler, pixelCenter, 0).xyz;
     float roughness = GBufferNormalRough.SampleLevel(gLinearClampSampler, pixelCenter, 0).w;
     
+    if (depth >= 1.0f - 1e-5f)
+    {
+        float3 skyColor = float3(0.1f, 0.3f, 0.7f);
+        gOutput[launchIndex] = float4(skyColor, -1.0f);
+        return;
+    }
+    
     float2 ndc;
     ndc.x = pixelCenter.x * 2.0f - 1.0f;
     ndc.y = 1.0f - pixelCenter.y * 2.0f;
