@@ -491,7 +491,7 @@ void ClosestHit(inout HitInfo payload, Attributes attrib)
 
     // To-eye vector (world)
     float3 V = normalize(gEyePosW - pW);
-    float3 N = normalize(mul((float3x3) ObjectToWorld3x4(), nObj));
+    float3 N = normalize(mul((float3x3) WorldToObject3x4(), nObj));
 
     
     float3 Lo = 0.0;
@@ -538,10 +538,7 @@ void ClosestHit(inout HitInfo payload, Attributes attrib)
 
     payload.depth += 1;
     
-    radiance = PostProcess(radiance);
-    
     payload.eta = materials[materialIndex].Ior;
- //   payload.isHit = true;
     if (payload.depth >= 5)
     {
         payload.colorAndDistance = float4(payload.colorAndDistance.xyz += radiance, RayTCurrent());
@@ -554,21 +551,17 @@ void ClosestHit(inout HitInfo payload, Attributes attrib)
 [shader("closesthit")]
 void PlaneClosestHit(inout HitInfo payload, Attributes attrib)
 {
-    // Full barycentric triple
     float3 bary = float3(1.0f - attrib.bary.x - attrib.bary.y, attrib.bary.x, attrib.bary.y);
 
     Light L = gLights[0];
 
-    // Triangle index in this geometry
     const uint triIndex = PrimitiveIndex();
     const uint vbase = triIndex * 3;
 
-    // Fetch triangle vertices (object space)
     STriVertex v0 = BTriVertex[indices[vbase + 0]];
     STriVertex v1 = BTriVertex[indices[vbase + 1]];
     STriVertex v2 = BTriVertex[indices[vbase + 2]];
 
-    // Interpolate vertex normal in object space
     float3 nObj = normalize(v0.Normal * bary.x +
                             v1.Normal * bary.y +
                             v2.Normal * bary.z);
@@ -577,12 +570,10 @@ void PlaneClosestHit(inout HitInfo payload, Attributes attrib)
     float3 pW = WorldRayOrigin() + RayTCurrent() * WorldRayDirection();
 
     float3 V = normalize(gEyePosW - pW);
-    float3 N = normalize(mul((float3x3) ObjectToWorld3x4(), nObj));
+    float3 N = normalize(mul((float3x3) WorldToObject3x4(), nObj));
 
-    //float3 lit = ComputeDirectionalLight(L, nObj, toEye, materials[materialIndex]);
 
     float3 toLight = normalize(-L.Direction);
-   // float3 finalColor;
     
     float3 LightDir;
     float pdf;
@@ -598,7 +589,6 @@ void PlaneClosestHit(inout HitInfo payload, Attributes attrib)
     float u1 = Rand(rngState);
     float u2 = Rand(rngState);
     float2 xi = float2(u1, u2);
-    // Mix diffuse and glossy sampling
     
     float roughness = 1 - materials[materialIndex].Shininess;
     
@@ -623,10 +613,9 @@ void PlaneClosestHit(inout HitInfo payload, Attributes attrib)
     payload.eta = materials[materialIndex].Ior;
     HitInfo giHit;
     giHit.depth = payload.depth;
-  //  giHit.isHit = false;
     giHit.colorAndDistance = (1.0, 0.0, 1.0, 1.0);
     RayDesc giRay;
-    giRay.Origin = pW + N * 0.001f; // bias to avoid self-shadowing
+    giRay.Origin = pW + N * 0.001f; 
     giRay.Direction = LightDir;
     giRay.TMin = 0.01f;
     giRay.TMax = 10000.0f;
@@ -780,7 +769,7 @@ void PlaneClosestHit(inout HitInfo payload, Attributes attrib)
 
     float3 finalColor = (radiance + areaLightContribution + indirectGI);
 
-    finalColor = PostProcess(finalColor);
+ //   finalColor = PostProcess(finalColor);
     
     payload.colorAndDistance = float4(finalColor, RayTCurrent());
     
@@ -805,7 +794,7 @@ void ReflectionClosestHit(inout HitInfo payload, Attributes attrib)
 
     // Interpolate vertex normal in object space
     float3 nObj = normalize(v0.Normal * bary.x + v1.Normal * bary.y + v2.Normal * bary.z);
-    float3 N = normalize(mul((float3x3) ObjectToWorld3x4(), nObj));
+    float3 N = normalize(mul((float3x3) WorldToObject3x4(), nObj));
     float3 wo = -normalize(WorldRayDirection());
     
     Material mat = materials[materialIndex];

@@ -193,7 +193,7 @@ static inline UINT64 Align(UINT64 v, UINT64 alignment) {
 void Renderer::Update(float dt, Camera& cam)
 {
 	m_EyePos = cam.GetPosition3f();
-//	cam.LookAt(m_EyePos, { 0.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f });
+	//	cam.LookAt(m_EyePos, { 0.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f });
 	cam.UpdateViewMatrix();
 	XMStoreFloat4x4(&m_View, cam.GetView());
 	XMStoreFloat4x4(&m_Proj, cam.GetProj());
@@ -214,7 +214,7 @@ void Renderer::Update(float dt, Camera& cam)
 	m_Instances[2].second = XMMatrixRotationAxis({ 0.0f, 1.0f, 0.0f }, static_cast<float>(m_AnimationCounter) / -1000.0f) * XMMatrixTranslation(10.0f, -10.0f, 0.0f);;
 	m_Instances[3].second = XMMatrixRotationAxis({ 0.0f, 1.0f, 0.0f }, static_cast<float>(m_AnimationCounter) / -1000.0f) * XMMatrixTranslation(-10.0f, -10.0f, 0.0f);;
 
-//	UpdateCameraBuffer();
+	//	UpdateCameraBuffer();
 	UpdateFrameIndexRNGCBuffer();
 	UpdateObjectCBs();
 	UpdateMainPassCB();
@@ -1283,12 +1283,14 @@ ID3D12Resource* Renderer::CurrentBackBuffer() const
 Microsoft::WRL::ComPtr<ID3D12RootSignature> Renderer::CreateRayGenSignature()
 {
 	nv_helpers_dx12::RootSignatureGenerator rsc;
+	rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_CBV, 3);
 	rsc.AddHeapRangesParameter(
 		{ { 0, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 0 },
 		{ 0, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1},
 		{ 0, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 3},
 		}
 	);
+
 
 	return rsc.Generate(m_Device.Get(), true);
 }
@@ -1443,7 +1445,10 @@ void Renderer::CreateShaderBindingTable()
 	D3D12_GPU_DESCRIPTOR_HANDLE srvUavHeapHandle = m_SrvUavHeap->GetGPUDescriptorHandleForHeapStart();
 	auto heapPointer = reinterpret_cast<void*>(srvUavHeapHandle.ptr);
 
-	m_SbtHelper.AddRayGenerationProgram(L"RayGen", { heapPointer });
+	m_SbtHelper.AddRayGenerationProgram(L"RayGen", {
+				(void*)m_PostProcessConstantBuffer->GetGPUVirtualAddress(),
+				heapPointer,
+		});
 
 	m_SbtHelper.AddMissProgram(L"Miss", {});
 	m_SbtHelper.AddMissProgram(L"ShadowMiss", {});

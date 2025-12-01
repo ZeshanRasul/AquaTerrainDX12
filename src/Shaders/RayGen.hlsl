@@ -36,6 +36,69 @@ cbuffer cbPass : register(b0)
     Light gLights[MaxLights];
 };
 
+cbuffer PostProcess : register(b3)
+{
+    float Exposure;
+    int ToneMapMode;
+    int DebugMode;
+    float pad;
+}
+
+float3 LinearToSRGB(float3 x)
+{
+    const float a = 0.055f;
+    float3 lo = 12.92f * x;
+    float3 hi = (1.0f + a) * pow(x, 1.0f / 2.4f) - a;
+    
+    return select(lo, hi, x > 0.0031308f);
+}
+
+float3 ApplyExposure(float3 color, float exposure)
+{
+    return color * exp2(exposure);
+}
+
+float3 ToneMapReinhard(float3 x)
+{
+    return x / (1.0f + x);
+}
+
+float3 RRTAndODTFit(float3 v)
+{
+    float3 a = v * (v + 0.0245786f) - 0.000090537f;
+    float3 b = v * (0.983729f * v + 0.4329510f) + 0.238081f;
+    return a / b;
+}
+
+float3 ToneMapACES(float3 color)
+{
+    color = RRTAndODTFit(color);
+    return saturate(color);
+
+}
+
+float3 PostProcess(float3 hdrColor)
+{
+    float3 color = ApplyExposure(hdrColor, Exposure);
+
+    if (ToneMapMode == 1)
+    {
+        color = ToneMapReinhard(color);
+    }
+    else if (ToneMapMode == 2)
+    {
+        color = ToneMapACES(color);
+    }
+    else
+    {
+        color = saturate(color);
+    }
+
+    color = LinearToSRGB(color);
+
+    return color;
+}
+
 [shader("raygeneration")]
 void RayGen()
 {
@@ -79,5 +142,7 @@ void RayGen()
     ray,
     payload);
     
-    gOutput[launchIndex] = float4(payload.colorAndDistance.rgb, 1.f);
+    float3 finalColor = PostProcess(payload.colorAndDistance.rgb);
+    
+    gOutput[launchIndex] = float4(finalColor, 1.f);
 }
