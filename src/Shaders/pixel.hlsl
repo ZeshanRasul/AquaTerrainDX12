@@ -58,7 +58,6 @@ float2 EncodeNormalOct(float3 n)
         );
     }
 
-    // map from [-1,1] to [0,1] to fit UNORM
     return enc * 0.5f + 0.5f;
 }
 

@@ -307,7 +307,7 @@ float GGX_PDF(float3 N, float3 V, float3 L, float roughness)
 
 float3 DecodeNormalOct(float2 e)
 {
-    // map back to [-1,1]
+    // back to [-1,1]
     e = e * 2.0f - 1.0f;
 
     float3 n = float3(e.x, e.y, 1.0f - abs(e.x) - abs(e.y));
@@ -315,12 +315,15 @@ float3 DecodeNormalOct(float2 e)
     if (n.z < 0.0f)
     {
         float oldX = n.x;
-        n.x = (1.0f - abs(n.y)) * (oldX >= 0.0f ? 1.0f : -1.0f);
-        n.y = (1.0f - abs(oldX)) * (n.y >= 0.0f ? 1.0f : -1.0f);
+        float oldY = n.y;
+
+        n.x = (1.0f - abs(oldY)) * (oldX >= 0.0f ? 1.0f : -1.0f);
+        n.y = (1.0f - abs(oldX)) * (oldY >= 0.0f ? 1.0f : -1.0f);
     }
 
     return normalize(n);
 }
+
 
 
 [shader("raygeneration")]
@@ -351,9 +354,9 @@ void RayGen()
     float3 albedo = g0.rgb;
     uint materialID = (uint) round(saturate(g0.a) * 255.0f);
     
-    float3 normal = DecodeNormalOct(g1.rg);
    
-    float roughness = g1.b;
+    Material mat = materials[materialID];
+    float roughness = saturate(g1.b);
     float metal = g1.a;
     
     float depth = GBufferDepth.SampleLevel(gLinearClampSampler, pixelCenter, 0).x;
@@ -377,44 +380,48 @@ void RayGen()
     float4 worldPosH = mul(viewPosH, gInvView);
     float3 worldPos = worldPosH.xyz / worldPosH.w;
 
+    float3 N = DecodeNormalOct(g1.rg);
+    float3 V = normalize(gEyePosW - worldPos);
 
-    float3 V = normalize(gEyePosW - worldPos.xyz);
-    if (dot(V, normal) < 0)
-        normal = -normal;
-    
+    if (dot(N, V) < 0.0f)
+        N = -N;
+
+    float3 Nf = N;
+
     float3 areaLightContribution = float3(0, 0, 0);
     
     float3 Lo = 0.0;
-   
-    Material mat = materials[materialID];
     
-    float eta_i = 1.0;
-    float eta_t = mat.Ior;
-    
-    float3 Nf = normal;
-    float3 N = normal;
-    
-    if (dot(V, N) < 0.0f)
+    float eta_i = 1.0f; // air
+    float eta_t = mat.Ior; // material IOR
+
+// BACKFACE? (ray is *inside* medium)
+    bool entering = dot(V, Nf) > 0.0f;
+
+    if (!entering)
     {
-        Nf = -N;
+    // The ray is *exiting* the material.
+    // Flip normal to maintain hemisphere consistency.
+        Nf = -Nf;
+
+    // Swap indices: now going from material -> air.
         eta_i = mat.Ior;
         eta_t = 1.0f;
     }
-    
+
     float eta = eta_i / eta_t;
-    
     for (int i = 0; i < 1; ++i)
     {
         float3 L;
         float3 Li = 0.0;
         float NdotL = 0.0;
         
-        if (!BuildLightSample(i, worldPos.xyz, normal, L, Li, NdotL))
+        if (!BuildLightSample(i, worldPos.xyz, Nf, L, Li, NdotL))
             continue;
         
         float3 H = normalize(V + L);
-        float NdotV = saturate(dot(normal, V));
-        float NdotH = saturate(dot(normal, H));
+        float NdotV = saturate(dot(Nf, V));
+        float NdotH = saturate(dot(Nf, H));
         float LdotH = saturate(dot(L, H));
         
         float3 Cd;
@@ -457,7 +464,7 @@ void RayGen()
   
         RayDesc shadowRay;
 
-        shadowRay.Origin = worldPos.xyz + normal * 0.001f;
+        shadowRay.Origin = worldPos.xyz + Nf * 0.001f;
         shadowRay.Direction = dir;
         shadowRay.TMin = 0.01f;
         shadowRay.TMax = dist;
@@ -487,7 +494,7 @@ void RayGen()
         
         if (!shadowPayload.isHit)
         {
-            float NdotL = saturate(dot(normal, dir));
+            float NdotL = saturate(dot(Nf, dir));
             if (NdotL > 0.0f)
             {
                 float3 lightNormal = normalize(cross(gAreaLight.U, gAreaLight.V));
@@ -510,21 +517,21 @@ void RayGen()
     payload.depth = payload.depth++;
     payload.eta = mat.Ior;
 
-    
     float3 reflectionColor = float3(0, 0, 0);
     
     uint rayDepth = 0;
     HitInfo reflectionPayload;
     reflectionPayload.colorAndDistance = float4(0, 0, 0, 1);
-    reflectionPayload.depth = payload.depth;
-    reflectionPayload.eta = payload.eta;
+    reflectionPayload.depth = payload.depth + 1;
+    reflectionPayload.eta = eta_t;
+    float3 F = 0.0f;
     if (roughness < 0.99f)
     {
         float2 xi = SampleHammersley(0, 1);
-        float3 N = SampleGGXVNDF(V, xi, roughness);
-        float3 R = reflect(-V, N);
+        float3 Nspec = SampleGGXVNDF(V, SampleHammersley(0, 1), roughness);
+        float3 R = reflect(-V, Nspec);
         RayDesc reflectionRay;
-        reflectionRay.Origin = worldPos.xyz + normal * 0.001f;
+        reflectionRay.Origin = worldPos.xyz + Nf * 0.001f;
         reflectionRay.Direction = R;
         reflectionRay.TMin = 0.01f;
         reflectionRay.TMax = 1e38f;
@@ -539,24 +546,30 @@ void RayGen()
         );
         
         float3 F0 = lerp(float3(0.04f, 0.04f, 0.04f), albedo, metal);
-        float cosTheta = saturate(dot(N, V));
-        float3 F = F0 + (1.0f - F0) * pow(1.0f - cosTheta, 5.0f);
+        float cosThetaI = saturate(dot(V, Nf));
+        float3 F = F0 + (1.0f - F0) * pow(1.0f - cosThetaI, 5.0f);
 
-        reflectionColor = F * reflectionPayload.colorAndDistance.xyz;
+      //  reflectionColor = F * reflectionPayload.colorAndDistance.xyz;
         
         rayDepth = reflectionPayload.depth;
     };
 
-    float3 wo = V;
-    
-    float cosThetaI = dot(-wo, Nf);
-    float sin2ThetaI = max(0.0f, 1.0f - cosThetaI * cosThetaI);
-    float sin2ThetaT = payload.eta * payload.eta * sin2ThetaI;
+    float3 refractDir = 0.0f;
+    bool tir = false;
 
-    float3 refractDir;
-    bool totalInternalReflection = (sin2ThetaT > 1.0f);
-    
-    
+{
+        float3 I = -V;
+        float cosI = dot(I, Nf);
+        float sin2T = eta * eta * (1.0f - cosI * cosI);
+
+        tir = (sin2T > 1.0f);
+
+        if (!tir)
+        {
+            refractDir = refract(I, Nf, eta);
+            refractDir = normalize(refractDir);
+        }
+    }
     
     payload.eta = reflectionPayload.eta;
     
@@ -567,42 +580,35 @@ void RayGen()
  // }
 
     HitInfo refrPayload = payload;
-    
-    refrPayload.depth++;
-    refrPayload.eta = payload.eta;
-    
-    float tMin = 0.001f;
-    float tMax = 1e27f;
-    
-        if (!totalInternalReflection)
-    {
-        refractDir = refract(-wo, Nf, eta);
-        refractDir = normalize(refractDir);
-        
-        RayDesc refractionRay;
-        refractionRay.Origin = worldPos + Nf * 0.01f; // bias to avoid self-shadowing
-        refractionRay.Direction = refractDir;
-        refractionRay.TMin = tMin;
-        refractionRay.TMax = tMax;
+    refrPayload.depth = payload.depth + 1;
+    refrPayload.eta = eta_t;
 
-    
+    if (!tir)
+    {
+        RayDesc refractionRay;
+        refractionRay.Origin = worldPos + Nf * 0.001f;
+        refractionRay.Direction = refractDir;
+        refractionRay.TMin = 0.001f;
+        refractionRay.TMax = 1e38f;
+
         TraceRay(
-            SceneBVH,
-            RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH,
-            0xff,
-            2,
-            3,
-            0,
-    refractionRay,
-    refrPayload
-        );
+        SceneBVH,
+        RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH,
+        0xFF,
+        2, 3, 0,
+        refractionRay,
+        refrPayload
+    );
     }
     
-    float3 finalColor = radiance + areaLightContribution + reflectionColor;
+    reflectionColor = reflectionPayload.colorAndDistance.xyz;
+    float3 refractionColor = refrPayload.colorAndDistance.xyz;
 
-    
-    finalColor += refrPayload.colorAndDistance.xyz;
+// Fresnel blends reflection vs refraction
+    float3 surfaceColor = lerp(refractionColor, reflectionColor, F);
+
+    float3 finalColor = radiance + areaLightContribution + surfaceColor;
     finalColor = PostProcess(finalColor);
-    
-    gOutput[launchIndex] = float4(finalColor, 1.0);
+
+    gOutput[launchIndex] = float4(finalColor, 1.0f);
 }
