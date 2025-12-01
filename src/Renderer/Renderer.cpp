@@ -84,7 +84,7 @@ bool Renderer::InitializeD3D12(HWND& windowHandle)
 	//nv_helpers_dx12::Manipulator::Singleton().setLookat(glm::vec3(0.0f, 1.0f, -27.0f), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
 
 #if defined(DEBUG) || defined(_DEBUG)
-	//CreateDebugController();
+	CreateDebugController();
 #endif
 	ThrowIfFailed(CreateDXGIFactory1(IID_PPV_ARGS(&m_DxgiFactory)));
 
@@ -1622,16 +1622,18 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> Renderer::CreateHitSignature()
 	nv_helpers_dx12::RootSignatureGenerator rsc;
 	rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_SRV, 0);
 	rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_SRV, 1);
-	rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_SRV, 2);
 	rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_CBV, 0);
 	rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_CBV, 1);
 	rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_CBV, 2);
 	rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_CBV, 3);
 	rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_CBV, 4);
-	rsc.AddHeapRangesParameter({ { 3, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2} });
-	rsc.AddHeapRangesParameter({ { 4, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 5} });
-	rsc.AddHeapRangesParameter({ { 5, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 6} });
-	rsc.AddHeapRangesParameter({ { 6, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 7} });
+	rsc.AddHeapRangesParameter({
+		{ 2, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1},
+		{ 3, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2},
+		{ 4, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 5},
+		{ 5, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 6},
+		{ 6, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 7},
+		});
 	return rsc.Generate(m_Device.Get(), true);
 }
 
@@ -1668,7 +1670,6 @@ void Renderer::CreateRaytracingPipeline()
 	pipeline.AddHitGroup(L"ReflectionHitGroup", L"ReflectionClosestHit");
 
 	pipeline.AddRootSignatureAssociation(m_RayGenSignature.Get(), { L"RayGen" });
-	pipeline.AddRootSignatureAssociation(m_MissSignature.Get(), { L"ShadowMiss" });
 
 	pipeline.AddRootSignatureAssociation(m_ShadowSignature.Get(), { L"ShadowHitGroup" });
 	pipeline.AddRootSignatureAssociation(m_MissSignature.Get(), { L"Miss", L"ShadowMiss" });
@@ -1867,7 +1868,7 @@ samplerHeapPointer });
 		if (m_IsInstanceReflective[i])
 		{
 			m_SbtHelper.AddHitGroup(L"ReflectionHitGroup", { (void*)vb,(void*)ib,
-				(void*)m_topLevelASBuffers.pResult->GetGPUVirtualAddress(),
+		//		(void*)m_topLevelASBuffers.pResult->GetGPUVirtualAddress(),
 				(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(),
 				(void*)m_GlobalConstantBuffer->GetGPUVirtualAddress(),
 				(void*)perInstanceCB,
@@ -1879,7 +1880,7 @@ samplerHeapPointer });
 			m_SbtHelper.AddHitGroup(L"ShadowHitGroup", {});
 
 			m_SbtHelper.AddHitGroup(L"ReflectionHitGroup", { (void*)vb,(void*)ib,
-				(void*)m_topLevelASBuffers.pResult->GetGPUVirtualAddress(),
+		//		(void*)m_topLevelASBuffers.pResult->GetGPUVirtualAddress(),
 				(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(),
 				(void*)m_GlobalConstantBuffer->GetGPUVirtualAddress(),
 				(void*)perInstanceCB,
@@ -1891,7 +1892,7 @@ samplerHeapPointer });
 		else
 		{
 			m_SbtHelper.AddHitGroup(L"PlaneHitGroup", { (void*)vb,(void*)ib,
-				(void*)m_topLevelASBuffers.pResult->GetGPUVirtualAddress(),
+		//		(void*)m_topLevelASBuffers.pResult->GetGPUVirtualAddress(),
 				(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(),
 				(void*)m_GlobalConstantBuffer->GetGPUVirtualAddress(),
 				(void*)perInstanceCB,
@@ -1903,7 +1904,7 @@ samplerHeapPointer });
 			m_SbtHelper.AddHitGroup(L"ShadowHitGroup", {});
 
 			m_SbtHelper.AddHitGroup(L"HitGroup", { (void*)vb,(void*)ib,
-				(void*)m_topLevelASBuffers.pResult->GetGPUVirtualAddress(),
+		//		(void*)m_topLevelASBuffers.pResult->GetGPUVirtualAddress(),
 				(void*)m_CurrentFrameResource->PassCB->Resource()->GetGPUVirtualAddress(),
 				(void*)m_GlobalConstantBuffer->GetGPUVirtualAddress(),
 				(void*)perInstanceCB,
@@ -1962,15 +1963,6 @@ void Renderer::CreateTopLevelAS(std::vector<std::pair<Microsoft::WRL::ComPtr<ID3
 		for (size_t i = 0; i < instances.size(); i++)
 		{
 			UINT hitGroupIndex = i;
-			//if (i < m_SkullCount)
-			//{
-			//	hitGroupIndex = i;
-			//}
-
-			//if (i >= m_SkullCount)
-			//{
-			//	hitGroupIndex = i;
-			//}
 
 			m_topLevelASGenerator.AddInstance(instances[i].first.Get(), instances[i].second, static_cast<UINT>(i), static_cast<UINT>(i * gNumRayTypes));
 		}
@@ -2010,10 +2002,10 @@ void Renderer::CreateAccelerationStructures()
 	};
 
 	m_IsInstanceReflective = {
-		false,
-		false,
-		false,
-		false,
+		true,
+		true,
+		true,
+		true,
 		true,
 		true
 	};

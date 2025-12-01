@@ -508,7 +508,7 @@ void ClosestHit(inout HitInfo payload, Attributes attrib)
 
     payload.depth += 1;
     
-    radiance = PostProcess(radiance);
+   // radiance = PostProcess(radiance);
     
     payload.eta = materials[materialIndex].Ior;
  //   payload.isHit = true;
@@ -596,17 +596,17 @@ void PlaneClosestHit(inout HitInfo payload, Attributes attrib)
     giRay.TMax = 10000.0f;
     
          
-    if (payload.depth <= 5)
-    {
-        TraceRay(SceneBVH,
-             RAY_FLAG_NONE,
-             0xFF,
-             2, 3, 0,
-             giRay,
-             giHit);
-
-        
-    }
+// if (payload.depth <= 5)
+// {
+//     TraceRay(SceneBVH,
+//          RAY_FLAG_NONE,
+//          0xFF,
+//          2, 3, 0,
+//          giRay,
+//          giHit);
+//
+//     
+// }
 
     float NdotV = saturate(dot(N, V));
     float NdotL = saturate(dot(N, LightDir));
@@ -712,14 +712,14 @@ void PlaneClosestHit(inout HitInfo payload, Attributes attrib)
         //    return;
         //}
         
-        TraceRay(
-        SceneBVH,
-        RAY_FLAG_NONE,
-        0xFF,
-        1, 3, 1,
-        shadowRay,
-        shadowPayload
-        );
+   //TraceRay(
+   //SceneBVH,
+   //RAY_FLAG_NONE,
+   //0xFF,
+   //1, 3, 1,
+   //shadowRay,
+   //shadowPayload
+   //);
         
         if (!shadowPayload.isHit)
         {
@@ -850,16 +850,16 @@ void ReflectionClosestHit(inout HitInfo payload, Attributes attrib)
     reflectionRay.TMax = 1e5f;
 
 
-    TraceRay(
-        SceneBVH,
-        RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH,
-        /*InstanceInclusionMask*/ 0xff,
-    /*RayContributionToHitGroupIndex*/ 2,
-        /*MultiplierForGeometryContributionToHitGroupIndex*/ 3,
-        /*MissShaderIndex*/ 0,
-        reflectionRay,
-        reflectionPayload
-    );
+  // TraceRay(
+  //     SceneBVH,
+  //     RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH,
+  //     /*InstanceInclusionMask*/ 0xff,
+  // /*RayContributionToHitGroupIndex*/ 2,
+  //     /*MultiplierForGeometryContributionToHitGroupIndex*/ 3,
+  //     /*MissShaderIndex*/ 0,
+  //     reflectionRay,
+  //     reflectionPayload
+  // );
     if (reflectionPayload.depth >= 3)
     {
         payload.colorAndDistance = float4(payload.colorAndDistance.xyz, RayTCurrent());
@@ -874,28 +874,28 @@ void ReflectionClosestHit(inout HitInfo payload, Attributes attrib)
     float tMin = 0.001f;
     float tMax = 1e27f;
 
-    if (!totalInternalReflection)
-    {
-        
-    
-        RayDesc refractionRay;
-        refractionRay.Origin = pW + refractDir * 0.01f; // bias to avoid self-shadowing
-        refractionRay.Direction = refractDir;
-        refractionRay.TMin = tMin;
-        refractionRay.TMax = tMax;
-
-    
-        TraceRay(
-            SceneBVH,
-            RAY_FLAG_NONE,
-            0xff,
-            0,
-            3,
-            0,
-    refractionRay,
-    refrPayload
-        );
-    }
+   // if (!totalInternalReflection)
+   // {
+   //     
+   // 
+   //     RayDesc refractionRay;
+   //     refractionRay.Origin = pW + refractDir * 0.01f; // bias to avoid self-shadowing
+   //     refractionRay.Direction = refractDir;
+   //     refractionRay.TMin = tMin;
+   //     refractionRay.TMax = tMax;
+   //
+   // 
+   //     TraceRay(
+   //         SceneBVH,
+   //         RAY_FLAG_NONE,
+   //         0xff,
+   //         0,
+   //         3,
+   //         0,
+   // refractionRay,
+   // refrPayload
+   //     );
+   // }
     
     float3 finalColor = reflectionPayload.colorAndDistance.xyz;
     

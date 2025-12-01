@@ -439,8 +439,40 @@ void RayGen()
 
     areaLightContribution /= samples;
 
+    float3 reflectionColor = float3(0, 0, 0);
+    
+    if (roughness < 0.99f)
+    {
+        float2 xi = SampleHammersley(0, 1);
+        float3 N = SampleGGXVNDF(V, xi, roughness);
+        float3 R = reflect(-V, N);
+        RayDesc reflectionRay;
+        reflectionRay.Origin = worldPos.xyz + normal * 0.001f;
+        reflectionRay.Direction = R;
+        reflectionRay.TMin = 0.01f;
+        reflectionRay.TMax = 1e38f;
+        HitInfo reflectionPayload;
+        reflectionPayload.colorAndDistance = float4(0, 0, 0, 1);
+        reflectionPayload.depth = 0;
+        reflectionPayload.eta = 1.0f;
+        TraceRay(
+            SceneBVH,
+            RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH
+            | RAY_FLAG_FORCE_OPAQUE,
+            0xFF,
+            2, 3, 0,
+            reflectionRay,
+            reflectionPayload
+        );
+        
+        float3 F0 = lerp(float3(0.04f, 0.04f, 0.04f), albedo, metal);
+        float cosTheta = saturate(dot(N, V));
+        float3 F = F0 + (1.0f - F0) * pow(1.0f - cosTheta, 5.0f);
 
-    float3 finalColor = radiance + areaLightContribution;
+        reflectionColor = F * reflectionPayload.colorAndDistance.xyz;
+    };
+
+    float3 finalColor = radiance + areaLightContribution + reflectionColor;
 
     finalColor = PostProcess(finalColor);
     
