@@ -1861,7 +1861,7 @@ samplerHeapPointer });
 			ib = sphereSubmesh->IndexBufferGPU->GetGPUVirtualAddress();
 
 		}
-		else if (i > m_SphereCount && i < 7)
+		else if (i > m_SphereCount && i < 6)
 		{
 			vb = skullSubmesh->VertexBufferGPU->GetGPUVirtualAddress();
 			ib = skullSubmesh->IndexBufferGPU->GetGPUVirtualAddress();
@@ -2195,8 +2195,8 @@ void Renderer::CreateAreaLightConstantBuffer()
 {
 	m_AreaLightDataCollection.reserve(1);
 	m_AreaLightData = new AreaLight();
-	m_AreaLightData->Position = XMFLOAT3(0.0f, 60.0f, -25.0f);
-	m_AreaLightData->Radiance = XMFLOAT3(0.5f, 0.5f, 0.5f);
+	m_AreaLightData->Position = XMFLOAT3(0.0f, 30.0f, -25.0f);
+	m_AreaLightData->Radiance = XMFLOAT3(255.5f, 255.5f, 255.5f);
 	m_AreaLightData->U = XMFLOAT3(8.0f, 0.0f, 0.0f);
 	m_AreaLightData->V = XMFLOAT3(0.0f, 0.0f, 8.0f);
 

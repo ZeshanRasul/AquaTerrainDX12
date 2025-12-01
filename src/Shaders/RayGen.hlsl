@@ -447,7 +447,7 @@ void RayGen()
         reflectionPayload.eta = 1.0f;
         TraceRay(
             SceneBVH,
-            RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH
+            RAY_FLAG_NONE
             ,
             0xFF,
             2, 3, 0,
@@ -466,7 +466,7 @@ void RayGen()
     //float3 finalColor = radiance + areaLightContribution + reflectionColor;
     float3 finalColor = radiance + areaLightContribution + reflectionColor;
 
-    finalColor = PostProcess(finalColor);
+ //   finalColor = PostProcess(finalColor);
     
     gOutput[launchIndex] = float4(reflectionColor, 1.0);
 }
