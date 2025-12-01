@@ -1604,6 +1604,7 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> Renderer::CreateRayGenSignature()
 	rsc.AddHeapRangesParameter(
 		{ { 0, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 0 },
 		{ 0, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1},
+		{ 1, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2},
 		{ 0, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 4},
 		{ 4, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 5},
 		{ 5, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 6},
@@ -2196,7 +2197,7 @@ void Renderer::CreateAreaLightConstantBuffer()
 	m_AreaLightDataCollection.reserve(1);
 	m_AreaLightData = new AreaLight();
 	m_AreaLightData->Position = XMFLOAT3(0.0f, 60.0f, -25.0f);
-	m_AreaLightData->Radiance = XMFLOAT3(5.0, 5.5f, 5.5f);
+	m_AreaLightData->Radiance = XMFLOAT3(3.0, 3.5f, 3.5f);
 	m_AreaLightData->U = XMFLOAT3(8.0f, 0.0f, 0.0f);
 	m_AreaLightData->V = XMFLOAT3(0.0f, 0.0f, 8.0f);
 

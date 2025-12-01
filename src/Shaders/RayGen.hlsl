@@ -16,11 +16,26 @@ struct AreaLight
     float Area;
 };
 
+struct Material
+{
+    float4 DiffuseAlbedo;
+    float3 FresnelR0;
+    float Ior;
+    float Reflectivity;
+    float3 Absorption;
+    float Shininess;
+    float pad;
+    float pad1;
+    float metallic;
+    bool IsReflective;
+};
+
 // Raytracing output texture, accessed as a UAV
 RWTexture2D<float4> gOutput : register(u0);
 
 // Raytracing acceleration structure, accessed as a SRV
 RaytracingAccelerationStructure SceneBVH : register(t0);
+StructuredBuffer<Material> materials : register(t1);
 Texture2D<float4> GBufferAlbedoMetal : register(t4);
 Texture2D<float4> GBufferNormalRough : register(t5);
 Texture2D<float4> GBufferDepth : register(t6);
@@ -290,6 +305,19 @@ float GGX_PDF(float3 N, float3 V, float3 L, float roughness)
     return pdf;
 }
 
+float3 DecodeNormalOct(float2 enc)
+{
+    // map back from [0,1] to [-1,1]
+    float2 f = enc * 2.0f - 1.0f;
+
+    float3 n = float3(f.x, f.y, 1.0f - abs(f.x) - abs(f.y));
+
+    float t = saturate(-n.z);
+    n.xy += select(-t, t, n.xy >= 0.0f);
+
+    return normalize(n);
+}
+
 [shader("raygeneration")]
 void RayGen()
 {
@@ -307,11 +335,22 @@ void RayGen()
 
     d.y = -d.y;
     
+    //float3 albedo = GBufferAlbedoMetal.SampleLevel(gLinearClampSampler, pixelCenter, 0).xyz;
+    //float metal = GBufferAlbedoMetal.SampleLevel(gLinearClampSampler, pixelCenter, 0).w;
+    //float3 normal = GBufferNormalRough.SampleLevel(gLinearClampSampler, pixelCenter, 0).xyz;
+    //float roughness = GBufferNormalRough.SampleLevel(gLinearClampSampler, pixelCenter, 0).w;
+    
+    float4 g0 = GBufferAlbedoMetal.SampleLevel(gLinearClampSampler, pixelCenter, 0);
+    float4 g1 = GBufferNormalRough.SampleLevel(gLinearClampSampler, pixelCenter, 0);
+    
+    float3 albedo = g0.rgb;
+    uint materialID = (uint) round(saturate(g0.a) * 255.0f);
+    
+    float3 normal = DecodeNormalOct(g1.rg);
+    float roughness = g1.b;
+    float metal = g1.a;
+    
     float depth = GBufferDepth.SampleLevel(gLinearClampSampler, pixelCenter, 0).x;
-    float3 albedo = GBufferAlbedoMetal.SampleLevel(gLinearClampSampler, pixelCenter, 0).xyz;
-    float metal = GBufferAlbedoMetal.SampleLevel(gLinearClampSampler, pixelCenter, 0).w;
-    float3 normal = GBufferNormalRough.SampleLevel(gLinearClampSampler, pixelCenter, 0).xyz;
-    float roughness = GBufferNormalRough.SampleLevel(gLinearClampSampler, pixelCenter, 0).w;
     
     if (depth >= 1.0f - 1e-5f)
     {
@@ -473,7 +512,7 @@ void RayGen()
     //float3 finalColor = radiance + areaLightContribution + reflectionColor;
     float3 finalColor = radiance + areaLightContribution + reflectionColor;
 
- //   finalColor = PostProcess(finalColor);
+    finalColor = PostProcess(finalColor);
     
     gOutput[launchIndex] = float4(finalColor, 1.0);
 }

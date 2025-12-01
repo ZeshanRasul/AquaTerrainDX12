@@ -45,6 +45,23 @@ cbuffer cbPass : register(b1)
 
 StructuredBuffer<Material> materials : register(t0);
 
+float2 EncodeNormalOct(float3 n)
+{
+    n /= (abs(n.x) + abs(n.y) + abs(n.z) + 1e-6);
+
+    float2 enc = n.xy;
+    if (n.z < 0.0f)
+    {
+        enc = (1.0f - abs(enc.yx)) * float2(
+            enc.x >= 0.0f ? 1.0f : -1.0f,
+            enc.y >= 0.0f ? 1.0f : -1.0f
+        );
+    }
+
+    // map from [-1,1] to [0,1] to fit UNORM
+    return enc * 0.5f + 0.5f;
+}
+
 struct GBuffer
 {
     float4 gBufferAlbedoMetal : SV_Target0;
@@ -57,13 +74,14 @@ GBuffer PS(PixelIn pIn)
 
     Material mat = materials[matIndex + pIn.InstanceID];
     
-    gBuffer.gBufferAlbedoMetal.xyz = mat.DiffuseAlbedo.xyz;
-    gBuffer.gBufferAlbedoMetal.w = mat.metallic;
+    gBuffer.gBufferAlbedoMetal.rgb = mat.DiffuseAlbedo.xyz;
+    gBuffer.gBufferAlbedoMetal.a = pIn.InstanceID / 255.0f;
     
 
     
-    gBuffer.gBufferNormalRough.xyz = pIn.NormalW;
-    gBuffer.gBufferNormalRough.w = 1.0 - mat.Shininess;
+    gBuffer.gBufferNormalRough.rg = EncodeNormalOct(pIn.NormalW);
+    gBuffer.gBufferNormalRough.b = 1.0 - mat.Shininess;
+    gBuffer.gBufferNormalRough.a = mat.metallic;
     
     return gBuffer;
 
