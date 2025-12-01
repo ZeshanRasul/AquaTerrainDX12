@@ -527,5 +527,7 @@ void ReflectionClosestHit(inout HitInfo payload, Attributes attrib)
 
     float3 radiance = Lo;
 
+    payload.eta = materials[materialIndex].Ior;
+    
     payload.colorAndDistance = float4(radiance, RayTCurrent());
 }

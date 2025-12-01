@@ -796,78 +796,73 @@ void Renderer::BuildMaterials()
 	boxMat->DiffuseSrvHeapIndex = 0;
 	boxMat->DiffuseAlbedo = XMFLOAT4(Colors::ForestGreen);
 	boxMat->FresnelR0 = XMFLOAT3(0.02f, 0.02f, 0.02f);
-	boxMat->Roughness = 0.7f;
+	boxMat->Roughness = 0.8f;
 	boxMat->metallic = 0.3f;
-
-	auto bricks0 = std::make_unique<Material>();
-	bricks0->Name = "bricks0";
-	bricks0->MatCBIndex = 1;
-	bricks0->DiffuseSrvHeapIndex = 1;
-	bricks0->DiffuseAlbedo = XMFLOAT4(Colors::Sienna);
-	bricks0->FresnelR0 = XMFLOAT3(0.02f, 0.02f, 0.02f);
-	bricks0->Roughness = 0.9f;
-	bricks0->metallic = 0.1f;
-
-	auto stone0 = std::make_unique<Material>();
-	stone0->Name = "stone0";
-	stone0->MatCBIndex = 2;
-	stone0->DiffuseSrvHeapIndex = 2;
-	stone0->DiffuseAlbedo = XMFLOAT4(Colors::Crimson);
-	stone0->FresnelR0 = XMFLOAT3(0.05f, 0.05f, 0.05f);
-	stone0->Roughness = 0.4f;
-	stone0->metallic = 0.67f;
-
-	auto skullMat = std::make_unique<Material>();
-	skullMat->Name = "skullMat";
-	skullMat->MatCBIndex = 3;
-	skullMat->DiffuseSrvHeapIndex = 3;
-	skullMat->DiffuseAlbedo = XMFLOAT4(Colors::BlanchedAlmond);
-	skullMat->FresnelR0 = XMFLOAT3(0.05f, 0.05f, 0.05);
-	skullMat->Roughness = 0.2f;
-	skullMat->metallic = 0.8f;
-	skullMat->Ior = 1.5f;
-	skullMat->IsReflective = true;
-
-	auto tile0 = std::make_unique<Material>();
-	tile0->Name = "tile0";
-	tile0->MatCBIndex = 4;
-	tile0->DiffuseSrvHeapIndex = 4;
-	tile0->DiffuseAlbedo = XMFLOAT4(Colors::Aquamarine);
-	tile0->FresnelR0 = XMFLOAT3(0.02f, 0.02f, 0.02f);
-	tile0->Roughness = 0.3f;
-	tile0->metallic = 0.7f;
-
 
 	auto sphereMat = std::make_unique<Material>();
 	sphereMat->Name = "sphere";
-	sphereMat->MatCBIndex = 5;
-	sphereMat->DiffuseSrvHeapIndex = 5;
-	sphereMat->DiffuseAlbedo = XMFLOAT4(Colors::Violet);
-	sphereMat->FresnelR0 = XMFLOAT3(0.06f, 0.06f, 0.06f);
+	sphereMat->MatCBIndex = 1;
+	sphereMat->DiffuseSrvHeapIndex = 1;
+	sphereMat->DiffuseAlbedo = XMFLOAT4(Colors::Sienna);
+	sphereMat->FresnelR0 = XMFLOAT3(0.02f, 0.02f, 0.02f);
 	sphereMat->Roughness = 0.2f;
 	sphereMat->metallic = 0.8f;
-	sphereMat->Ior = 1.5f;
 	sphereMat->IsReflective = true;
+	sphereMat->Ior = 1.5f;
+
+	auto skullMat = std::make_unique<Material>();
+	skullMat->Name = "skull0";
+	skullMat->MatCBIndex = 2;
+	skullMat->DiffuseSrvHeapIndex = 2;
+	skullMat->DiffuseAlbedo = XMFLOAT4(Colors::Crimson);
+	skullMat->FresnelR0 = XMFLOAT3(0.05f, 0.05f, 0.05f);
+	skullMat->Roughness = 0.6f;
+	skullMat->metallic = 0.4f;
+
+	auto skullMat2 = std::make_unique<Material>();
+	skullMat2->Name = "skullMat2";
+	skullMat2->MatCBIndex = 3;
+	skullMat2->DiffuseSrvHeapIndex = 3;
+	skullMat2->DiffuseAlbedo = XMFLOAT4(Colors::BlanchedAlmond);
+	skullMat2->FresnelR0 = XMFLOAT3(0.05f, 0.05f, 0.05);
+	skullMat2->Roughness = 0.3f;
+	skullMat2->metallic = 0.9f;
+	skullMat2->Ior = 1.5f;
+	skullMat2->IsReflective = true;
+
+	auto skullMat3 = std::make_unique<Material>();
+	skullMat3->Name = "skullMat3";
+	skullMat3->MatCBIndex = 4;
+	skullMat3->DiffuseSrvHeapIndex = 4;
+	skullMat3->DiffuseAlbedo = XMFLOAT4(Colors::Aquamarine);
+	skullMat3->FresnelR0 = XMFLOAT3(0.02f, 0.02f, 0.02f);
+	skullMat3->Roughness = 0.3f;
+	skullMat3->metallic = 0.7f;
+
+
+	auto skullMat4 = std::make_unique<Material>();
+	skullMat4->Name = "skullMat4";
+	skullMat4->MatCBIndex = 5;
+	skullMat4->DiffuseSrvHeapIndex = 5;
+	skullMat4->DiffuseAlbedo = XMFLOAT4(Colors::Violet);
+	skullMat4->FresnelR0 = XMFLOAT3(0.06f, 0.06f, 0.06f);
+	skullMat4->Roughness = 0.85f;
+	skullMat4->Ior = 1.5f;
+	skullMat4->IsReflective = true;
 
 	m_Materials["box"] = std::move(boxMat);
-	//	m_FrameResources[m_CurrentFrameResourceIndex]->matCount++;
-	m_Materials["bricks0"] = std::move(bricks0);
-	//	m_FrameResources[m_CurrentFrameResourceIndex]->matCount++;
-	m_Materials["stone0"] = std::move(stone0);
-	//	m_FrameResources[m_CurrentFrameResourceIndex]->matCount++;
-	m_Materials["tile0"] = std::move(tile0);
-	//	m_FrameResources[m_CurrentFrameResourceIndex]->matCount++;
-	m_Materials["skullMat"] = std::move(skullMat);
-	//	m_FrameResources[m_CurrentFrameResourceIndex]->matCount++;
-	m_Materials["sphere"] = std::move(sphereMat);
-	//	m_FrameResources[m_CurrentFrameResourceIndex]->matCount++;
+	m_Materials["bricks0"] = std::move(sphereMat);
+	m_Materials["stone0"] = std::move(skullMat);
+	m_Materials["tile0"] = std::move(skullMat2);
+	m_Materials["skullMat"] = std::move(skullMat3);
+	m_Materials["sphere"] = std::move(skullMat4);
 }
 void Renderer::BuildShapeGeometry()
 {
 	GeometryGenerator geoGen;
 	GeometryGenerator::MeshData box = geoGen.CreateBox(10.5f, 10.5f, 10.5f, 3);
 	GeometryGenerator::MeshData grid = geoGen.CreateGrid(20.0f, 30.0f, 60, 40);
-	GeometryGenerator::MeshData sphere = geoGen.CreateSphere(0.5f, 20, 20);
+	GeometryGenerator::MeshData sphere = geoGen.CreateSphere(0.5f, 32, 32);
 	GeometryGenerator::MeshData cylinder = geoGen.CreateCylinder(0.5f, 0.3f, 3.0f, 20, 20);
 
 	//
@@ -2197,7 +2192,7 @@ void Renderer::CreateAreaLightConstantBuffer()
 	m_AreaLightDataCollection.reserve(1);
 	m_AreaLightData = new AreaLight();
 	m_AreaLightData->Position = XMFLOAT3(0.0f, 60.0f, -25.0f);
-	m_AreaLightData->Radiance = XMFLOAT3(3.0, 3.5f, 3.5f);
+	m_AreaLightData->Radiance = XMFLOAT3(0.8, 0.7f, 0.75f);
 	m_AreaLightData->U = XMFLOAT3(8.0f, 0.0f, 0.0f);
 	m_AreaLightData->V = XMFLOAT3(0.0f, 0.0f, 8.0f);
 

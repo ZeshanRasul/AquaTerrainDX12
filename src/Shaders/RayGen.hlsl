@@ -347,6 +347,7 @@ void RayGen()
     uint materialID = (uint) round(saturate(g0.a) * 255.0f);
     
     float3 normal = DecodeNormalOct(g1.rg);
+   
     float roughness = g1.b;
     float metal = g1.a;
     
@@ -373,10 +374,29 @@ void RayGen()
 
 
     float3 V = normalize(gEyePosW - worldPos.xyz);
+    if (dot(V, normal) < 0)
+        normal = -normal;
     
     float3 areaLightContribution = float3(0, 0, 0);
     
     float3 Lo = 0.0;
+   
+    Material mat = materials[materialID];
+    
+    float eta_i = 1.0;
+    float eta_t = mat.Ior;
+    
+    float3 Nf = normal;
+    float3 N = normal;
+    
+    if (dot(V, N) < 0.0f)
+    {
+        Nf = -N;
+        eta_i = mat.Ior;
+        eta_t = 1.0f;
+    }
+    
+    float eta = eta_i / eta_t;
     
     for (int i = 0; i < 1; ++i)
     {
@@ -432,7 +452,7 @@ void RayGen()
   
         RayDesc shadowRay;
 
-        shadowRay.Origin = worldPos.xyz + normal * 0.001f; 
+        shadowRay.Origin = worldPos.xyz + normal * 0.001f;
         shadowRay.Direction = dir;
         shadowRay.TMin = 0.01f;
         shadowRay.TMax = dist;
@@ -440,10 +460,16 @@ void RayGen()
         ShadowHitInfo shadowPayload;
 
         payload.depth++;
-        payload.eta = 1.0;
+        payload.eta = materials[materialID].Ior;
         shadowPayload.isHit = true;
         shadowPayload.depth = 0;
       
+        //if (payload.depth >= 5)
+        //{
+        //    gOutput[launchIndex] = float4(radiance + areaLightContribution, 1.0);
+        //    return;
+        //}
+        
         TraceRay(
         SceneBVH,
         RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH
@@ -475,8 +501,18 @@ void RayGen()
 
     areaLightContribution /= samples;
 
+    
+    payload.depth = payload.depth++;
+    payload.eta = mat.Ior;
+
+    
     float3 reflectionColor = float3(0, 0, 0);
     
+    uint rayDepth = 0;
+    HitInfo reflectionPayload;
+    reflectionPayload.colorAndDistance = float4(0, 0, 0, 1);
+    reflectionPayload.depth = payload.depth;
+    reflectionPayload.eta = payload.eta;
     if (roughness < 0.99f)
     {
         float2 xi = SampleHammersley(0, 1);
@@ -487,14 +523,10 @@ void RayGen()
         reflectionRay.Direction = R;
         reflectionRay.TMin = 0.01f;
         reflectionRay.TMax = 1e38f;
-        HitInfo reflectionPayload;
-        reflectionPayload.colorAndDistance = float4(0, 0, 0, 1);
-        reflectionPayload.depth = 0;
-        reflectionPayload.eta = 1.0f;
+
         TraceRay(
             SceneBVH,
-            RAY_FLAG_NONE
-            ,
+            RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH,
             0xFF,
             2, 3, 0,
             reflectionRay,
@@ -505,13 +537,66 @@ void RayGen()
         float cosTheta = saturate(dot(N, V));
         float3 F = F0 + (1.0f - F0) * pow(1.0f - cosTheta, 5.0f);
 
-       reflectionColor = F * reflectionPayload.colorAndDistance.xyz;
-    //    reflectionColor = reflectionPayload.colorAndDistance.xyz;
+        reflectionColor = F * reflectionPayload.colorAndDistance.xyz;
+        
+        rayDepth = reflectionPayload.depth;
     };
 
-    //float3 finalColor = radiance + areaLightContribution + reflectionColor;
+    float3 wo = V;
+    
+    float cosThetaI = dot(-wo, Nf);
+    float sin2ThetaI = max(0.0f, 1.0f - cosThetaI * cosThetaI);
+    float sin2ThetaT = payload.eta * payload.eta * sin2ThetaI;
+
+    float3 refractDir;
+    bool totalInternalReflection = (sin2ThetaT > 1.0f);
+    
+    
+    
+    payload.eta = reflectionPayload.eta;
+    
+ // if (payload.depth + reflectionPayload.depth >= 5)
+ // {
+ //     gOutput[launchIndex] = float4(radiance + areaLightContribution + reflectionColor, RayTCurrent());
+ //     return;
+ // }
+
+    HitInfo refrPayload = payload;
+    
+    refrPayload.depth++;
+    refrPayload.eta = payload.eta;
+    
+    float tMin = 0.001f;
+    float tMax = 1e27f;
+    
+        if (!totalInternalReflection)
+    {
+        refractDir = refract(-wo, Nf, eta);
+        refractDir = normalize(refractDir);
+        
+        RayDesc refractionRay;
+        refractionRay.Origin = worldPos + Nf * 0.01f; // bias to avoid self-shadowing
+        refractionRay.Direction = refractDir;
+        refractionRay.TMin = tMin;
+        refractionRay.TMax = tMax;
+
+    
+        TraceRay(
+            SceneBVH,
+            RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH,
+            0xff,
+            2,
+            3,
+            0,
+    refractionRay,
+    refrPayload
+        );
+    }
+    
     float3 finalColor = radiance + areaLightContribution + reflectionColor;
 
+    
+    finalColor += refrPayload.colorAndDistance.xyz;
     finalColor = PostProcess(finalColor);
     
     gOutput[launchIndex] = float4(finalColor, 1.0);
