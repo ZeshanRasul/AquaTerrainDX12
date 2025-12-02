@@ -140,6 +140,7 @@ bool Renderer::InitializeD3D12(HWND& windowHandle)
 	CreatePostProcessConstantBuffer();
 	CreateAreaLightConstantBuffer();
 	CreateRaytracingOutputBuffer();
+	CreateAccumulationBuffer();
 	CreateShaderResourceHeap();
 	CreateShaderBindingTable();
 	CreateImGuiDescriptorHeap();
@@ -676,8 +677,8 @@ void Renderer::BuildMaterials()
 	bricks0->DiffuseSrvHeapIndex = 1;
 	bricks0->DiffuseAlbedo = XMFLOAT4(Colors::Sienna);
 	bricks0->FresnelR0 = XMFLOAT3(0.02f, 0.02f, 0.02f);
-	bricks0->Roughness = 0.1f;
-	bricks0->metallic = 0.8f;
+	bricks0->Roughness = 0.9f;
+	bricks0->metallic = 0.1f;
 
 	auto stone0 = std::make_unique<Material>();
 	stone0->Name = "stone0";
@@ -695,6 +696,7 @@ void Renderer::BuildMaterials()
 	skullMat->DiffuseAlbedo = XMFLOAT4(Colors::BlanchedAlmond);
 	skullMat->FresnelR0 = XMFLOAT3(0.05f, 0.05f, 0.05);
 	skullMat->Roughness = 0.7f;
+	skullMat->metallic = 0.1f;
 	skullMat->Ior = 1.5f;
 	skullMat->IsReflective = true;
 
@@ -704,8 +706,8 @@ void Renderer::BuildMaterials()
 	tile0->DiffuseSrvHeapIndex = 2;
 	tile0->DiffuseAlbedo = XMFLOAT4(Colors::Aquamarine);
 	tile0->FresnelR0 = XMFLOAT3(0.02f, 0.02f, 0.02f);
-	tile0->Roughness = 0.3f;
-	tile0->metallic = 0.7f;
+	tile0->Roughness = 0.2f;
+	tile0->metallic = 0.75f;
 
 
 	auto sphereMat = std::make_unique<Material>();
@@ -715,6 +717,7 @@ void Renderer::BuildMaterials()
 	sphereMat->DiffuseAlbedo = XMFLOAT4(Colors::Violet);
 	sphereMat->FresnelR0 = XMFLOAT3(0.06f, 0.06f, 0.06f);
 	sphereMat->Roughness = 0.85f;
+	sphereMat->metallic = 0.15f;
 	skullMat->Ior = 1.5f;
 	skullMat->IsReflective = true;
 
@@ -1288,6 +1291,7 @@ Microsoft::WRL::ComPtr<ID3D12RootSignature> Renderer::CreateRayGenSignature()
 		{ { 0, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 0 },
 		{ 0, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1},
 		{ 0, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 3},
+		{ 1, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 4},
 		}
 	);
 
@@ -1375,7 +1379,7 @@ void Renderer::CreateRaytracingOutputBuffer()
 
 void Renderer::CreateShaderResourceHeap()
 {
-	m_SrvUavHeap = nv_helpers_dx12::CreateDescriptorHeap(m_Device.Get(), 4, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
+	m_SrvUavHeap = nv_helpers_dx12::CreateDescriptorHeap(m_Device.Get(), 5, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
 
 	D3D12_CPU_DESCRIPTOR_HANDLE srvHandle = m_SrvUavHeap->GetCPUDescriptorHandleForHeapStart();
 
@@ -1423,7 +1427,31 @@ void Renderer::CreateShaderResourceHeap()
 	//m_Device->CreateConstantBufferView(&cbvDesc, srvHandle);
 
 
+	uavDesc = {};
+	uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
+	m_Device->CreateUnorderedAccessView(m_AccumulationBuffer.Get(), nullptr, &uavDesc, srvHandle);
 
+	srvHandle.ptr += m_Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+
+}
+
+void Renderer::CreateAccumulationBuffer()
+{
+	D3D12_RESOURCE_DESC resDesc = {};
+
+	resDesc.DepthOrArraySize = 1;
+	resDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+	resDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+
+	resDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+	resDesc.Width = m_ClientWidth;
+	resDesc.Height = m_ClientHeight;
+	resDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+	resDesc.MipLevels = 1;
+	resDesc.SampleDesc.Count = 1;
+
+	ThrowIfFailed(m_Device->CreateCommittedResource(&nv_helpers_dx12::kDefaultHeapProps, D3D12_HEAP_FLAG_NONE, &resDesc, D3D12_RESOURCE_STATE_COPY_SOURCE, nullptr, IID_PPV_ARGS(&m_AccumulationBuffer)));
 
 }
 
@@ -1590,8 +1618,8 @@ void Renderer::CreateAccelerationStructures()
 		false,
 		false,
 		false,
-		true,
-		true
+		false,
+		false
 	};
 
 	CreateTopLevelAS(m_Instances);
@@ -1763,8 +1791,8 @@ void Renderer::CreatePostProcessConstantBuffer()
 
 void Renderer::CreateAreaLightConstantBuffer()
 {
-	m_AreaLightData.Position = XMFLOAT3(0.0f, 50.0f, 0.0f);
-	m_AreaLightData.Radiance = XMFLOAT3(5.0f, 5.0f, 5.0f);
+	m_AreaLightData.Position = XMFLOAT3(0.0f, 30.0f, 0.0f);
+	m_AreaLightData.Radiance = XMFLOAT3(60.0f, 60.0f, 60.0f);
 	m_AreaLightData.U = XMFLOAT3(5.0f, 0.0f, 0.0f);
 	m_AreaLightData.V = XMFLOAT3(0.0f, 0.0f, 5.0f);
 
@@ -1775,10 +1803,10 @@ void Renderer::CreateAreaLightConstantBuffer()
 		m_AreaLightData.V.y * m_AreaLightData.V.y +
 		m_AreaLightData.V.z * m_AreaLightData.V.z);
 
-	m_AreaLightData.Area = 4.0f * lenU * lenV;
+	m_AreaLightData.Area = lenU * lenV;
 
 	m_AreaLightConstantBuffer = nv_helpers_dx12::CreateBuffer(
-		m_Device.Get(), sizeof(AreaLight), D3D12_RESOURCE_FLAG_NONE,
+		m_Device.Get(), sizeof(m_AreaLightData), D3D12_RESOURCE_FLAG_NONE,
 		D3D12_RESOURCE_STATE_GENERIC_READ, nv_helpers_dx12::kUploadHeapProps);
 
 	uint8_t* pData;

@@ -65,11 +65,11 @@ struct PostProcessData
 struct AreaLight
 {
 	XMFLOAT3 Position;
-	float Pad;
+	float Pad = 0.0f;
 	XMFLOAT3 U;
-	float Pad2;
+	float Pad2 = 0.0f;
 	XMFLOAT3 V;
-	float Pad3;
+	float Pad3 = 0.0f;
 	XMFLOAT3 Radiance;
 	float Area;
 };

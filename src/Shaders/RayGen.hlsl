@@ -5,6 +5,7 @@
 
 // Raytracing output texture, accessed as a UAV
 RWTexture2D<float4> gOutput : register(u0);
+RWTexture2D<float4> gAccumBuf : register(u1);
 
 // Raytracing acceleration structure, accessed as a SRV
 RaytracingAccelerationStructure SceneBVH : register(t0);
@@ -37,6 +38,7 @@ cbuffer FrameData : register(b5)
     uint frameIndex;
 }
 
+[numthreads(8, 8, 1)]
 [shader("raygeneration")]
 void RayGen()
 {
@@ -129,8 +131,16 @@ void RayGen()
         ray.TMin = 0.001f;
         ray.TMax = 1e38f;
     }
-     
+    
     float3 finalColor = PostProcessColor(finalRadiance);
-    gOutput[launchIndex] = float4(finalColor, 1.0f);
+     
+    float4 prev = gAccumBuf[launchIndex];
+    float4 current = float4(finalColor, 1.0f);
+    
+    float a = (frameIndex == 0) ? 1.0f : 1.0f / (frameIndex + 1);
+    
+    gAccumBuf[launchIndex] = lerp(prev, current, a);
+    
+    gOutput[launchIndex] = gAccumBuf[launchIndex];
 }
 

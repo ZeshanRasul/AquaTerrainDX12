@@ -278,7 +278,7 @@ void ClosestHit(inout PathPayload payload, Attributes attrib)
     payload.depth++;
 
     Material mat = materials[materialIndex];
-
+    
     payload.emission = 0.0f;
     
     // Sample BSDF
@@ -291,7 +291,7 @@ void ClosestHit(inout PathPayload payload, Attributes attrib)
     float3 VLocal = mul(V, transpose(frame));
     
     float3 LdDir = 0.0f;
-    float LdContrib = 0.0f;
+    float3 LdContrib = 0.0f;
     
     LightSample lightSample = SampleAreaLight(pW, N, payload.seed);
     
@@ -308,7 +308,7 @@ void ClosestHit(inout PathPayload payload, Attributes attrib)
             if (NdotL > 0.0f)
             {
                 float3 f = EvaluateDisneyBRDF(mat, N, V, L);
-                float3 pdfBSDF = PdfDisneyBRDF(mat, N, V, L);
+                float pdfBSDF = PdfDisneyBRDF(mat, N, V, L);
                 
                 // Multiple importance sampling weight (balance heuristic)
                 float pdfLight = lightSample.pdf;
@@ -316,13 +316,12 @@ void ClosestHit(inout PathPayload payload, Attributes attrib)
                 float pdfBSDF2 = pdfBSDF * pdfBSDF;
                 float wLight = pdfL2 / max(pdfL2 + pdfBSDF2, 1e-4f);
                 
-                LdContrib = wLight * f * lightSample.Li * NdotL / max(pdfLight, 1e-4f);
+               LdContrib = wLight * f * lightSample.Li * NdotL / max(pdfLight, 1e-4f);
             }
         }
     }
-    
-    BSDFSample
-        bsdf = SampleDisneyGGX(mat, N, V, VLocal, xi, frame);
+      
+    BSDFSample bsdf = SampleDisneyGGX(mat, N, V, VLocal, xi, frame);
     
     if (!bsdf.valid || all(bsdf.fOverPdf == 0.0f))
     {
@@ -337,7 +336,7 @@ void ClosestHit(inout PathPayload payload, Attributes attrib)
     float3 selfEmit = 0.0f;
     payload.emission = selfEmit + LdContrib;
     
-    // Stop if pdf is invalid or throughput will be zero
+    // Stop if pdf is invalid or if throughput will be zero
     if (all(bsdf.fOverPdf == 0.0f) || bsdf.pdf <= 0.0f)
     {
         payload.done = 1;

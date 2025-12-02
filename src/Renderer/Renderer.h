@@ -201,7 +201,10 @@ private:
 	void CreateRaytracingOutputBuffer();
 	void CreateShaderResourceHeap();
 
+	void CreateAccumulationBuffer();
+
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_OutputResource;
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_AccumulationBuffer;
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_SrvUavHeap;
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_ImguiHeap;
 
