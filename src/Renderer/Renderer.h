@@ -208,6 +208,17 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_SrvUavHeap;
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_ImguiHeap;
 
+	/// <summary>
+	///  Denoising
+	/// </summary>
+	
+	void CreateDenoisingResources();
+
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_NormalTex;
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_DepthTex;
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_DenoisePing;
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_DenoisePong;
+
 	void CreateShaderBindingTable();
 
 	nv_helpers_dx12::ShaderBindingTableGenerator m_SbtHelper;

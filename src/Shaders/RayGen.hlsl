@@ -6,6 +6,8 @@
 // Raytracing output texture, accessed as a UAV
 RWTexture2D<float4> gOutput : register(u0);
 RWTexture2D<float4> gAccumBuf : register(u1);
+RWTexture2D<float4> gNormal : register(u2);
+RWTexture2D<float> gDepth : register(u3);
 
 // Raytracing acceleration structure, accessed as a SRV
 RaytracingAccelerationStructure SceneBVH : register(t0);
@@ -140,6 +142,10 @@ void RayGen()
     float a = (frameIndex == 0) ? 1.0f : 1.0f / (frameIndex + 1);
     
     gAccumBuf[launchIndex] = lerp(prev, current, a);
+    
+    gNormal[launchIndex] = float4(payload.normal, 1.0f);
+    float d = float(length(payload.hitPos - gEyePosW));
+    gDepth[launchIndex] = saturate(d / gFarZ);
     
     gOutput[launchIndex] = gAccumBuf[launchIndex];
 }
