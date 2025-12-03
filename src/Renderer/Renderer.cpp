@@ -940,8 +940,8 @@ void Renderer::BuildPSOs()
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC waterPsoDesc = opaquePsoDesc;
 	waterPsoDesc.pRootSignature = m_TransparentRootSignature.Get();
 	waterPsoDesc.VS = {
-		reinterpret_cast<BYTE*>(m_VsByteCodeWater->GetBufferPointer()),
-		m_VsByteCodeWater->GetBufferSize()
+		reinterpret_cast<BYTE*>(m_VsByteCode->GetBufferPointer()),
+		m_VsByteCode->GetBufferSize()
 	};
 	waterPsoDesc.PS = {
 		reinterpret_cast<BYTE*>(m_PsByteCodeWater->GetBufferPointer()),
@@ -1047,7 +1047,7 @@ void Renderer::UpdateWaterCB(GameTimer& dt)
 {
 	for (int i = 0; i < m_TransparentRenderItems.size(); ++i)
 	{
-		XMMATRIX world = XMLoadFloat4x4(&m_WavesRitem->World);
+		XMMATRIX world = XMMatrixScaling(10.f, 10.f, 10.f);
 		XMStoreFloat4x4(&m_waterConstantsCB.gWorld, world);
 		XMStoreFloat4x4(&m_waterConstantsCB.gViewProj, XMMatrixMultiply(XMLoadFloat4x4(&m_View), XMLoadFloat4x4(&m_Proj)));
 		m_waterConstantsCB.gCameraPos = m_EyePos;
