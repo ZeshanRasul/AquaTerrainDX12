@@ -48,6 +48,9 @@ private:
 	void BuildMaterials();
 	void BuildShapeGeometry();
 	void BuildSkullGeometry();
+	void BuildLandGeometry();
+	float GetHillsHeight(float x, float z);
+	XMFLOAT3 GetHillsNormal(float x, float z);
 	void BuildRenderItems();
 	void DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::vector<RenderItem*>& riItems);
 
