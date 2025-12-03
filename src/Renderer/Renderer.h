@@ -229,6 +229,9 @@ private:
 	D3D12_GPU_DESCRIPTOR_HANDLE m_ComputeSrvHandle;
 	D3D12_GPU_DESCRIPTOR_HANDLE m_ComputeUavHandle;
 
+	void CreatePresentUAV();
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_PresentUAV;
+
 	int m_DenoiseStep = 1;
 
 	void CreateDenoiseConstantBuffer();
