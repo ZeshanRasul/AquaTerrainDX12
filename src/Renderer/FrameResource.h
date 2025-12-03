@@ -5,9 +5,20 @@
 
 using namespace DirectX;
 
+struct WaterConstants
+{
+	XMFLOAT4X4 gWorld = MathHelper::Identity4x4();
+	XMFLOAT4X4 gViewProj = MathHelper::Identity4x4();
+	XMFLOAT3 gCameraPos = { 0.0f, 0.0f, 0.0f };
+	float gTime = 0.0f;
+	XMFLOAT3 gWaterColor = { 0.65f, 0.75f, 0.90f };
+	float gPad0 = 0.0f;
+
+};
+
 struct ObjectConstants
 {
-	XMFLOAT4X4 WorldViewProj = MathHelper::Identity4x4();
+	XMFLOAT4X4 World = MathHelper::Identity4x4();
 };
 
 struct PassConstants
@@ -41,7 +52,7 @@ struct Vertex
 struct FrameResource
 {
 public:
-	FrameResource(ID3D12Device* device, UINT passCount, UINT objectCount, UINT materialCount, UINT waveVertCount);
+	FrameResource(ID3D12Device* device, UINT passCount, UINT opaqueObjectCount, UINT transparentObjectCount, UINT materialCount, UINT waveVertCount);
 	FrameResource(const FrameResource& rhs) = delete;
 	FrameResource& operator=(const FrameResource& rhs) = delete;
 	~FrameResource();
@@ -53,6 +64,7 @@ public:
 	std::unique_ptr<UploadBuffer<MaterialConstants>> MaterialCB = nullptr;
 
 	std::unique_ptr<UploadBuffer<Vertex>> WavesVB = nullptr;
+	std::unique_ptr<UploadBuffer<WaterConstants>> WaterCB = nullptr;
 
 	UINT Fence = 0;
 };

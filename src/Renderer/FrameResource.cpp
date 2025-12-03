@@ -1,14 +1,17 @@
 #include "FrameResource.h"
 
-FrameResource::FrameResource(ID3D12Device* device, UINT passCount, UINT objectCount, UINT materialCount, UINT waveVertCount)
+FrameResource::FrameResource(ID3D12Device* device, UINT passCount, UINT opaqueObjectCount, UINT transparentObjectCount, UINT materialCount, UINT waveVertCount)
 {
 	ThrowIfFailed(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(CmdListAlloc.GetAddressOf())));
 
+	UINT totalObjectCount = opaqueObjectCount + transparentObjectCount;
+
 	PassCB = std::make_unique<UploadBuffer<PassConstants>>(device, passCount, true);
-	ObjectCB = std::make_unique<UploadBuffer<ObjectConstants>>(device, objectCount, true);
-	MaterialCB = std::make_unique<UploadBuffer<MaterialConstants>>(device, objectCount, true);
+	ObjectCB = std::make_unique<UploadBuffer<ObjectConstants>>(device, totalObjectCount, true);
+	MaterialCB = std::make_unique<UploadBuffer<MaterialConstants>>(device, opaqueObjectCount, true);
 
 	WavesVB = std::make_unique<UploadBuffer<Vertex>>(device, waveVertCount, false);
+	WaterCB = std::make_unique<UploadBuffer<WaterConstants>>(device, transparentObjectCount, true);
 }
 
 FrameResource::~FrameResource()

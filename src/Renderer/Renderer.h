@@ -5,6 +5,7 @@
 #include "UploadBuffer.h"
 #include "FrameResource.h"
 #include "../Camera.h"
+#include "../Utils/GameTimer.h"
 
 using namespace DirectX;
 
@@ -21,7 +22,7 @@ public:
 
 	bool InitializeD3D12(HWND& windowHandle);
 	bool Shutdown();
-	void Update(float dt, Camera& cam);
+	void Update(GameTimer& dt, Camera& cam);
 	void Draw();
 
 private:
@@ -47,7 +48,8 @@ private:
 	void CreateCbvDescriptorHeaps();
 	void CreateConstantBufferViews();
 
-	void CreateRootSignature();
+	void CreateOpaqueRootSignature();
+	void CreateTransparentRootSignature();
 
 	void BuildShadersAndInputLayout();
 	
@@ -67,7 +69,8 @@ private:
 	void UpdateObjectCBs();
 	void UpdateMaterialCBs();
 	void UpdateMainPassCB();
-	void UpdateWaves(float fakeTime);
+	void UpdateWaterCB(GameTimer& dt);
+	void UpdateWaves(GameTimer& dt);
 
 	void FlushCommandQueue();
 
@@ -112,6 +115,7 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_UploadCBuffer = nullptr;
 	std::unique_ptr<UploadBuffer<ObjectConstants>> m_ObjectCB = nullptr;
 	UINT m_PassCbvOffset;
+	UINT m_WaterCbvOffset;
 
 	UINT m_RtvDescriptorSize = 0;
 	UINT m_DsvDescriptorSize = 0;
@@ -133,13 +137,16 @@ private:
 
 	Microsoft::WRL::ComPtr<ID3DBlob> m_VsByteCode;
 	Microsoft::WRL::ComPtr<ID3DBlob> m_PsByteCode;
+	Microsoft::WRL::ComPtr<ID3DBlob> m_VsByteCodeWater;
+	Microsoft::WRL::ComPtr<ID3DBlob> m_PsByteCodeWater;
 	std::vector<D3D12_INPUT_ELEMENT_DESC> m_InputLayoutDescs;
 
 	XMFLOAT4X4 m_World = MathHelper::Identity4x4();
 	XMFLOAT4X4 m_View = MathHelper::Identity4x4();
 	XMFLOAT4X4 m_Proj = MathHelper::Identity4x4();
 
-	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_RootSignature;
+	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_OpaqueRootSignature;
+	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_TransparentRootSignature;
 	std::unordered_map<std::string, Microsoft::WRL::ComPtr<ID3D12PipelineState>> m_PipelineStateObjects;
 
 	float m_Theta = 1.5f * DirectX::XM_PI;
@@ -152,7 +159,7 @@ private:
 	int m_CurrentFrameResourceIndex = 0;
 	XMFLOAT3 m_EyePos;
 
-	std::vector<std::unique_ptr<RenderItem>> m_AllRenderItems;
+	std::vector<RenderItem*> m_AllRenderItems;
 
 	std::vector<RenderItem*> m_OpaqueRenderItems;
 	std::vector<RenderItem*> m_TransparentRenderItems;
@@ -164,4 +171,5 @@ private:
 	RenderItem* m_WavesRitem = nullptr;
 
 	PassConstants m_MainPassCB;
+	WaterConstants m_waterConstantsCB;
 };

@@ -9,7 +9,7 @@ Application::Application()
 {
 	assert(!s_Instance);
 	s_Instance = this;
-
+	m_GameTimer.Reset();
 	m_GameTimer.Start();
 	m_Window = std::unique_ptr<Window>(new Window(m_Camera, m_GameTimer));
 	m_Window->SetEventCallback(BIND_EVENT_FN(Application::OnEvent));
@@ -36,13 +36,12 @@ int Application::Run()
 	while (m_Running)
 	{
 		m_GameTimer.Tick();
-		m_Window->OnKeyboardInput(this->m_GameTimer);
+		m_Window->OnKeyboardInput(m_GameTimer);
 		if (const auto ecode = Window::ProcessMessages())
 		{
 			return *ecode;
 		}
-		float dt = m_GameTimer.DeltaTime();
-		m_Renderer->Update(dt, m_Window->GetCamera());
+		m_Renderer->Update(m_GameTimer, m_Window->GetCamera());
 		m_Renderer->Draw();
 	}
 

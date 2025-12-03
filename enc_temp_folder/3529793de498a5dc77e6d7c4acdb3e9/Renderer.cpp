@@ -383,7 +383,7 @@ void Renderer::CreateConstantBufferViews()
 	UINT waterCBByteSize = d3dUtil::CalcConstantBufferByteSize(sizeof(WaterConstants));
 	for (int frameIndex = 0; frameIndex < gNumFrameResources; ++frameIndex)
 	{
-		for (size_t i = 0; i < m_TransparentRenderItems.size(); ++i)
+		for (size_t i = 0; i < m_TransparentRenderItems.size(); i++)
 		{
 			auto waterCB = m_FrameResources[frameIndex]->WaterCB->Resource();
 			D3D12_GPU_VIRTUAL_ADDRESS waterBufAddress = waterCB->GetGPUVirtualAddress();
@@ -880,7 +880,7 @@ void Renderer::DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::ve
 	auto objectCB = m_CurrentFrameResource->ObjectCB->Resource();
 	auto matCB = m_CurrentFrameResource->MaterialCB->Resource();
 
-	for (size_t i = 0; i < riItems.size(); ++i)
+	for (size_t i = 0; i < riItems.size(); i++)
 	{
 		auto ri = riItems[i];
 
