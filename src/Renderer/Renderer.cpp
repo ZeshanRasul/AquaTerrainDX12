@@ -60,7 +60,7 @@ bool Renderer::InitializeD3D12(HWND& windowHandle)
 	return true;
 }
 
-void Renderer::Update()
+void Renderer::Update(float dt, Camera& cam)
 {
 	m_CurrentFrameResourceIndex = (m_CurrentFrameResourceIndex + 1) % NumFrameResources;
 	m_CurrentFrameResource = m_FrameResources[m_CurrentFrameResourceIndex].get();
@@ -73,14 +73,10 @@ void Renderer::Update()
 		CloseHandle(eventHandle);
 	}
 
-	XMVECTOR pos = XMVectorSet(0.0f, 1.0f, -27.0f, 1.0f);
-	XMVECTOR target = XMVectorZero();
-	XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-	XMMATRIX view = XMMatrixLookAtLH(pos, target, up);
-	XMStoreFloat4x4(&m_View, view);
-
-	XMMATRIX P = XMMatrixPerspectiveFovLH(0.25f * MathHelper::Pi, (float)(m_ClientWidth / m_ClientHeight), 0.1f, 1000.0f);
-	XMStoreFloat4x4(&m_Proj, P);
+	m_EyePos = cam.GetPosition3f();
+	cam.UpdateViewMatrix();
+	XMStoreFloat4x4(&m_View, cam.GetView());
+	XMStoreFloat4x4(&m_Proj, cam.GetProj());
 
 	UpdateObjectCBs();
 	UpdateMainPassCB();

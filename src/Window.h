@@ -3,6 +3,8 @@
 #include <optional>
 #include "Events/Event.h"
 #include "Input.h"
+#include "Utils/GameTimer.h"
+#include "Camera.h"
 
 struct WindowProps
 {
@@ -42,7 +44,7 @@ private:
 	};
 
 public:
-	Window(const WindowProps& props = WindowProps());
+	Window(Camera& cam, GameTimer& gt, const WindowProps& props = WindowProps());
 	~Window();
 
 	void OnUpdate();
@@ -57,6 +59,8 @@ public:
 
 	inline virtual void* GetNativeWindow() const { return m_Window; }
 	HWND GetWindowHandle() { return m_Hwnd; }
+	void OnKeyboardInput(GameTimer& gt);
+	Camera& GetCamera() { return m_Camera; }
 
 private:
 	struct WindowData
@@ -75,6 +79,9 @@ private:
 	static LRESULT CALLBACK HandleMessageThunk(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 	LRESULT HandleMessage(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
+	void OnMouseMove(WPARAM btnState, int x, int y);
+
+
 public:
 	Input input;
 
@@ -85,4 +92,7 @@ private:
 
 	HWND m_Hwnd;
 
+	POINT m_LastMousePos;
+
+	Camera m_Camera;
 };

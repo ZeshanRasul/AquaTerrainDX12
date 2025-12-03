@@ -7,6 +7,8 @@
 #include "Events/MouseEvent.h"
 #include "Window.h"
 #include "Renderer/Renderer.h"
+#include "Camera.h"
+#include "Utils/GameTimer.h"
 
 class Application
 {
@@ -23,7 +25,10 @@ public:
 	inline Window& GetWindow() { return *m_Window; }
 
 	inline HWND GetHWND() { return m_Window->GetWindowHandle(); }
+	
+	inline Camera& GetCamera() { return m_Camera; }
 
+	GameTimer m_GameTimer;
 private:
 	bool m_Running = true;
 	bool OnWindowClose(WindowCloseEvent& event);
@@ -33,4 +38,6 @@ private:
 
 	std::unique_ptr<Renderer> m_Renderer;
 	static Application* s_Instance;
+
+	Camera m_Camera;
 };

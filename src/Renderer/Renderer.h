@@ -4,6 +4,7 @@
 #include "../Utils/Waves.h"
 #include "UploadBuffer.h"
 #include "FrameResource.h"
+#include "../Camera.h"
 
 using namespace DirectX;
 
@@ -20,7 +21,7 @@ public:
 
 	bool InitializeD3D12(HWND& windowHandle);
 	bool Shutdown();
-	void Update();
+	void Update(float dt, Camera& cam);
 	void Draw();
 
 private:
