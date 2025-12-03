@@ -1,10 +1,17 @@
 #pragma once
 #include "../Utils/d3dUtil.h"
 #include "../Utils/GeometryGenerator.h"
+#include "../Utils/Waves.h"
 #include "UploadBuffer.h"
 #include "FrameResource.h"
 
 using namespace DirectX;
+
+enum class RenderLayer : int
+{
+	Opaque = 0,
+	Count
+};
 
 class Renderer {
 public:
@@ -49,6 +56,7 @@ private:
 	void BuildShapeGeometry();
 	void BuildSkullGeometry();
 	void BuildLandGeometry();
+	void BuildWavesGeometry();
 	float GetHillsHeight(float x, float z);
 	XMFLOAT3 GetHillsNormal(float x, float z);
 	void BuildRenderItems();
@@ -58,6 +66,7 @@ private:
 	void UpdateObjectCBs();
 	void UpdateMaterialCBs();
 	void UpdateMainPassCB();
+	void UpdateWaves(float fakeTime);
 
 	void FlushCommandQueue();
 
@@ -149,6 +158,9 @@ private:
 
 	std::unordered_map<std::string, std::unique_ptr<MeshGeometry>> m_Geometries;
 	std::unordered_map<std::string, std::unique_ptr<Material>> m_Materials;
+	
+	std::unique_ptr<Waves> m_Waves;
+	RenderItem* m_WavesRitem = nullptr;
 
 	PassConstants m_MainPassCB;
 };

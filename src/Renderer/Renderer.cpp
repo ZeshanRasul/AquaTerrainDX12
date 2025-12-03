@@ -39,28 +39,23 @@ bool Renderer::InitializeD3D12(HWND& windowHandle)
 
 	CreateDepthStencilView();
 
-	//CreateVertexBufferView();
-	//CreateIndexBufferView();
+	m_Waves = std::make_unique<Waves>(128, 128, 1.0f, 0.03f, 4.0f, 0.2f);
 
 
 	CreateRootSignature();
 	BuildShadersAndInputLayout();
 	BuildMaterials();
 	BuildLandGeometry();
-	//BuildShapeGeometry();
 	BuildSkullGeometry();
+	BuildWavesGeometry();
 	BuildRenderItems();
 	BuildFrameResources();
-	//CreateCbvDescriptorHeaps();
-	//CreateConstantBufferViews();
 
 	BuildPSOs();
 
 	ThrowIfFailed(m_CommandList->Close());
 	ID3D12CommandList* cmdLists[] = { m_CommandList.Get() };
 	m_CommandQueue->ExecuteCommandLists(_countof(cmdLists), cmdLists);
-
-	//	FlushCommandQueue();
 
 	return true;
 }
@@ -90,6 +85,7 @@ void Renderer::Update()
 	UpdateObjectCBs();
 	UpdateMainPassCB();
 	UpdateMaterialCBs();
+	UpdateWaves((m_CurrentFrameResourceIndex / 2.0f) * 5.0f);
 }
 
 void Renderer::Draw()
@@ -454,6 +450,14 @@ void Renderer::BuildMaterials()
 	grass->FresnelR0 = XMFLOAT3(0.01f, 0.01f, 0.01f);
 	grass->Roughness = 0.125f;
 
+	auto skullMat = std::make_unique<Material>();
+	skullMat->Name = "skullMat";
+	skullMat->MatCBIndex = 0;
+	skullMat->DiffuseSrvHeapIndex = 0;
+	skullMat->DiffuseAlbedo = XMFLOAT4(0.3f, 0.33f, 0.31f, 1.0f);
+	skullMat->FresnelR0 = XMFLOAT3(0.01f, 0.01f, 0.01f);
+	skullMat->Roughness = 0.25f;
+
 	auto water = std::make_unique<Material>();
 	water->Name = "water";
 	water->MatCBIndex = 1;
@@ -463,6 +467,7 @@ void Renderer::BuildMaterials()
 	water->Roughness = 0.0f;
 
 	m_Materials["grass"] = std::move(grass);
+	m_Materials["skullMat"] = std::move(skullMat);
 	m_Materials["water"] = std::move(water);
 }
 void Renderer::BuildShapeGeometry()
@@ -713,6 +718,60 @@ void Renderer::BuildLandGeometry()
 	m_Geometries["landGeo"] = std::move(geo);
 }
 
+void Renderer::BuildWavesGeometry()
+{
+	std::vector<std::uint16_t> indices(3 * m_Waves->TriangleCount());
+	assert(m_Waves->VertexCount() < 0x0000ffff);
+
+	int m = m_Waves->RowCount();
+	int n = m_Waves->ColumnCount();
+	int k = 0;
+	for (int i = 0; i < m - 1; ++i)
+	{
+		for (int j = 0; j < n - 1; ++j)
+		{
+			indices[k] = i * n + j;
+			indices[k + 1] = i * n + j + 1;
+			indices[k + 2] = (i + 1) * n + j;
+
+			indices[k + 3] = (i + 1) * n + j;
+			indices[k + 4] = i * n + j + 1;
+			indices[k + 5] = (i + 1) * n + j + 1;
+
+			k += 6;
+		}
+	}
+
+	UINT vbByteSize = m_Waves->VertexCount() * sizeof(Vertex);
+	UINT ibByteSize = (UINT)indices.size() * sizeof(std::uint16_t);
+
+	auto geo = std::make_unique<MeshGeometry>();
+	geo->Name = "waterGeo";
+
+	geo->VertexBufferCPU = nullptr;
+	geo->VertexBufferGPU = nullptr;
+
+	ThrowIfFailed(D3DCreateBlob(ibByteSize, &geo->IndexBufferCPU));
+	CopyMemory(geo->IndexBufferCPU->GetBufferPointer(), indices.data(), ibByteSize);
+
+	geo->IndexBufferGPU = d3dUtil::CreateDefaultBuffer(m_Device.Get(),
+		m_CommandList.Get(), indices.data(), ibByteSize, geo->IndexBufferUploader);
+
+	geo->VertexByteStride = sizeof(Vertex);
+	geo->VertexBufferByteSize = vbByteSize;
+	geo->IndexFormat = DXGI_FORMAT_R16_UINT;
+	geo->IndexBufferByteSize = ibByteSize;
+
+	SubmeshGeometry submesh;
+	submesh.IndexCount = (UINT)indices.size();
+	submesh.StartIndexLocation = 0;
+	submesh.BaseVertexLocation = 0;
+
+	geo->DrawArgs["grid"] = submesh;
+
+	m_Geometries["waterGeo"] = std::move(geo);
+}
+
 float Renderer::GetHillsHeight(float x, float z)
 {
 	return 0.3f * (z * sinf(0.1f * x) + x * cosf(0.1f * z));
@@ -749,13 +808,28 @@ void Renderer::BuildRenderItems()
 	XMStoreFloat4x4(&skullRitem->World, XMMatrixScaling(0.5f, 0.5f, 0.5f) * XMMatrixTranslation(0.0f, 1.0f, 0.0f));
 	skullRitem->TexTransform = MathHelper::Identity4x4();
 	skullRitem->ObjCBIndex = 1;
-	skullRitem->Mat = m_Materials["water"].get();
+	skullRitem->Mat = m_Materials["skullMat"].get();
 	skullRitem->Geo = m_Geometries["skullGeo"].get();
 	skullRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 	skullRitem->IndexCount = skullRitem->Geo->DrawArgs["skull"].IndexCount;
 	skullRitem->StartIndexLocation = skullRitem->Geo->DrawArgs["skull"].StartIndexLocation;
 	skullRitem->BaseVertexLocation = skullRitem->Geo->DrawArgs["skull"].BaseVertexLocation;
 	m_AllRenderItems.push_back(std::move(skullRitem));
+
+	auto wavesRitem = std::make_unique<RenderItem>();
+	wavesRitem->World = MathHelper::Identity4x4();
+	XMStoreFloat4x4(&wavesRitem->TexTransform, XMMatrixScaling(5.0f, 5.0f, 1.0f));
+	wavesRitem->ObjCBIndex = 2;
+	wavesRitem->Mat = m_Materials["water"].get();
+	wavesRitem->Geo = m_Geometries["waterGeo"].get();
+	wavesRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	wavesRitem->IndexCount = wavesRitem->Geo->DrawArgs["grid"].IndexCount;
+	wavesRitem->StartIndexLocation = wavesRitem->Geo->DrawArgs["grid"].StartIndexLocation;
+	wavesRitem->BaseVertexLocation = wavesRitem->Geo->DrawArgs["grid"].BaseVertexLocation;
+	
+	m_WavesRitem = wavesRitem.get();
+	m_AllRenderItems.push_back(std::move(wavesRitem));
+
 
 	// All the render items are opaque.
 	for (auto& e : m_AllRenderItems)
@@ -828,7 +902,7 @@ void Renderer::BuildFrameResources()
 {
 	for (int i = 0; i < NumFrameResources; ++i)
 	{
-		m_FrameResources.push_back(std::make_unique<FrameResource>(m_Device.Get(), 1, (UINT)m_AllRenderItems.size()));
+		m_FrameResources.push_back(std::make_unique<FrameResource>(m_Device.Get(), 1, (UINT)m_AllRenderItems.size(), (UINT)m_Materials.size(), m_Waves->VertexCount()));
 	}
 }
 void Renderer::UpdateObjectCBs()
@@ -906,7 +980,46 @@ void Renderer::UpdateMainPassCB()
 
 	auto currPassCB = m_CurrentFrameResource->PassCB.get();
 	currPassCB->CopyData(0, m_MainPassCB);
-};
+}
+void Renderer::UpdateWaves(float fakeTime)
+{	
+	static float t_base = 0.0f;
+	if ((fakeTime - t_base) >= 0.25f)
+	{
+		t_base += 0.25f;
+
+		int i = MathHelper::Rand(4, m_Waves->RowCount() - 5);
+		int j = MathHelper::Rand(4, m_Waves->ColumnCount() - 5);
+
+		float r = MathHelper::RandF(0.2f, 0.5f);
+
+		m_Waves->Disturb(i, j, r);
+	}
+
+	// Update the wave simulation.
+	m_Waves->Update(fakeTime / 2.0f * 5.0f);
+
+	// Update the wave vertex buffer with the new solution.
+	auto currWavesVB = m_CurrentFrameResource->WavesVB.get();
+	for (int i = 0; i < m_Waves->VertexCount(); ++i)
+	{
+		Vertex v;
+
+		v.Pos = m_Waves->Position(i);
+		v.Normal = m_Waves->Normal(i);
+
+		// Derive tex-coords from position by 
+		// mapping [-w/2,w/2] --> [0,1]
+		v.TexCoord.x = 0.5f + v.Pos.x / m_Waves->Width();
+		v.TexCoord.y = 0.5f - v.Pos.z / m_Waves->Depth();
+
+		currWavesVB->CopyData(i, v);
+	}
+
+	// Set the dynamic VB of the wave renderitem to the current frame VB.
+	m_WavesRitem->Geo->VertexBufferGPU = currWavesVB->Resource();
+}
+;
 
 void Renderer::CreateVertexBufferView()
 {
