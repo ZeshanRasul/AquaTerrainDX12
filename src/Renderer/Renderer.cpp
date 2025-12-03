@@ -41,10 +41,11 @@ bool Renderer::InitializeD3D12(HWND& windowHandle)
 
 	m_Waves = std::make_unique<Waves>(128, 128, 1.0f, 0.03f, 4.0f, 0.2f);
 
+	//	CreateCbvDescriptorHeaps();
 
+	BuildShadersAndInputLayout();
 	CreateOpaqueRootSignature();
 	CreateTransparentRootSignature();
-	BuildShadersAndInputLayout();
 	BuildMaterials();
 	BuildLandGeometry();
 	BuildSkullGeometry();
@@ -123,7 +124,9 @@ void Renderer::Draw()
 	DrawRenderItems(m_CommandList.Get(), m_OpaqueRenderItems);
 
 
+	m_CommandList->SetPipelineState(m_PipelineStateObjects["water"].Get());
 	m_CommandList->SetGraphicsRootSignature(m_TransparentRootSignature.Get());
+	passCB = m_CurrentFrameResource->PassCB->Resource();
 	m_CommandList->SetGraphicsRootConstantBufferView(2, passCB->GetGPUVirtualAddress());
 	auto waterCB = m_CurrentFrameResource->WaterCB->Resource();
 	m_CommandList->SetGraphicsRootConstantBufferView(3, waterCB->GetGPUVirtualAddress());
@@ -144,7 +147,7 @@ void Renderer::Draw()
 
 	m_CommandQueue->Signal(m_Fence.Get(), m_CurrentFence);
 
-	ThrowIfFailed(cmdListAlloc->Reset());
+	//	ThrowIfFailed(cmdListAlloc->Reset());
 
 }
 void Renderer::CreateDebugController()
@@ -888,11 +891,16 @@ void Renderer::DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::ve
 		cmdList->IASetIndexBuffer(&ri->Geo->IndexBufferView());
 		cmdList->IASetPrimitiveTopology(ri->PrimitiveType);
 
-		D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objectCB->GetGPUVirtualAddress() + ri->ObjCBIndex * objCBByteSize;
-		D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = matCB->GetGPUVirtualAddress() + ri->Mat->MatCBIndex * matCBByteSize;
+		if (ri->ObjCBIndex != 2)
+		{
 
-		cmdList->SetGraphicsRootConstantBufferView(0, objCBAddress);
-		cmdList->SetGraphicsRootConstantBufferView(1, matCBAddress);
+
+			D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objectCB->GetGPUVirtualAddress() + ri->ObjCBIndex * objCBByteSize;
+			D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = matCB->GetGPUVirtualAddress() + ri->Mat->MatCBIndex * matCBByteSize;
+
+			cmdList->SetGraphicsRootConstantBufferView(0, objCBAddress);
+			cmdList->SetGraphicsRootConstantBufferView(1, matCBAddress);
+		}
 
 		cmdList->DrawIndexedInstanced(ri->IndexCount, 1, ri->StartIndexLocation, ri->BaseVertexLocation, 0);
 	}
@@ -939,15 +947,15 @@ void Renderer::BuildPSOs()
 		reinterpret_cast<BYTE*>(m_PsByteCodeWater->GetBufferPointer()),
 		m_PsByteCodeWater->GetBufferSize()
 	};
-	waterPsoDesc.BlendState.RenderTarget[0].BlendEnable = TRUE;
-	waterPsoDesc.BlendState.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
-	waterPsoDesc.BlendState.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
-	waterPsoDesc.BlendState.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
-	waterPsoDesc.BlendState.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ONE;
-	waterPsoDesc.BlendState.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
-	waterPsoDesc.BlendState.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
-	waterPsoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
-	ThrowIfFailed(m_Device->CreateGraphicsPipelineState(&opaquePsoDesc, IID_PPV_ARGS(&m_PipelineStateObjects["transparent"])));
+	//waterPsoDesc.BlendState.RenderTarget[0].BlendEnable = TRUE;
+	//waterPsoDesc.BlendState.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
+	//waterPsoDesc.BlendState.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
+	//waterPsoDesc.BlendState.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
+	//waterPsoDesc.BlendState.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ONE;
+	//waterPsoDesc.BlendState.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
+	//waterPsoDesc.BlendState.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
+	//waterPsoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+	ThrowIfFailed(m_Device->CreateGraphicsPipelineState(&waterPsoDesc, IID_PPV_ARGS(&m_PipelineStateObjects["water"])));
 
 }
 void Renderer::BuildFrameResources()
@@ -1037,15 +1045,18 @@ void Renderer::UpdateMainPassCB()
 
 void Renderer::UpdateWaterCB(GameTimer& dt)
 {
-	XMMATRIX world = XMLoadFloat4x4(&m_WavesRitem->World);
-	XMStoreFloat4x4(&m_waterConstantsCB.gWorld, world);
-	XMStoreFloat4x4(&m_waterConstantsCB.gViewProj, XMMatrixMultiply(XMLoadFloat4x4(&m_View), XMLoadFloat4x4(&m_Proj)));
-	m_waterConstantsCB.gCameraPos = m_EyePos;
-	m_waterConstantsCB.gTime = dt.DeltaTime();
-	m_waterConstantsCB.gWaterColor = XMFLOAT3(0.65f, 0.75f, 0.90f);
-	m_waterConstantsCB.gPad0 = 0.0f;
-	auto currWaterCB = m_CurrentFrameResource->WaterCB.get();
-	currWaterCB->CopyData(0, m_waterConstantsCB);
+	for (int i = 0; i < m_TransparentRenderItems.size(); ++i)
+	{
+		XMMATRIX world = XMLoadFloat4x4(&m_WavesRitem->World);
+		XMStoreFloat4x4(&m_waterConstantsCB.gWorld, world);
+		XMStoreFloat4x4(&m_waterConstantsCB.gViewProj, XMMatrixMultiply(XMLoadFloat4x4(&m_View), XMLoadFloat4x4(&m_Proj)));
+		m_waterConstantsCB.gCameraPos = m_EyePos;
+		m_waterConstantsCB.gTime = dt.TotalTime();
+		m_waterConstantsCB.gWaterColor = XMFLOAT3(0.65f, 0.75f, 0.90f);
+		m_waterConstantsCB.gPad0 = 0.0f;
+		auto currWaterCB = m_CurrentFrameResource->WaterCB.get();
+		currWaterCB->CopyData(i, m_waterConstantsCB);
+	}
 }
 
 void Renderer::UpdateWaves(GameTimer& gt)

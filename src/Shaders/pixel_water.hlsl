@@ -1,4 +1,4 @@
-cbuffer WaterCB : register(b4)
+cbuffer WaterCB : register(b3)
 {
     float4x4 gWorld;
     float4x4 gViewProj;
@@ -16,28 +16,10 @@ struct VSInput
 
 struct VSOutput
 {
-    float4 posH : SV_POSITION;
-    float3 worldPos : TEXCOORD0;
-    float3 worldNormal : TEXCOORD1;
-    float2 uv : TEXCOORD2;
+    float4 PosH : SV_POSITION;
+    float3 PosW : POSITION;
+    float3 NormalW : NORMAL;
 };
-
-VSOutput VS_Main(VSInput vin)
-{
-    VSOutput vout;
-
-    float3 worldPos = mul(float4(vin.pos, 1.0f), gWorld).xyz;
-
-    // Flat plane normal up
-    float3 worldNormal = float3(0.0f, 1.0f, 0.0f);
-
-    vout.worldPos = worldPos;
-    vout.worldNormal = worldNormal;
-    vout.uv = vin.uv;
-    vout.posH = mul(float4(worldPos, 1.0f), gViewProj);
-
-    return vout;
-}
 
 float3 EvaluateSky(float3 dir)
 {
@@ -50,8 +32,8 @@ float3 EvaluateSky(float3 dir)
 
 float4 PS(VSOutput pin) : SV_TARGET
 {
-    float3 N = normalize(pin.worldNormal);
-    float3 V = normalize(gCameraPos - pin.worldPos);
+    float3 N = normalize(pin.NormalW);
+    float3 V = normalize(gCameraPos - pin.PosW);
 
     float cosTheta = saturate(dot(N, V));
 

@@ -64,6 +64,7 @@ private:
 	XMFLOAT3 GetHillsNormal(float x, float z);
 	void BuildRenderItems();
 	void DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::vector<RenderItem*>& riItems);
+	void DrawRenderItemsWater(ID3D12GraphicsCommandList* cmdList, const std::vector<RenderItem*>& riItems);
 
 	void BuildFrameResources();
 	void UpdateObjectCBs();
