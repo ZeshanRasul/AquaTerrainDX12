@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.24)
 
 # Project
-project(NocteEngine LANGUAGES CXX)
+project(AquaTerrainDX12 LANGUAGES CXX)
 
 # This project is Windows-only (uses Win32 API and D3D12)
 if(NOT WIN32)
