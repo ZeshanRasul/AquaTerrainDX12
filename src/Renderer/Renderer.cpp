@@ -105,7 +105,7 @@ void Renderer::Draw()
 	vp.Width = m_ClientWidth;
 	vp.Height = m_ClientHeight;
 	vp.MinDepth = 0.0f;
-	vp.MaxDepth = 0.0f;
+	vp.MaxDepth = 1.0f;
 
 	m_CommandList->RSSetViewports(1, &vp);
 

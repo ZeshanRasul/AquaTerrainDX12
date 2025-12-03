@@ -3,6 +3,7 @@
 #include "Events/KeyEvent.h"
 #include "Events/MouseEvent.h"
 #include "Renderer/Renderer.h"
+#include "windowsx.h"
 
 Window::WindowClass Window::WindowClass::wndClass;
 
@@ -228,127 +229,21 @@ LRESULT Window::HandleMessage(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	///////////////////////
 	///////////////////////
 
+	case WM_RBUTTONDOWN:
+	case WM_LBUTTONDOWN:
+	case WM_MBUTTONDOWN:
+		OnMouseDown(wParam, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+		return 0;
+	case WM_LBUTTONUP:
+	case WM_MBUTTONUP:
+	case WM_RBUTTONUP:
+		OnMouseUp(wParam, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+		return 0;
+	case WM_MOUSEMOVE:
+		OnMouseMove(wParam, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+		return 0;
 	case WM_MOVE:
 	{
-		const POINTS pt = MAKEPOINTS(lParam);
-
-		if (pt.x >= 0 && pt.x <= (int)m_Data.Width && pt.y >= 0 && pt.y <= (int)m_Data.Height)
-		{
-			input.OnMouseMove(pt.x, pt.y);
-
-			Window* const p_Wnd = reinterpret_cast<Window*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
-			WindowData& data = p_Wnd->m_Data;
-
-			MouseMovedEvent event((float)pt.x, (float)pt.y);
-			if (data.EventCallback != nullptr)
-			{
-				data.EventCallback(event);
-			}
-			if (!input.IsInWindow())
-			{
-				SetCapture(hWnd);
-				input.OnMouseEnter();
-			}
-			break;
-		}
-		else
-		{
-			if (wParam & (MK_LBUTTON | MK_RBUTTON))
-			{
-				input.OnMouseMove(pt.x, pt.y);
-
-				Window* const p_Wnd = reinterpret_cast<Window*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
-				WindowData& data = p_Wnd->m_Data;
-
-				MouseMovedEvent event((float)pt.x, (float)pt.y);
-				if (data.EventCallback != nullptr)
-				{
-					data.EventCallback(event);
-				}
-			}
-		}
-		break;
-	}
-
-	case WM_LBUTTONDOWN:
-	{
-		const POINTS pt = MAKEPOINTS(lParam);
-		input.OnLeftPressed();
-
-		SetForegroundWindow(hWnd);
-
-		Window* const p_Wnd = reinterpret_cast<Window*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
-		WindowData& data = p_Wnd->m_Data;
-
-		MouseButtonPressedEvent event(0);
-		if (data.EventCallback != nullptr)
-		{
-			data.EventCallback(event);
-		}
-
-		break;
-	}
-
-	case WM_RBUTTONDOWN:
-	{
-		const POINTS pt = MAKEPOINTS(lParam);
-		input.OnRightPressed();
-
-		Window* const p_Wnd = reinterpret_cast<Window*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
-		WindowData& data = p_Wnd->m_Data;
-
-		MouseButtonPressedEvent event(1);
-		if (data.EventCallback != nullptr)
-		{
-			data.EventCallback(event);
-		}
-		break;
-	}
-
-	case WM_LBUTTONUP:
-	{
-
-		const POINTS pt = MAKEPOINTS(lParam);
-		input.OnLeftReleased();
-
-		if (pt.x < 0 || pt.x >(int)m_Data.Width || pt.y < 0 || pt.y >(int)m_Data.Height)
-		{
-			ReleaseCapture();
-			input.OnMouseLeave();
-		}
-
-		Window* const p_Wnd = reinterpret_cast<Window*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
-		WindowData& data = p_Wnd->m_Data;
-
-		MouseButtonReleasedEvent event(0);
-		if (data.EventCallback != nullptr)
-		{
-			data.EventCallback(event);
-		}
-
-		break;
-
-	}
-
-	case WM_RBUTTONUP:
-	{
-		const POINTS pt = MAKEPOINTS(lParam);
-		input.OnRightReleased();
-
-		if (pt.x < 0 || pt.x >(int)m_Data.Width || pt.y < 0 || pt.y >(int)m_Data.Height)
-		{
-			ReleaseCapture();
-			input.OnMouseLeave();
-		}
-
-		Window* const p_Wnd = reinterpret_cast<Window*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
-		WindowData& data = p_Wnd->m_Data;
-
-		MouseButtonReleasedEvent event(1);
-		if (data.EventCallback != nullptr)
-		{
-			data.EventCallback(event);
-		}
 		break;
 	}
 
@@ -390,6 +285,19 @@ LRESULT Window::HandleMessage(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	}
 
 	return DefWindowProc(hWnd, msg, wParam, lParam);
+}
+
+void Window::OnMouseDown(WPARAM btnState, int x, int y)
+{
+	m_LastMousePos.x = x;
+	m_LastMousePos.y = y;
+
+	SetCapture(m_Hwnd);
+}
+
+void Window::OnMouseUp(WPARAM btnState, int x, int y)
+{
+	ReleaseCapture();
 }
 
 void Window::OnMouseMove(WPARAM btnState, int x, int y)
