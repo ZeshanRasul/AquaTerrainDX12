@@ -20,6 +20,7 @@ struct VSOutput
     float4 PosH : SV_POSITION;
     float3 PosW : POSITION;
     float3 NormalW : NORMAL;
+    float2 TexC : TEXCOORD;
 };
 
 VSOutput VS(VSInput vin)
@@ -35,5 +36,8 @@ VSOutput VS(VSInput vin)
     vout.PosH = mul(float4(worldPos, 1.0f), gViewProj);
     vout.NormalW = worldNormal;
 
+  //  float4 texC = mul(float4(vin.TexC, 0.0f, 1.0f), gTexTransform);
+    vout.TexC = mul(vin.TexC, float2(4.0f, 4.0f));
+    
     return vout;
 }

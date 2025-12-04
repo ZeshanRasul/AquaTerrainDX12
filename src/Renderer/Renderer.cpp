@@ -2,10 +2,11 @@
 
 const int gNumFrameResources = 3;
 
-Renderer::Renderer(HWND& windowHandle, UINT width, UINT height)
+Renderer::Renderer(HWND& windowHandle, UINT width, UINT height, Camera& cam)
 	:m_Hwnd(windowHandle),
 	m_ClientWidth(width),
-	m_ClientHeight(height)
+	m_ClientHeight(height),
+	m_Camera(cam)
 {
 	m_Hwnd = windowHandle;
 	InitializeD3D12(m_Hwnd);
@@ -39,13 +40,26 @@ bool Renderer::InitializeD3D12(HWND& windowHandle)
 
 	CreateDepthStencilView();
 
+	m_Camera.SetLens(0.25f * MathHelper::Pi, static_cast<float>(m_ClientWidth) / m_ClientHeight, 1.0f, 1000.0f);
+	m_Camera.UpdateViewMatrix();
+	XMStoreFloat4x4(&m_Proj, XMMatrixTranspose(m_Camera.GetProj()));
+	XMStoreFloat4x4(&m_View, XMMatrixTranspose(m_Camera.GetView()));
+
+	mCbvSrvDescriptorSize = m_Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	m_Waves = std::make_unique<Waves>(128, 128, 1.0f, 0.03f, 4.0f, 0.2f);
+	
+	vp.TopLeftX = 0.0f;
+	vp.TopLeftY = 0.0f;
+	vp.Width = m_ClientWidth;
+	vp.Height = m_ClientHeight;
+	vp.MinDepth = 0.0f;
+	vp.MaxDepth = 1.0f;
 
-	//	CreateCbvDescriptorHeaps();
-
+	LoadTextures();
 	BuildShadersAndInputLayout();
 	CreateOpaqueRootSignature();
 	CreateTransparentRootSignature();
+	BuildDescriptorHeaps();
 	BuildMaterials();
 	BuildLandGeometry();
 	BuildSkullGeometry();
@@ -74,7 +88,6 @@ void Renderer::Update(GameTimer& gt, Camera& cam)
 		WaitForSingleObject(eventHandle, INFINITE);
 		CloseHandle(eventHandle);
 	}
-
 	m_EyePos = cam.GetPosition3f();
 	cam.UpdateViewMatrix();
 	XMStoreFloat4x4(&m_View, cam.GetView());
@@ -95,13 +108,7 @@ void Renderer::Draw()
 
 	ThrowIfFailed(m_CommandList->Reset(cmdListAlloc.Get(), m_PipelineStateObjects["opaque"].Get()));
 
-	D3D12_VIEWPORT vp;
-	vp.TopLeftX = 0.0f;
-	vp.TopLeftY = 0.0f;
-	vp.Width = m_ClientWidth;
-	vp.Height = m_ClientHeight;
-	vp.MinDepth = 0.0f;
-	vp.MaxDepth = 1.0f;
+
 
 	m_CommandList->RSSetViewports(1, &vp);
 
@@ -115,21 +122,26 @@ void Renderer::Draw()
 
 	m_CommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
 
+	ID3D12DescriptorHeap* descriptorHeaps[] = { m_SrvHeap.Get() };
+	m_CommandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
+	m_CommandList->SetPipelineState(m_PipelineStateObjects["opaque"].Get());
+
 	m_CommandList->SetGraphicsRootSignature(m_OpaqueRootSignature.Get());
 
 	auto passCB = m_CurrentFrameResource->PassCB->Resource();
-	m_CommandList->SetGraphicsRootConstantBufferView(2, passCB->GetGPUVirtualAddress());
+	m_CommandList->SetGraphicsRootConstantBufferView(3, passCB->GetGPUVirtualAddress());
 
 
 	DrawRenderItems(m_CommandList.Get(), m_OpaqueRenderItems);
 
 
+	m_CommandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
 	m_CommandList->SetPipelineState(m_PipelineStateObjects["water"].Get());
 	m_CommandList->SetGraphicsRootSignature(m_TransparentRootSignature.Get());
 	passCB = m_CurrentFrameResource->PassCB->Resource();
-	m_CommandList->SetGraphicsRootConstantBufferView(2, passCB->GetGPUVirtualAddress());
+	m_CommandList->SetGraphicsRootConstantBufferView(3, passCB->GetGPUVirtualAddress());
 	auto waterCB = m_CurrentFrameResource->WaterCB->Resource();
-	m_CommandList->SetGraphicsRootConstantBufferView(3, waterCB->GetGPUVirtualAddress());
+	m_CommandList->SetGraphicsRootConstantBufferView(4, waterCB->GetGPUVirtualAddress());
 
 	DrawRenderItems(m_CommandList.Get(), m_TransparentRenderItems);
 
@@ -404,13 +416,20 @@ void Renderer::CreateConstantBufferViews()
 
 void Renderer::CreateOpaqueRootSignature()
 {
-	CD3DX12_ROOT_PARAMETER slotRootParameter[3];
+	CD3DX12_DESCRIPTOR_RANGE texTable;
+	texTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2, 0);
 
-	slotRootParameter[0].InitAsConstantBufferView(0);
-	slotRootParameter[1].InitAsConstantBufferView(1);
-	slotRootParameter[2].InitAsConstantBufferView(2);
 
-	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(3, slotRootParameter, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+	CD3DX12_ROOT_PARAMETER slotRootParameter[4];
+
+	slotRootParameter[0].InitAsDescriptorTable(1, &texTable, D3D12_SHADER_VISIBILITY_PIXEL);
+	slotRootParameter[1].InitAsConstantBufferView(0);
+	slotRootParameter[2].InitAsConstantBufferView(1);
+	slotRootParameter[3].InitAsConstantBufferView(2);
+
+	auto staticSamplers = GetStaticSamplers();
+
+	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(4, slotRootParameter, (UINT)staticSamplers.size(), staticSamplers.data(), D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
 	Microsoft::WRL::ComPtr<ID3DBlob> serializedRootSig = nullptr;
 	Microsoft::WRL::ComPtr<ID3DBlob> errorBlob = nullptr;
@@ -429,14 +448,20 @@ void Renderer::CreateOpaqueRootSignature()
 
 void Renderer::CreateTransparentRootSignature()
 {
-	CD3DX12_ROOT_PARAMETER slotRootParameter[4];
+	CD3DX12_DESCRIPTOR_RANGE texTable;
+	texTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 2);
 
-	slotRootParameter[0].InitAsConstantBufferView(0);
-	slotRootParameter[1].InitAsConstantBufferView(1);
-	slotRootParameter[2].InitAsConstantBufferView(2);
-	slotRootParameter[3].InitAsConstantBufferView(3);
+	CD3DX12_ROOT_PARAMETER slotRootParameter[5];
 
-	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(4, slotRootParameter, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+	slotRootParameter[0].InitAsDescriptorTable(1, &texTable, D3D12_SHADER_VISIBILITY_PIXEL);
+	slotRootParameter[1].InitAsConstantBufferView(0);
+	slotRootParameter[2].InitAsConstantBufferView(1);
+	slotRootParameter[3].InitAsConstantBufferView(2);
+	slotRootParameter[4].InitAsConstantBufferView(3);
+
+	auto staticSamplers = GetStaticSamplers();
+
+	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(5, slotRootParameter, (UINT)staticSamplers.size(), staticSamplers.data(), D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
 	Microsoft::WRL::ComPtr<ID3DBlob> serializedRootSig = nullptr;
 	Microsoft::WRL::ComPtr<ID3DBlob> errorBlob = nullptr;
@@ -451,6 +476,63 @@ void Renderer::CreateTransparentRootSignature()
 	ThrowIfFailed(hr);
 
 	ThrowIfFailed(m_Device->CreateRootSignature(0, serializedRootSig->GetBufferPointer(), serializedRootSig->GetBufferSize(), IID_PPV_ARGS(m_TransparentRootSignature.GetAddressOf())));
+}
+
+std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> Renderer::GetStaticSamplers()
+{
+	// Applications usually only need a handful of samplers.  So just define them all up front
+	// and keep them available as part of the root signature.  
+
+	const CD3DX12_STATIC_SAMPLER_DESC pointWrap(
+		0, // shaderRegister
+		D3D12_FILTER_MIN_MAG_MIP_POINT, // filter
+		D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressU
+		D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressV
+		D3D12_TEXTURE_ADDRESS_MODE_WRAP); // addressW
+
+	const CD3DX12_STATIC_SAMPLER_DESC pointClamp(
+		1, // shaderRegister
+		D3D12_FILTER_MIN_MAG_MIP_POINT, // filter
+		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,  // addressU
+		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,  // addressV
+		D3D12_TEXTURE_ADDRESS_MODE_CLAMP); // addressW
+
+	const CD3DX12_STATIC_SAMPLER_DESC linearWrap(
+		2, // shaderRegister
+		D3D12_FILTER_MIN_MAG_MIP_LINEAR, // filter
+		D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressU
+		D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressV
+		D3D12_TEXTURE_ADDRESS_MODE_WRAP); // addressW
+
+	const CD3DX12_STATIC_SAMPLER_DESC linearClamp(
+		3, // shaderRegister
+		D3D12_FILTER_MIN_MAG_MIP_LINEAR, // filter
+		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,  // addressU
+		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,  // addressV
+		D3D12_TEXTURE_ADDRESS_MODE_CLAMP); // addressW
+
+	const CD3DX12_STATIC_SAMPLER_DESC anisotropicWrap(
+		4, // shaderRegister
+		D3D12_FILTER_ANISOTROPIC, // filter
+		D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressU
+		D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressV
+		D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressW
+		0.0f,                             // mipLODBias
+		8);                               // maxAnisotropy
+
+	const CD3DX12_STATIC_SAMPLER_DESC anisotropicClamp(
+		5, // shaderRegister
+		D3D12_FILTER_ANISOTROPIC, // filter
+		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,  // addressU
+		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,  // addressV
+		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,  // addressW
+		0.0f,                              // mipLODBias
+		8);                                // maxAnisotropy
+
+	return {
+		pointWrap, pointClamp,
+		linearWrap, linearClamp,
+		anisotropicWrap, anisotropicClamp };
 }
 
 void Renderer::BuildShadersAndInputLayout()
@@ -830,7 +912,7 @@ XMFLOAT3 Renderer::GetHillsNormal(float x, float z)
 void Renderer::BuildRenderItems()
 {
 	auto gridRitem = new RenderItem();
-	gridRitem->World = MathHelper::Identity4x4();
+	XMStoreFloat4x4(&gridRitem->World, XMMatrixScaling(100.0f, 10.0f, 100.0f) * XMMatrixTranslation(0.0f, -20.0f, 0.0f));
 	XMStoreFloat4x4(&gridRitem->TexTransform, XMMatrixScaling(8.0f, 8.0f, 1.0f));
 	gridRitem->ObjCBIndex = 0;
 	gridRitem->Mat = m_Materials["grass"].get();
@@ -854,7 +936,7 @@ void Renderer::BuildRenderItems()
 	m_OpaqueRenderItems.push_back(std::move(skullRitem));
 
 	auto wavesRitem = new RenderItem();
-	wavesRitem->World = MathHelper::Identity4x4();
+	XMStoreFloat4x4(&wavesRitem->World, XMMatrixScaling(100.0f, 10.0f, 100.0f) * XMMatrixTranslation(0.0f, -20.0f, 0.0f));
 	XMStoreFloat4x4(&wavesRitem->TexTransform, XMMatrixScaling(5.0f, 5.0f, 1.0f));
 	wavesRitem->ObjCBIndex = 2;
 	wavesRitem->Mat = m_Materials["water"].get();
@@ -891,6 +973,10 @@ void Renderer::DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::ve
 		cmdList->IASetIndexBuffer(&ri->Geo->IndexBufferView());
 		cmdList->IASetPrimitiveTopology(ri->PrimitiveType);
 
+
+		CD3DX12_GPU_DESCRIPTOR_HANDLE tex(m_SrvHeap->GetGPUDescriptorHandleForHeapStart());
+		tex.Offset(ri->Mat->DiffuseSrvHeapIndex, mCbvSrvDescriptorSize);
+		cmdList->SetGraphicsRootDescriptorTable(0, tex);
 		if (ri->ObjCBIndex != 2)
 		{
 
@@ -898,8 +984,8 @@ void Renderer::DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::ve
 			D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objectCB->GetGPUVirtualAddress() + ri->ObjCBIndex * objCBByteSize;
 			D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = matCB->GetGPUVirtualAddress() + ri->Mat->MatCBIndex * matCBByteSize;
 
-			cmdList->SetGraphicsRootConstantBufferView(0, objCBAddress);
-			cmdList->SetGraphicsRootConstantBufferView(1, matCBAddress);
+			cmdList->SetGraphicsRootConstantBufferView(1, objCBAddress);
+			cmdList->SetGraphicsRootConstantBufferView(2, matCBAddress);
 		}
 
 		cmdList->DrawIndexedInstanced(ri->IndexCount, 1, ri->StartIndexLocation, ri->BaseVertexLocation, 0);
@@ -924,8 +1010,6 @@ void Renderer::BuildPSOs()
 		m_PsByteCode->GetBufferSize()
 	};
 	opaquePsoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-	opaquePsoDesc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
-	opaquePsoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
 	opaquePsoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
 	opaquePsoDesc.SampleMask = UINT_MAX;
 	opaquePsoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
@@ -947,17 +1031,18 @@ void Renderer::BuildPSOs()
 		reinterpret_cast<BYTE*>(m_PsByteCodeWater->GetBufferPointer()),
 		m_PsByteCodeWater->GetBufferSize()
 	};
-	//waterPsoDesc.BlendState.RenderTarget[0].BlendEnable = TRUE;
-	//waterPsoDesc.BlendState.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
-	//waterPsoDesc.BlendState.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
-	//waterPsoDesc.BlendState.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
-	//waterPsoDesc.BlendState.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ONE;
-	//waterPsoDesc.BlendState.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
-	//waterPsoDesc.BlendState.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
-	//waterPsoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+	waterPsoDesc.BlendState.RenderTarget[0].BlendEnable = TRUE;
+	waterPsoDesc.BlendState.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
+	waterPsoDesc.BlendState.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
+	waterPsoDesc.BlendState.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
+	waterPsoDesc.BlendState.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ONE;
+	waterPsoDesc.BlendState.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
+	waterPsoDesc.BlendState.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
+	waterPsoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
 	ThrowIfFailed(m_Device->CreateGraphicsPipelineState(&waterPsoDesc, IID_PPV_ARGS(&m_PipelineStateObjects["water"])));
 
 }
+
 void Renderer::BuildFrameResources()
 {
 	for (int i = 0; i < NumFrameResources; ++i)
@@ -974,9 +1059,11 @@ void Renderer::UpdateObjectCBs()
 		if (e->NumFramesDirty)
 		{
 			XMMATRIX world = XMLoadFloat4x4(&e->World);
+			XMMATRIX texTransform = XMLoadFloat4x4(&e->TexTransform);
 
 			ObjectConstants objConstants;
 			XMStoreFloat4x4(&objConstants.World, XMMatrixTranspose(world));
+			XMStoreFloat4x4(&objConstants.TexTransform, XMMatrixTranspose(texTransform));
 
 			currObjectCB->CopyData(e->ObjCBIndex, objConstants);
 
@@ -1010,6 +1097,7 @@ void Renderer::UpdateMaterialCBs()
 }
 void Renderer::UpdateMainPassCB()
 {
+	m_Camera.UpdateViewMatrix();
 	XMMATRIX view = XMLoadFloat4x4(&m_View);
 	XMMATRIX proj = XMLoadFloat4x4(&m_Proj);
 
@@ -1026,11 +1114,11 @@ void Renderer::UpdateMainPassCB()
 	XMStoreFloat4x4(&m_MainPassCB.ViewProj, XMMatrixTranspose(viewProj));
 	XMStoreFloat4x4(&m_MainPassCB.InvViewProj, XMMatrixTranspose(invViewProj));
 
-	m_MainPassCB.EyePosW = m_EyePos;
+	m_MainPassCB.EyePosW = m_Camera.GetPosition3f();;
 	m_MainPassCB.RenderTargetSize = XMFLOAT2((float)m_ClientWidth, (float)m_ClientHeight);
 	m_MainPassCB.InvRenderTargetSize = XMFLOAT2(1.0f / m_ClientWidth, 1.0f / m_ClientHeight);
-	m_MainPassCB.NearZ = 1.0f;
-	m_MainPassCB.FarZ = 1000.0f;
+	m_MainPassCB.NearZ = m_Camera.GetNearZ();
+	m_MainPassCB.FarZ = m_Camera.GetFarZ();;
 	m_MainPassCB.AmbientLight = { 0.25f, 0.25f, 0.35f, 1.0f };
 	m_MainPassCB.Lights[0].Direction = { 0.57735f, -0.57735f, 0.57735f };
 	m_MainPassCB.Lights[0].Strength = { 0.6f, 0.6f, 0.6f };
@@ -1096,6 +1184,66 @@ void Renderer::UpdateWaves(GameTimer& gt)
 
 	// Set the dynamic VB of the wave renderitem to the current frame VB.
 	m_WavesRitem->Geo->VertexBufferGPU = currWavesVB->Resource();
+}
+void Renderer::LoadTextures()
+{
+	auto grassTex = std::make_unique<Texture>();
+	grassTex->Name = "grassTex";
+	grassTex->Filename = L"../../Textures/grass.dds";
+	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(m_Device.Get(),
+		m_CommandList.Get(), grassTex->Filename.c_str(),
+		grassTex->Resource, grassTex->UploadHeap));
+
+	auto waterTex = std::make_unique<Texture>();
+	waterTex->Name = "waterTex";
+	waterTex->Filename = L"../../Textures/water1.dds";
+	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(m_Device.Get(),
+		m_CommandList.Get(), waterTex->Filename.c_str(),
+		waterTex->Resource, waterTex->UploadHeap));
+
+	auto fenceTex = std::make_unique<Texture>();
+	fenceTex->Name = "fenceTex";
+	fenceTex->Filename = L"../../Textures/WoodCrate01.dds";
+	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(m_Device.Get(),
+		m_CommandList.Get(), fenceTex->Filename.c_str(),
+		fenceTex->Resource, fenceTex->UploadHeap));
+
+	m_Textures[grassTex->Name] = std::move(grassTex);
+	m_Textures[waterTex->Name] = std::move(waterTex);
+	m_Textures[fenceTex->Name] = std::move(fenceTex);
+}
+void Renderer::BuildDescriptorHeaps()
+{
+	D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
+	srvHeapDesc.NumDescriptors = 3;
+	srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+	ThrowIfFailed(m_Device->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_SrvHeap)));
+
+	CD3DX12_CPU_DESCRIPTOR_HANDLE hDescriptor(m_SrvHeap->GetCPUDescriptorHandleForHeapStart());
+
+	auto grassTex = m_Textures["grassTex"]->Resource;
+	auto waterTex = m_Textures["waterTex"]->Resource;
+	auto fenceTex = m_Textures["fenceTex"]->Resource;
+
+	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	srvDesc.Format = grassTex->GetDesc().Format;
+	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.Texture2D.MostDetailedMip = 0;
+	srvDesc.Texture2D.MipLevels = -1;
+	m_Device->CreateShaderResourceView(grassTex.Get(), &srvDesc, hDescriptor);
+
+	hDescriptor.Offset(1, m_CbvSrvUavDescriptorSize);
+
+	srvDesc.Format = waterTex->GetDesc().Format;
+	m_Device->CreateShaderResourceView(waterTex.Get(), &srvDesc, hDescriptor);
+
+	hDescriptor.Offset(1, m_CbvSrvUavDescriptorSize);
+
+	srvDesc.Format = fenceTex->GetDesc().Format;
+	m_Device->CreateShaderResourceView(fenceTex.Get(), &srvDesc, hDescriptor);
+
 };
 
 

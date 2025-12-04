@@ -1,3 +1,12 @@
+Texture2D gDiffuseMap : register(t0);
+
+SamplerState gsamPointWrap : register(s0);
+SamplerState gsamPointClamp : register(s1);
+SamplerState gsamLinearWrap : register(s2);
+SamplerState gsamLinearClamp : register(s3);
+SamplerState gsamAnisotropicWrap : register(s4);
+SamplerState gsamAnisotropicClamp : register(s5);
+
 cbuffer WaterCB : register(b3)
 {
     float4x4 gWorld;
@@ -11,6 +20,7 @@ cbuffer WaterCB : register(b3)
 struct VSInput
 {
     float3 pos : POSITION;
+    float3 NormalW : NORMAL;
     float2 uv : TEXCOORD0;
 };
 
@@ -19,6 +29,7 @@ struct VSOutput
     float4 PosH : SV_POSITION;
     float3 PosW : POSITION;
     float3 NormalW : NORMAL;
+    float2 TexC : TEXCOORD0;
 };
 
 float3 EvaluateSky(float3 dir)
@@ -32,6 +43,8 @@ float3 EvaluateSky(float3 dir)
 
 float4 PS(VSOutput pin) : SV_TARGET
 {
+    float3 diffuseAlbedo = (gDiffuseMap.Sample(gsamAnisotropicWrap, pin.TexC), 1.0) * float3(0.65, 0.75, 0.90);
+    
     float3 N = normalize(pin.NormalW);
     float3 V = normalize(gCameraPos - pin.PosW);
 
@@ -46,7 +59,7 @@ float4 PS(VSOutput pin) : SV_TARGET
     float3 R = reflect(-V, N);
     float3 sky = EvaluateSky(R);
 
-    float3 base = gWaterColor;
+    float3 base = diffuseAlbedo.rgb;
     float3 color = lerp(base, sky, F);
 
     float alpha = 0.6f; // tweak
