@@ -140,6 +140,8 @@ private:
 	Microsoft::WRL::ComPtr<ID3DBlob> m_PsByteCode;
 	Microsoft::WRL::ComPtr<ID3DBlob> m_VsByteCodeWater;
 	Microsoft::WRL::ComPtr<ID3DBlob> m_PsByteCodeWater;
+	Microsoft::WRL::ComPtr<ID3DBlob> m_VsByteCodeSky;
+	Microsoft::WRL::ComPtr<ID3DBlob> m_PsByteCodeSky;
 	std::vector<D3D12_INPUT_ELEMENT_DESC> m_InputLayoutDescs;
 
 	XMFLOAT4X4 m_World = MathHelper::Identity4x4();
@@ -164,6 +166,7 @@ private:
 
 	std::vector<RenderItem*> m_OpaqueRenderItems;
 	std::vector<RenderItem*> m_TransparentRenderItems;
+	std::vector<RenderItem*> m_SkyRenderItems;
 
 	std::unordered_map<std::string, std::unique_ptr<MeshGeometry>> m_Geometries;
 	std::unordered_map<std::string, std::unique_ptr<Material>> m_Materials;
@@ -177,6 +180,7 @@ private:
 	Camera& m_Camera;
 
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_SrvHeap;
+	UINT m_SkyTexHeapIndex = 1;
 
 	void LoadTextures();
 	std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> GetStaticSamplers();

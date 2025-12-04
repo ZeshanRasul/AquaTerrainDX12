@@ -136,9 +136,15 @@ void Renderer::Draw()
 	auto passCB = m_CurrentFrameResource->PassCB->Resource();
 	m_CommandList->SetGraphicsRootConstantBufferView(3, passCB->GetGPUVirtualAddress());
 
-
 	DrawRenderItems(m_CommandList.Get(), m_OpaqueRenderItems);
 
+
+	m_CommandList->SetPipelineState(m_PipelineStateObjects["sky"].Get());
+	m_CommandList->SetGraphicsRootSignature(m_OpaqueRootSignature.Get());
+	passCB = m_CurrentFrameResource->PassCB->Resource();
+	m_CommandList->SetGraphicsRootConstantBufferView(3, passCB->GetGPUVirtualAddress());
+	//m_CommandList->SetGraphicsRootDescriptorTable(4, CD3DX12_GPU_DESCRIPTOR_HANDLE(m_SrvHeap->GetGPUDescriptorHandleForHeapStart(), m_SkyTexHeapIndex, m_CbvSrvUavDescriptorSize));
+	DrawRenderItems(m_CommandList.Get(), m_SkyRenderItems);
 
 	m_CommandList->SetPipelineState(m_PipelineStateObjects["water"].Get());
 	m_CommandList->SetGraphicsRootSignature(m_TransparentRootSignature.Get());
@@ -427,15 +433,23 @@ void Renderer::LoadTextures()
 		m_CommandList.Get(), grassTex->Filename.c_str(),
 		grassTex->Resource, grassTex->UploadHeap));
 
-
 	m_Textures[grassTex->Name] = std::move(grassTex);
+
+	auto skyCubeMap = std::make_unique<Texture>();
+	skyCubeMap->Name = "skyCubeMap";
+	skyCubeMap->Filename = L"../../Textures/grasscube1024.dds";
+	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(m_Device.Get(),
+		m_CommandList.Get(), skyCubeMap->Filename.c_str(),
+		skyCubeMap->Resource, skyCubeMap->UploadHeap));
+
+	m_Textures[skyCubeMap->Name] = std::move(skyCubeMap);
 
 }
 
 void Renderer::createSrvDescriptorHeaps()
 {
 	D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
-	srvHeapDesc.NumDescriptors = 1;
+	srvHeapDesc.NumDescriptors = 2;
 	srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 	ThrowIfFailed(m_Device->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_SrvHeap)));
@@ -443,15 +457,26 @@ void Renderer::createSrvDescriptorHeaps()
 	CD3DX12_CPU_DESCRIPTOR_HANDLE hDescriptor(m_SrvHeap->GetCPUDescriptorHandleForHeapStart());
 
 	auto grassTex = m_Textures["grassTex"]->Resource;
+	auto skyCubeMap = m_Textures["skyCubeMap"]->Resource;
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 	srvDesc.Format = grassTex->GetDesc().Format;
 	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 	srvDesc.Texture2D.MostDetailedMip = 0;
-	srvDesc.Texture2D.MipLevels = -1;
+	srvDesc.Texture2D.MipLevels = grassTex->GetDesc().MipLevels;
+	srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
 	m_Device->CreateShaderResourceView(grassTex.Get(), &srvDesc, hDescriptor);
 
+	hDescriptor.Offset(1, m_CbvSrvUavDescriptorSize);
+
+	
+	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
+	srvDesc.TextureCube.MostDetailedMip = 0;
+	srvDesc.TextureCube.MipLevels = skyCubeMap->GetDesc().MipLevels;
+	srvDesc.TextureCube.ResourceMinLODClamp = 0.0f;
+	srvDesc.Format = skyCubeMap->GetDesc().Format;
+	m_Device->CreateShaderResourceView(skyCubeMap.Get(), &srvDesc, hDescriptor);
 
 }
 
@@ -515,19 +540,24 @@ std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> Renderer::GetStaticSamplers()
 void Renderer::CreateOpaqueRootSignature()
 {
 	CD3DX12_DESCRIPTOR_RANGE texTable;
-	texTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
+	texTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0);
+	CD3DX12_DESCRIPTOR_RANGE texTable2;
+	texTable2.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1, 0);
+	
 
 
-	CD3DX12_ROOT_PARAMETER slotRootParameter[4];
+	CD3DX12_ROOT_PARAMETER slotRootParameter[5];
 
 	slotRootParameter[0].InitAsDescriptorTable(1, &texTable, D3D12_SHADER_VISIBILITY_PIXEL);
 	slotRootParameter[1].InitAsConstantBufferView(0);
 	slotRootParameter[2].InitAsConstantBufferView(1);
 	slotRootParameter[3].InitAsConstantBufferView(2);
+	slotRootParameter[4].InitAsDescriptorTable(1, &texTable2, D3D12_SHADER_VISIBILITY_PIXEL);
+
 	auto staticSamplers = GetStaticSamplers();
 
 	// A root signature is an array of root parameters.
-	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(4, slotRootParameter,
+	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(5, slotRootParameter,
 		(UINT)staticSamplers.size(), staticSamplers.data(),
 		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
@@ -586,6 +616,10 @@ void Renderer::BuildShadersAndInputLayout()
 	m_PsByteCode = d3dUtil::CompileShader(L"Shaders\\pixel.hlsl", nullptr, "PS", "ps_5_0");
 	m_VsByteCodeWater = d3dUtil::CompileShader(L"Shaders\\vertex_water.hlsl", nullptr, "VS", "vs_5_0");
 	m_PsByteCodeWater = d3dUtil::CompileShader(L"Shaders\\pixel_water.hlsl", nullptr, "PS", "ps_5_0");
+	m_VsByteCodeSky = d3dUtil::CompileShader(L"Shaders\\vertex_sky.hlsl", nullptr, "VS", "vs_5_0");
+	m_PsByteCodeSky = d3dUtil::CompileShader(L"Shaders\\pixel_sky.hlsl", nullptr, "PS", "ps_5_0");
+
+
 
 	m_InputLayoutDescs =
 	{
@@ -598,9 +632,18 @@ void Renderer::BuildShadersAndInputLayout()
 }
 void Renderer::BuildMaterials()
 {
+	auto sky = std::make_unique<Material>();
+	sky->Name = "sky";
+	sky->MatCBIndex = 0;
+	sky->DiffuseSrvHeapIndex = 1;
+	sky->DiffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	sky->FresnelR0 = XMFLOAT3(0.1f, 0.1f, 0.1f);
+	sky->Roughness = 1.0f;
+
+
 	auto grass = std::make_unique<Material>();
 	grass->Name = "grass";
-	grass->MatCBIndex = 0;
+	grass->MatCBIndex = 1;
 	grass->DiffuseSrvHeapIndex = 0;
 	grass->DiffuseAlbedo = XMFLOAT4(0.5f, 0.6f, 0.1f, 1.0f);
 	grass->FresnelR0 = XMFLOAT3(0.01f, 0.01f, 0.01f);
@@ -608,20 +651,21 @@ void Renderer::BuildMaterials()
 
 	auto skullMat = std::make_unique<Material>();
 	skullMat->Name = "skullMat";
-	skullMat->MatCBIndex = 1;
-	skullMat->DiffuseSrvHeapIndex = 1;
+	skullMat->MatCBIndex = 2;
+	skullMat->DiffuseSrvHeapIndex = 2;
 	skullMat->DiffuseAlbedo = XMFLOAT4(0.3f, 0.33f, 0.31f, 1.0f);
 	skullMat->FresnelR0 = XMFLOAT3(0.01f, 0.01f, 0.01f);
 	skullMat->Roughness = 0.25f;
 
 	auto water = std::make_unique<Material>();
 	water->Name = "water";
-	water->MatCBIndex = 2;
-	water->DiffuseSrvHeapIndex = 2;
+	water->MatCBIndex = 3;
+	water->DiffuseSrvHeapIndex = 3;
 	water->DiffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 	water->FresnelR0 = XMFLOAT3(0.2f, 0.2f, 0.2f);
 	water->Roughness = 0.0f;
 
+	m_Materials["sky"] = std::move(sky);
 	m_Materials["grass"] = std::move(grass);
 	m_Materials["skullMat"] = std::move(skullMat);
 	m_Materials["water"] = std::move(water);
@@ -949,10 +993,22 @@ XMFLOAT3 Renderer::GetHillsNormal(float x, float z)
 
 void Renderer::BuildRenderItems()
 {
+	auto skyRitem = new RenderItem();
+	XMStoreFloat4x4(&skyRitem->World, XMMatrixScaling(5000.0f, 5000.0f, 5000.0f));
+	skyRitem->TexTransform = MathHelper::Identity4x4();
+	skyRitem->ObjCBIndex = 0;
+	skyRitem->Mat = m_Materials["sky"].get();
+	skyRitem->Geo = m_Geometries["shapeGeo"].get();
+	skyRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	skyRitem->IndexCount = skyRitem->Geo->DrawArgs["sphere"].IndexCount;
+	skyRitem->StartIndexLocation = skyRitem->Geo->DrawArgs["sphere"].StartIndexLocation;
+	skyRitem->BaseVertexLocation = skyRitem->Geo->DrawArgs["sphere"].BaseVertexLocation;
+	m_SkyRenderItems.push_back(std::move(skyRitem));
+
 	auto gridRitem = new RenderItem();
 	gridRitem->World = MathHelper::Identity4x4();
 	XMStoreFloat4x4(&gridRitem->TexTransform, XMMatrixScaling(8.0f, 8.0f, 10.0f));
-	gridRitem->ObjCBIndex = 0;
+	gridRitem->ObjCBIndex = 1;
 	gridRitem->Mat = m_Materials["grass"].get();
 	gridRitem->Geo = m_Geometries["landGeo"].get();
 	gridRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
@@ -963,7 +1019,7 @@ void Renderer::BuildRenderItems()
 
 	auto skullRitem = new RenderItem();
 	XMStoreFloat4x4(&skullRitem->TexTransform, XMMatrixScaling(8.0f, 8.0f, 1.0f));
-	skullRitem->ObjCBIndex = 1;
+	skullRitem->ObjCBIndex = 2;
 	skullRitem->Mat = m_Materials["skullMat"].get();
 	skullRitem->Geo = m_Geometries["skullGeo"].get();
 	skullRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
@@ -975,7 +1031,7 @@ void Renderer::BuildRenderItems()
 	auto wavesRitem = new RenderItem();
 	wavesRitem->World = MathHelper::Identity4x4();
 	XMStoreFloat4x4(&wavesRitem->TexTransform, XMMatrixScaling(5.0f, 5.0f, 1.0f));
-	wavesRitem->ObjCBIndex = 2;
+	wavesRitem->ObjCBIndex = 3;
 	wavesRitem->Mat = m_Materials["water"].get();
 	wavesRitem->Geo = m_Geometries["waterGeo"].get();
 	wavesRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
@@ -986,6 +1042,8 @@ void Renderer::BuildRenderItems()
 	m_WavesRitem = wavesRitem;
 	m_TransparentRenderItems.push_back(std::move(wavesRitem));
 
+	for (auto & e : m_SkyRenderItems)
+		m_AllRenderItems.push_back(e);
 
 	for (auto& e : m_OpaqueRenderItems)
 		m_AllRenderItems.push_back(e);
@@ -1010,7 +1068,7 @@ void Renderer::DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::ve
 		cmdList->IASetIndexBuffer(&ri->Geo->IndexBufferView());
 		cmdList->IASetPrimitiveTopology(ri->PrimitiveType);
 
-		if (ri->ObjCBIndex != 2)
+		if (ri->ObjCBIndex != 3)
 		{
 			D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objectCB->GetGPUVirtualAddress() + ri->ObjCBIndex * objCBByteSize;
 			D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = matCB->GetGPUVirtualAddress() + ri->Mat->MatCBIndex * matCBByteSize;
@@ -1027,6 +1085,8 @@ void Renderer::DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::ve
 
 				CD3DX12_GPU_DESCRIPTOR_HANDLE tex(m_SrvHeap->GetGPUDescriptorHandleForHeapStart());
 				cmdList->SetGraphicsRootDescriptorTable(0, tex);
+				tex.Offset(m_SkyTexHeapIndex, m_CbvSrvUavDescriptorSize);
+				cmdList->SetGraphicsRootDescriptorTable(4, tex);
 			}
 		}
 
@@ -1065,6 +1125,22 @@ void Renderer::BuildPSOs()
 
 	ThrowIfFailed(m_Device->CreateGraphicsPipelineState(&opaquePsoDesc, IID_PPV_ARGS(&m_PipelineStateObjects["opaque"])));
 
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC skyPsoDesc = opaquePsoDesc;
+	skyPsoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
+	skyPsoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+	skyPsoDesc.pRootSignature = m_OpaqueRootSignature.Get();
+	skyPsoDesc.VS = {
+		reinterpret_cast<BYTE*>(m_VsByteCodeSky->GetBufferPointer()),
+		m_VsByteCodeSky->GetBufferSize()
+	};
+	skyPsoDesc.PS = {
+		reinterpret_cast<BYTE*>(m_PsByteCodeSky->GetBufferPointer()),
+		m_PsByteCodeSky->GetBufferSize()
+	};
+
+	ThrowIfFailed(m_Device->CreateGraphicsPipelineState(&skyPsoDesc, IID_PPV_ARGS(&m_PipelineStateObjects["sky"])));
+
+
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC waterPsoDesc = opaquePsoDesc;
 	waterPsoDesc.pRootSignature = m_TransparentRootSignature.Get();
 	waterPsoDesc.VS = {
@@ -1090,7 +1166,7 @@ void Renderer::BuildFrameResources()
 {
 	for (int i = 0; i < NumFrameResources; ++i)
 	{
-		m_FrameResources.push_back(std::make_unique<FrameResource>(m_Device.Get(), 1, (UINT)m_OpaqueRenderItems.size(), (UINT)m_TransparentRenderItems.size(), (UINT)m_Materials.size(), m_Waves->VertexCount()));
+		m_FrameResources.push_back(std::make_unique<FrameResource>(m_Device.Get(), 1, (UINT)m_OpaqueRenderItems.size(), (UINT)m_TransparentRenderItems.size(), (UINT)1, (UINT)m_Materials.size(), m_Waves->VertexCount()));
 	}
 }
 void Renderer::UpdateObjectCBs()
