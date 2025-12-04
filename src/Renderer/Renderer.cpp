@@ -15,7 +15,7 @@ Renderer::Renderer(HWND& windowHandle, UINT width, UINT height, Camera& cam)
 bool Renderer::InitializeD3D12(HWND& windowHandle)
 {
 #if defined(DEBUG) || defined(_DEBUG)
-	CreateDebugController();
+//	CreateDebugController();
 #endif
 
 	ThrowIfFailed(CreateDXGIFactory1(IID_PPV_ARGS(&m_DxgiFactory)));
@@ -623,7 +623,10 @@ void Renderer::CreateTransparentRootSignature()
 	slotRootParameter[3].InitAsConstantBufferView(2);
 	slotRootParameter[4].InitAsConstantBufferView(3);
 
-	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(5, slotRootParameter, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+	auto staticSamplers = GetStaticSamplers();
+
+
+	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(5, slotRootParameter, (UINT)staticSamplers.size(), staticSamplers.data(), D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
 	Microsoft::WRL::ComPtr<ID3DBlob> serializedRootSig = nullptr;
 	Microsoft::WRL::ComPtr<ID3DBlob> errorBlob = nullptr;
@@ -1067,7 +1070,7 @@ void Renderer::BuildRenderItems()
 	m_OpaqueRenderItems.push_back(std::move(skullRitem));
 
 	auto wavesRitem = new RenderItem();
-	wavesRitem->World = MathHelper::Identity4x4();
+	XMStoreFloat4x4(&wavesRitem->World, XMMatrixTranslation(0.0f, 5.0f, 0.0f));
 	XMStoreFloat4x4(&wavesRitem->TexTransform, XMMatrixScaling(5.0f, 5.0f, 1.0f));
 	wavesRitem->ObjCBIndex = 3;
 	wavesRitem->Mat = m_Materials["water"].get();
@@ -1190,6 +1193,10 @@ void Renderer::BuildPSOs()
 	waterPsoDesc.BlendState.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
 	waterPsoDesc.BlendState.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
 	waterPsoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+	waterPsoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+	waterPsoDesc.DepthStencilState.DepthEnable = TRUE;
+	waterPsoDesc.BlendState.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+
 	ThrowIfFailed(m_Device->CreateGraphicsPipelineState(&waterPsoDesc, IID_PPV_ARGS(&m_PipelineStateObjects["water"])));
 
 }

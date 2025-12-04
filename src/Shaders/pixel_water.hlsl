@@ -1,15 +1,44 @@
+#include "LightingUtil.hlsl"
+
 Texture2D gDepth : register(t0);
+
+SamplerState gSamplerPointClamp : register(s0);
 
 cbuffer WaterCB : register(b3)
 {
     float4x4 gWorld;
-    float4x4 gViewProj;
+    float4x4 gViewProj2;
     float3 gCameraPos;
     float gTime;
     float3 gWaterColor;
     float gPad0;
 };
     
+cbuffer cbPass : register(b2)
+{
+    float4x4 gView;
+    float4x4 gInvView;
+    float4x4 gProj;
+    float4x4 gInvProj;
+    float4x4 gViewProj;
+    float4x4 gInvViewProj;
+    float3 gEyePosW;
+    float cbPerObjectPad1;
+    float2 gRenderTargetSize;
+    float2 gInvRenderTargetSize;
+    float gNearZ;
+    float gFarZ;
+    float cbPerObjectPad2;
+    float cbPerObjectPad3;
+    float4 gAmbientLight;
+    
+    float4 gFogColor;
+    float gFogStart;
+    float gFogRange;
+    
+    Light gLights[MaxLights];
+};
+
 struct VSOutput
 {
     float4 PosH : SV_POSITION;
@@ -17,6 +46,14 @@ struct VSOutput
     float3 NormalW : NORMAL;
     float2 TexC : TEXCOORD;
 };
+
+float LinearizeDepth(float depth)
+{
+    float n = gNearZ;
+    float f = gFarZ;
+
+    return (n * f) / (f - depth * (f - n));
+}
 
 float3 EvaluateSky(float3 dir)
 {
@@ -29,24 +66,39 @@ float3 EvaluateSky(float3 dir)
 
 float4 PS(VSOutput pin) : SV_TARGET
 {
-    float3 V = normalize(gCameraPos - pin.PosW);
-    float3 N = normalize(float3(0, 1, 0));
+    float gAbsorptionStrength = 0.6f; 
+    float3 gShallowWaterColor = float3(0.0f, 0.3f, 0.5f);
+    float3 gDeepWaterColor = float3(0.0f, 0.05f, 0.1f);
+    float gBaseAlpha = 0.5f;
+    
+    float2 uv = pin.PosH.xy * gInvRenderTargetSize;
 
-    float cosTheta = saturate(dot(N, V));
+    float sceneDepthNonLinear = gDepth.SampleLevel(gSamplerPointClamp, uv, 0).r;
 
-    // Cheap Schlick Fresnel
-    float3 F0 = float3(0.02f, 0.02f, 0.02f); // water-ish
-    float fresnel = pow(1.0f - cosTheta, 5.0f);
-    float3 F = F0 + (1.0f - F0) * fresnel;
+    float waterDepthNonLinear = pin.PosH.z;
 
-    // Approx reflection towards sky
-    float3 R = reflect(-V, N);
-    float3 sky = EvaluateSky(R);
+    float sceneDepthLinear = LinearizeDepth(sceneDepthNonLinear);
+    float waterDepthLinear = LinearizeDepth(waterDepthNonLinear);
 
-    float3 base = gWaterColor;
-    float3 color = lerp(base, sky, F);
+    float thickness = max(sceneDepthLinear - waterDepthLinear, 0.0f);
 
-    float alpha = 0.6f; // tweak
+    float absorption = saturate(thickness * gAbsorptionStrength);
 
-    return float4(color, alpha);
+    float3 waterColor = lerp(gShallowWaterColor, gDeepWaterColor, absorption);
+
+    float3 N = normalize(pin.NormalW);
+    float3 V = normalize(gEyePosW - pin.PosW);
+    float NdotV = saturate(dot(N, V));
+
+    float fresnel = pow(1.0f - NdotV, 5.0f);
+
+    float alpha = saturate(lerp(gBaseAlpha, 1.0f, fresnel));
+
+    if (thickness <= 0.0f)
+    {
+        alpha *= 0.3f;
+    }
+
+    return float4(waterColor, alpha);
 }
+
