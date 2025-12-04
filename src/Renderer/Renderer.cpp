@@ -92,6 +92,7 @@ void Renderer::Update(GameTimer& gt, Camera& cam)
 	cam.UpdateViewMatrix();
 	XMStoreFloat4x4(&m_View, cam.GetView());
 	XMStoreFloat4x4(&m_Proj, cam.GetProj());
+	m_EyePos = cam.GetPosition3f();
 
 	UpdateObjectCBs();
 	UpdateMainPassCB();
