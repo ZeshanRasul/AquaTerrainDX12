@@ -3,6 +3,7 @@
 cbuffer cbPerObject : register(b0)
 {
     float4x4 gWorld;
+    float4x4 gTexTransform;
 }
 
 cbuffer cbMaterial : register(b1)
@@ -59,6 +60,10 @@ VertexOut VS(VertexIn vIn)
     vOut.NormalW = mul(vIn.NormalL, (float3x3)gWorld);
     
     vOut.PosH = mul(posW, gViewProj);
-    vOut.TexC = vIn.TexC;
+    float4 texC = mul(float4(vIn.TexC, 0.0f, 1.0f), gTexTransform);
+    texC = mul(texC, gMatTransform);
+    vOut.TexC = texC.xy;
+    
+    
     return vOut;
 }

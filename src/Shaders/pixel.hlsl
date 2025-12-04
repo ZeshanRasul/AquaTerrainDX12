@@ -1,5 +1,5 @@
 #ifndef NUM_DIR_LIGHTS
-    #define NUM_DIR_LIGHTS 3
+    #define NUM_DIR_LIGHTS 1
 #endif
 
 #include "LightingUtil.hlsl"
@@ -49,22 +49,22 @@ cbuffer cbPass : register(b2)
 
 float4 PS(PixelIn pIn) : SV_Target
 {
-    float4 diffuseAlbedo = gDiffuseMap.Sample(gsamAnisotropicWrap, pIn.TexC) > 0 ? gDiffuseMap.Sample(gsamAnisotropicWrap, pIn.TexC) : float4(1.0, 1.0, 1.0, 1.0);
+    float4 diffuseAlbedo = gDiffuseMap.Sample(gsamAnisotropicWrap, pIn.TexC) * gDiffuseAlbedo;
     pIn.NormalW = normalize(pIn.NormalW);
     
     float3 toEyeW = normalize(gEyePosW - pIn.PosW);
     
-    float4 ambient = gAmbientLight * gDiffuseAlbedo;
+    float4 ambient = gAmbientLight * diffuseAlbedo;
     
     const float shininess = 1.0f - gRoughness;
-    Material mat = { gDiffuseAlbedo, gFresnelR0, shininess };
+    Material mat = { diffuseAlbedo, gFresnelR0, shininess };
     float3 shadowFactor = 1.0f;
     
     float4 directLight = ComputeLighting(gLights, mat, pIn.PosW, pIn.NormalW, toEyeW, shadowFactor);
     
     float4 litColor = ambient + directLight;
     
-    litColor.a = gDiffuseAlbedo.a;
+    litColor.a = diffuseAlbedo.a;
     
     return diffuseAlbedo;
 }

@@ -35,6 +35,6 @@ VSOutput VS(VSInput vin)
     vout.PosW = worldPos;
     vout.PosH = mul(float4(worldPos, 1.0f), gViewProj);
     vout.NormalW = worldNormal;
-    vin.TexC = vin.TexC;
+    vout.TexC = vin.TexC;
     return vout;
 }

@@ -55,14 +55,14 @@ bool Renderer::InitializeD3D12(HWND& windowHandle)
 
 	//	CreateCbvDescriptorHeaps();
 	LoadTextures();
-	createSrvDescriptorHeaps();
-	BuildShadersAndInputLayout();
 	CreateOpaqueRootSignature();
 	CreateTransparentRootSignature();
-	BuildMaterials();
+	createSrvDescriptorHeaps();
+	BuildShadersAndInputLayout();
 	BuildShapeGeometry();
 	BuildLandGeometry();
 	BuildSkullGeometry();
+	BuildMaterials();
 	BuildWavesGeometry();
 	BuildRenderItems();
 	BuildFrameResources();
@@ -836,6 +836,7 @@ void Renderer::BuildLandGeometry()
 		vertices[i].Pos.y = GetHillsHeight(p.x, p.z);
 		XMFLOAT3 n = GetHillsNormal(p.x, p.z);
 		vertices[i].Normal = n;
+		vertices[i].TexCoord = grid.Vertices[i].TexC;
 	}
 
 	const UINT vbByteSize = (UINT)vertices.size() * sizeof(Vertex);
@@ -949,7 +950,7 @@ void Renderer::BuildRenderItems()
 {
 	auto gridRitem = new RenderItem();
 	gridRitem->World = MathHelper::Identity4x4();
-	XMStoreFloat4x4(&gridRitem->TexTransform, XMMatrixScaling(8.0f, 8.0f, 1.0f));
+	XMStoreFloat4x4(&gridRitem->TexTransform, XMMatrixScaling(8.0f, 8.0f, 10.0f));
 	gridRitem->ObjCBIndex = 0;
 	gridRitem->Mat = m_Materials["grass"].get();
 	gridRitem->Geo = m_Geometries["landGeo"].get();
@@ -960,7 +961,7 @@ void Renderer::BuildRenderItems()
 	m_OpaqueRenderItems.push_back(std::move(gridRitem));
 
 	auto skullRitem = new RenderItem();
-	skullRitem->TexTransform = MathHelper::Identity4x4();
+	XMStoreFloat4x4(&skullRitem->TexTransform, XMMatrixScaling(8.0f, 8.0f, 1.0f));
 	skullRitem->ObjCBIndex = 1;
 	skullRitem->Mat = m_Materials["skullMat"].get();
 	skullRitem->Geo = m_Geometries["skullGeo"].get();
@@ -1010,13 +1011,13 @@ void Renderer::DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::ve
 
 		if (ri->ObjCBIndex != 2)
 		{
-
-
 			D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objectCB->GetGPUVirtualAddress() + ri->ObjCBIndex * objCBByteSize;
 			D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = matCB->GetGPUVirtualAddress() + ri->Mat->MatCBIndex * matCBByteSize;
 
 			cmdList->SetGraphicsRootConstantBufferView(1, objCBAddress);
 			cmdList->SetGraphicsRootConstantBufferView(2, matCBAddress);
+
+
 
 			if (ri->ObjCBIndex == 0) // grass
 			{
@@ -1100,9 +1101,11 @@ void Renderer::UpdateObjectCBs()
 		if (e->NumFramesDirty)
 		{
 			XMMATRIX world = XMLoadFloat4x4(&e->World);
+			XMMATRIX texTransform = XMLoadFloat4x4(&e->TexTransform);
 
 			ObjectConstants objConstants;
 			XMStoreFloat4x4(&objConstants.World, XMMatrixTranspose(world));
+			XMStoreFloat4x4(&objConstants.TexTransform, XMMatrixTranspose(texTransform));
 
 			currObjectCB->CopyData(e->ObjCBIndex, objConstants);
 
@@ -1127,6 +1130,7 @@ void Renderer::UpdateMaterialCBs()
 			matConstants.DiffuseAlbedo = mat->DiffuseAlbedo;
 			matConstants.FresnelR0 = mat->FresnelR0;
 			matConstants.Roughness = mat->Roughness;
+			XMStoreFloat4x4(&matConstants.MatTransform, XMMatrixTranspose(matTransform));
 
 			curretMaterialCB->CopyData(mat->MatCBIndex, matConstants);
 
@@ -1152,7 +1156,7 @@ void Renderer::UpdateMainPassCB()
 	XMStoreFloat4x4(&m_MainPassCB.ViewProj, XMMatrixTranspose(viewProj));
 	XMStoreFloat4x4(&m_MainPassCB.InvViewProj, XMMatrixTranspose(invViewProj));
 
-	m_MainPassCB.EyePosW = m_EyePos;
+	m_MainPassCB.EyePosW = m_Camera.GetPosition3f();
 	m_MainPassCB.RenderTargetSize = XMFLOAT2((float)m_ClientWidth, (float)m_ClientHeight);
 	m_MainPassCB.InvRenderTargetSize = XMFLOAT2(1.0f / m_ClientWidth, 1.0f / m_ClientHeight);
 	m_MainPassCB.NearZ = 1.0f;
