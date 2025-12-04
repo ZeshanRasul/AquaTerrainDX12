@@ -1163,6 +1163,10 @@ void Renderer::UpdateMainPassCB()
 	m_MainPassCB.NearZ = 1.0f;
 	m_MainPassCB.FarZ = 1000.0f;
 	m_MainPassCB.AmbientLight = { 0.25f, 0.25f, 0.35f, 1.0f };
+	m_MainPassCB.FogColor = { 0.7f, 0.7f, 0.7f, 1.0f };
+	m_MainPassCB.FogStart = 5.0f;
+	m_MainPassCB.FogRange = 150.0f;
+
 	m_MainPassCB.Lights[0].Direction = { 0.57735f, -0.57735f, 0.57735f };
 	m_MainPassCB.Lights[0].Strength = { 0.6f, 0.6f, 0.6f };
 	m_MainPassCB.Lights[1].Direction = { -0.57735f, -0.57735f, 0.57735f };

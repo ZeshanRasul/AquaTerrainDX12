@@ -44,6 +44,10 @@ cbuffer cbPass : register(b2)
     float cbPerObjectPad3;
     float4 gAmbientLight;
     
+    float4 gFogColor;
+    float gFogStart;
+    float gFogRange;
+    
     Light gLights[MaxLights];
 };
 
@@ -63,6 +67,9 @@ float4 PS(PixelIn pIn) : SV_Target
     float4 directLight = ComputeLighting(gLights, mat, pIn.PosW, pIn.NormalW, toEyeW, shadowFactor);
     
     float4 litColor = ambient + directLight;
+    
+    float fogAmount = saturate((length(gEyePosW - pIn.PosW) - gFogStart) / gFogRange);
+    litColor = lerp(litColor, gFogColor, fogAmount);
     
     litColor.a = diffuseAlbedo.a;
     
