@@ -143,17 +143,6 @@ void Renderer::Draw()
 
 	DrawRenderItems(m_CommandList.Get(), m_OpaqueRenderItems);
 
-	m_CommandList->SetPipelineState(m_PipelineStateObjects["water"].Get());
-	m_CommandList->SetGraphicsRootSignature(m_TransparentRootSignature.Get());
-	m_CommandList->SetDescriptorHeaps(0, descriptorHeaps);
-
-	passCB = m_CurrentFrameResource->PassCB->Resource();
-	m_CommandList->SetGraphicsRootConstantBufferView(2, passCB->GetGPUVirtualAddress());
-	auto waterCB = m_CurrentFrameResource->WaterCB->Resource();
-	m_CommandList->SetGraphicsRootConstantBufferView(3, waterCB->GetGPUVirtualAddress());
-
-	DrawRenderItems(m_CommandList.Get(), m_TransparentRenderItems);
-
 	m_CommandList->SetPipelineState(m_PipelineStateObjects["sky"].Get());
 	m_CommandList->SetGraphicsRootSignature(m_OpaqueRootSignature.Get());
 	m_CommandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
@@ -164,6 +153,17 @@ void Renderer::Draw()
 	m_CommandList->SetGraphicsRootDescriptorTable(4, tex);
 
 	DrawRenderItems(m_CommandList.Get(), m_SkyRenderItems);
+
+	m_CommandList->SetPipelineState(m_PipelineStateObjects["water"].Get());
+	m_CommandList->SetGraphicsRootSignature(m_TransparentRootSignature.Get());
+	m_CommandList->SetDescriptorHeaps(0, descriptorHeaps);
+
+	passCB = m_CurrentFrameResource->PassCB->Resource();
+	m_CommandList->SetGraphicsRootConstantBufferView(2, passCB->GetGPUVirtualAddress());
+	auto waterCB = m_CurrentFrameResource->WaterCB->Resource();
+	m_CommandList->SetGraphicsRootConstantBufferView(3, waterCB->GetGPUVirtualAddress());
+
+	DrawRenderItems(m_CommandList.Get(), m_TransparentRenderItems);
 
 	m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
 
@@ -1081,8 +1081,17 @@ void Renderer::DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::ve
 		D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objectCB->GetGPUVirtualAddress() + ri->ObjCBIndex * objCBByteSize;
 		D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = matCB->GetGPUVirtualAddress() + ri->Mat->MatCBIndex * matCBByteSize;
 
-		cmdList->SetGraphicsRootConstantBufferView(1, objCBAddress);
-		cmdList->SetGraphicsRootConstantBufferView(2, matCBAddress);
+		if (ri->Geo->Name == "waterGeo")
+		{
+
+			cmdList->SetGraphicsRootConstantBufferView(0, objCBAddress);
+			cmdList->SetGraphicsRootConstantBufferView(1, matCBAddress);
+		}
+		else
+		{
+			cmdList->SetGraphicsRootConstantBufferView(1, objCBAddress);
+			cmdList->SetGraphicsRootConstantBufferView(2, matCBAddress);
+		}
 
 		cmdList->DrawIndexedInstanced(ri->IndexCount, 1, ri->StartIndexLocation, ri->BaseVertexLocation, 0);
 	}
@@ -1145,14 +1154,14 @@ void Renderer::BuildPSOs()
 		reinterpret_cast<BYTE*>(m_PsByteCodeWater->GetBufferPointer()),
 		m_PsByteCodeWater->GetBufferSize()
 	};
-	//waterPsoDesc.BlendState.RenderTarget[0].BlendEnable = TRUE;
-	//waterPsoDesc.BlendState.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
-	//waterPsoDesc.BlendState.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
-	//waterPsoDesc.BlendState.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
-	//waterPsoDesc.BlendState.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ONE;
-	//waterPsoDesc.BlendState.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
-	//waterPsoDesc.BlendState.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
-	//waterPsoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+	waterPsoDesc.BlendState.RenderTarget[0].BlendEnable = TRUE;
+	waterPsoDesc.BlendState.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
+	waterPsoDesc.BlendState.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
+	waterPsoDesc.BlendState.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
+	waterPsoDesc.BlendState.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ONE;
+	waterPsoDesc.BlendState.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
+	waterPsoDesc.BlendState.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
+	waterPsoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
 	ThrowIfFailed(m_Device->CreateGraphicsPipelineState(&waterPsoDesc, IID_PPV_ARGS(&m_PipelineStateObjects["water"])));
 
 }
