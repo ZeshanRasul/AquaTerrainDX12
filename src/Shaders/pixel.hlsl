@@ -3,12 +3,19 @@
 #endif
 
 #include "LightingUtil.hlsl"
-
+Texture2D gDiffuseMap : register(t0);
+SamplerState gsamPointWrap : register(s0);
+SamplerState gsamPointClamp : register(s1);
+SamplerState gsamLinearWrap : register(s2);
+SamplerState gsamLinearClamp : register(s3);
+SamplerState gsamAnisotropicWrap : register(s4);
+SamplerState gsamAnisotropicClamp : register(s5);
 struct PixelIn
 {
     float4 PosH : SV_POSITION;
     float3 PosW : POSITION;
     float3 NormalW : NORMAL;
+    float2 TexC : TEXCOORD;
 };
 
 cbuffer cbMaterial : register(b1)
@@ -42,6 +49,7 @@ cbuffer cbPass : register(b2)
 
 float4 PS(PixelIn pIn) : SV_Target
 {
+    float4 diffuseAlbedo = gDiffuseMap.Sample(gsamAnisotropicWrap, pIn.TexC) > 0 ? gDiffuseMap.Sample(gsamAnisotropicWrap, pIn.TexC) : float4(1.0, 1.0, 1.0, 1.0);
     pIn.NormalW = normalize(pIn.NormalW);
     
     float3 toEyeW = normalize(gEyePosW - pIn.PosW);

@@ -46,6 +46,7 @@ struct VertexOut
     float4 PosH : SV_POSITION;
     float3 PosW : POSITION;
     float3 NormalW : NORMAL;
+    float2 TexC : TEXCOORD;
 };
 
 VertexOut VS(VertexIn vIn)
@@ -58,6 +59,6 @@ VertexOut VS(VertexIn vIn)
     vOut.NormalW = mul(vIn.NormalL, (float3x3)gWorld);
     
     vOut.PosH = mul(posW, gViewProj);
-            
+    vOut.TexC = vIn.TexC;
     return vOut;
 }

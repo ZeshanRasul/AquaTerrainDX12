@@ -47,7 +47,7 @@ private:
 
 	void CreateCbvDescriptorHeaps();
 	void CreateConstantBufferViews();
-
+	void createSrvDescriptorHeaps();
 	void CreateOpaqueRootSignature();
 	void CreateTransparentRootSignature();
 
@@ -167,6 +167,7 @@ private:
 
 	std::unordered_map<std::string, std::unique_ptr<MeshGeometry>> m_Geometries;
 	std::unordered_map<std::string, std::unique_ptr<Material>> m_Materials;
+	std::unordered_map<std::string, std::unique_ptr<Texture>> m_Textures;
 	
 	std::unique_ptr<Waves> m_Waves;
 	RenderItem* m_WavesRitem = nullptr;
@@ -174,4 +175,11 @@ private:
 	PassConstants m_MainPassCB;
 	WaterConstants m_waterConstantsCB;
 	Camera& m_Camera;
+
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_SrvHeap;
+
+	void LoadTextures();
+	std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> GetStaticSamplers();
+	UINT m_CbvSrvDescriptorSize;
+
 };
