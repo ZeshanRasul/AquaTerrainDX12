@@ -124,7 +124,7 @@ void Renderer::Draw()
 
 	m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
 
-	m_CommandList->ClearRenderTargetView(CurrentBackBufferView(), DirectX::Colors::LightSteelBlue, 0, nullptr);
+	m_CommandList->ClearRenderTargetView(CurrentBackBufferView(), DirectX::Colors::Fuchsia, 0, nullptr);
 	m_CommandList->ClearDepthStencilView(DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
 	m_CommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
@@ -1178,9 +1178,10 @@ void Renderer::UpdateWaterCB(GameTimer& dt)
 {
 	for (int i = 0; i < m_TransparentRenderItems.size(); ++i)
 	{
-		XMMATRIX world = XMMatrixScaling(10.f, 1.0, 10.f);
+		XMMATRIX world = XMMatrixIdentity();
 		XMStoreFloat4x4(&m_waterConstantsCB.gWorld, world);
-		XMStoreFloat4x4(&m_waterConstantsCB.gViewProj, XMMatrixMultiply(XMLoadFloat4x4(&m_View), XMLoadFloat4x4(&m_Proj)));
+		XMStoreFloat4x4(&m_waterConstantsCB.gViewProj, XMMatrixMultiply(XMMatrixTranspose(XMLoadFloat4x4(&m_View)), XMMatrixTranspose(XMLoadFloat4x4(&m_Proj))));
+
 		m_waterConstantsCB.gCameraPos = m_EyePos;
 		m_waterConstantsCB.gTime = dt.TotalTime();
 		m_waterConstantsCB.gWaterColor = XMFLOAT3(0.65f, 0.75f, 0.90f);

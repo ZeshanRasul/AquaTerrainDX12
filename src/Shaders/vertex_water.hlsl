@@ -26,14 +26,14 @@ struct VSOutput
 VSOutput VS(VSInput vin)
 {
     VSOutput vout;
-
-    float3 worldPos = mul(float4(vin.PosL, 1.0f), gWorld).xyz;
+    
+    float4 worldPos = mul(float4(vin.PosL, 1.0f), gWorld);
 
     // Flat plane normal up
     float3 worldNormal = float3(0.0f, 1.0f, 0.0f);
 
-    vout.PosW = worldPos;
-    vout.PosH = mul(float4(worldPos, 1.0f), gViewProj);
+    vout.PosW = worldPos.xyz;
+    vout.PosH = mul(worldPos, gViewProj);
     vout.NormalW = worldNormal;
     vout.TexC = vin.TexC;
     return vout;

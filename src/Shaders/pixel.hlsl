@@ -66,5 +66,5 @@ float4 PS(PixelIn pIn) : SV_Target
     
     litColor.a = diffuseAlbedo.a;
     
-    return diffuseAlbedo;
+    return litColor;
 }

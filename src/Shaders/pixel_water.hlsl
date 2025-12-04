@@ -8,17 +8,12 @@ cbuffer WaterCB : register(b3)
     float gPad0;
 };
 
-struct VSInput
-{
-    float3 pos : POSITION;
-    float2 uv : TEXCOORD0;
-};
-
 struct VSOutput
 {
     float4 PosH : SV_POSITION;
     float3 PosW : POSITION;
     float3 NormalW : NORMAL;
+    float2 TexC : TEXCOORD;
 };
 
 float3 EvaluateSky(float3 dir)
@@ -32,8 +27,8 @@ float3 EvaluateSky(float3 dir)
 
 float4 PS(VSOutput pin) : SV_TARGET
 {
-    float3 N = normalize(pin.NormalW);
     float3 V = normalize(gCameraPos - pin.PosW);
+    float3 N = normalize(float3(0, 1, 0));
 
     float cosTheta = saturate(dot(N, V));
 
