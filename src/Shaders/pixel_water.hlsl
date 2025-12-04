@@ -1,3 +1,5 @@
+Texture2D gDepth : register(t0);
+
 cbuffer WaterCB : register(b3)
 {
     float4x4 gWorld;
@@ -7,7 +9,7 @@ cbuffer WaterCB : register(b3)
     float3 gWaterColor;
     float gPad0;
 };
-
+    
 struct VSOutput
 {
     float4 PosH : SV_POSITION;

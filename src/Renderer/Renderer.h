@@ -130,7 +130,7 @@ private:
 	bool m_IsWireframe = false;
 
 	DXGI_FORMAT m_BackBufferFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
-	DXGI_FORMAT m_DepthStencilFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	DXGI_FORMAT m_DepthStencilFormat = DXGI_FORMAT_R24G8_TYPELESS;
 	HWND& m_Hwnd;
 	UINT m_ClientWidth;
 	UINT m_ClientHeight;
@@ -185,5 +185,7 @@ private:
 	void LoadTextures();
 	std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> GetStaticSamplers();
 	UINT m_CbvSrvDescriptorSize;
+
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_DepthSRV;
 
 };

@@ -10,6 +10,7 @@ SamplerState gsamLinearWrap : register(s2);
 SamplerState gsamLinearClamp : register(s3);
 SamplerState gsamAnisotropicWrap : register(s4);
 SamplerState gsamAnisotropicClamp : register(s5);
+
 struct PixelIn
 {
     float4 PosH : SV_POSITION;
