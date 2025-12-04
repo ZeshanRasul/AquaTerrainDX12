@@ -2,10 +2,11 @@
 
 const int gNumFrameResources = 3;
 
-Renderer::Renderer(HWND& windowHandle, UINT width, UINT height)
+Renderer::Renderer(HWND& windowHandle, UINT width, UINT height, Camera& cam)
 	:m_Hwnd(windowHandle),
 	m_ClientWidth(width),
-	m_ClientHeight(height)
+	m_ClientHeight(height),
+	m_Camera(cam)
 {
 	m_Hwnd = windowHandle;
 	InitializeD3D12(m_Hwnd);
@@ -18,6 +19,11 @@ bool Renderer::InitializeD3D12(HWND& windowHandle)
 #endif
 
 	ThrowIfFailed(CreateDXGIFactory1(IID_PPV_ARGS(&m_DxgiFactory)));
+
+	m_Camera.SetPosition(0.0f, 20.0f, -50.0f);
+	m_Camera.UpdateViewMatrix();
+	m_View = m_Camera.GetView4x4f();
+	m_Proj = m_Camera.GetProj4x4f();
 
 	CreateDevice();
 
@@ -75,7 +81,6 @@ void Renderer::Update(GameTimer& gt, Camera& cam)
 		CloseHandle(eventHandle);
 	}
 
-	m_EyePos = cam.GetPosition3f();
 	cam.UpdateViewMatrix();
 	XMStoreFloat4x4(&m_View, cam.GetView());
 	XMStoreFloat4x4(&m_Proj, cam.GetProj());

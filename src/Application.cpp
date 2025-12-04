@@ -17,7 +17,7 @@ Application::Application()
 
 	m_Hwnd = m_Window->GetWindowHandle();
 
-	m_Renderer = std::unique_ptr<Renderer>(new Renderer(m_Hwnd, m_Window->GetWidth(), m_Window->GetHeight()));
+	m_Renderer = std::unique_ptr<Renderer>(new Renderer(m_Hwnd, m_Window->GetWidth(), m_Window->GetHeight(), m_Window->GetCamera()));
 };
 
 Application::~Application()

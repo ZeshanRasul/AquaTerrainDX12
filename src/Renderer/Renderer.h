@@ -17,7 +17,7 @@ enum class RenderLayer : int
 
 class Renderer {
 public:
-	Renderer(HWND& windowHandle, UINT width, UINT height);
+	Renderer(HWND& windowHandle, UINT width, UINT height, Camera& cam);
 	~Renderer() = default;
 
 	bool InitializeD3D12(HWND& windowHandle);
@@ -173,4 +173,5 @@ private:
 
 	PassConstants m_MainPassCB;
 	WaterConstants m_waterConstantsCB;
+	Camera& m_Camera;
 };
