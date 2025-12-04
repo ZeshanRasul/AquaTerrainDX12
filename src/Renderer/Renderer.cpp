@@ -54,7 +54,8 @@ bool Renderer::InitializeD3D12(HWND& windowHandle)
 	m_Waves = std::make_unique<Waves>(128, 128, 1.0f, 0.03f, 4.0f, 0.2f);
 
 	//	CreateCbvDescriptorHeaps();
-
+	LoadTextures();
+	createSrvDescriptorHeaps();
 	BuildShadersAndInputLayout();
 	CreateOpaqueRootSignature();
 	CreateTransparentRootSignature();
@@ -132,7 +133,7 @@ void Renderer::Draw()
 
 
 	auto passCB = m_CurrentFrameResource->PassCB->Resource();
-	m_CommandList->SetGraphicsRootConstantBufferView(2, passCB->GetGPUVirtualAddress());
+	m_CommandList->SetGraphicsRootConstantBufferView(3, passCB->GetGPUVirtualAddress());
 
 
 	DrawRenderItems(m_CommandList.Get(), m_OpaqueRenderItems);
@@ -518,10 +519,10 @@ void Renderer::CreateOpaqueRootSignature()
 
 	CD3DX12_ROOT_PARAMETER slotRootParameter[4];
 
-	slotRootParameter[0].InitAsConstantBufferView(0);
-	slotRootParameter[1].InitAsConstantBufferView(1);
-	slotRootParameter[2].InitAsConstantBufferView(2);
-	slotRootParameter[3].InitAsDescriptorTable(1, &texTable, D3D12_SHADER_VISIBILITY_PIXEL);
+	slotRootParameter[0].InitAsDescriptorTable(1, &texTable, D3D12_SHADER_VISIBILITY_PIXEL);
+	slotRootParameter[1].InitAsConstantBufferView(0);
+	slotRootParameter[2].InitAsConstantBufferView(1);
+	slotRootParameter[3].InitAsConstantBufferView(2);
 	auto staticSamplers = GetStaticSamplers();
 
 	// A root signature is an array of root parameters.
@@ -1014,16 +1015,16 @@ void Renderer::DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::ve
 			D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objectCB->GetGPUVirtualAddress() + ri->ObjCBIndex * objCBByteSize;
 			D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = matCB->GetGPUVirtualAddress() + ri->Mat->MatCBIndex * matCBByteSize;
 
-			cmdList->SetGraphicsRootConstantBufferView(0, objCBAddress);
-			cmdList->SetGraphicsRootConstantBufferView(1, matCBAddress);
+			cmdList->SetGraphicsRootConstantBufferView(1, objCBAddress);
+			cmdList->SetGraphicsRootConstantBufferView(2, matCBAddress);
 
-			if (ri->ObjCBIndex = 0) // grass
+			if (ri->ObjCBIndex == 0) // grass
 			{
 				ID3D12DescriptorHeap* descriptorHeaps[] = { m_SrvHeap.Get() };
 				m_CommandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
 
 				CD3DX12_GPU_DESCRIPTOR_HANDLE tex(m_SrvHeap->GetGPUDescriptorHandleForHeapStart());
-				cmdList->SetGraphicsRootDescriptorTable(3, tex);
+				cmdList->SetGraphicsRootDescriptorTable(0, tex);
 			}
 		}
 
@@ -1069,8 +1070,8 @@ void Renderer::BuildPSOs()
 		m_VsByteCode->GetBufferSize()
 	};
 	waterPsoDesc.PS = {
-		reinterpret_cast<BYTE*>(m_PsByteCode->GetBufferPointer()),
-		m_PsByteCode->GetBufferSize()
+		reinterpret_cast<BYTE*>(m_PsByteCodeWater->GetBufferPointer()),
+		m_PsByteCodeWater->GetBufferSize()
 	};
 	//waterPsoDesc.BlendState.RenderTarget[0].BlendEnable = TRUE;
 	//waterPsoDesc.BlendState.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;

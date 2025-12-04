@@ -1,4 +1,4 @@
-cbuffer WaterCB : register(b4)
+cbuffer WaterCB : register(b3)
 {
     float4x4 gWorld;
     float4x4 gViewProj;
