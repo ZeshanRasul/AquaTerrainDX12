@@ -15,7 +15,7 @@ Renderer::Renderer(HWND& windowHandle, UINT width, UINT height, Camera& cam)
 bool Renderer::InitializeD3D12(HWND& windowHandle)
 {
 #if defined(DEBUG) || defined(_DEBUG)
-//	CreateDebugController();
+	//	CreateDebugController();
 #endif
 
 	ThrowIfFailed(CreateDXGIFactory1(IID_PPV_ARGS(&m_DxgiFactory)));
@@ -466,6 +466,32 @@ void Renderer::LoadTextures()
 
 	m_Textures[skyCubeMap->Name] = std::move(skyCubeMap);
 
+	auto grassNorm = std::make_unique<Texture>();
+	grassNorm->Name = "grassNorm";
+	grassNorm->Filename = L"../../Textures/grass_norm.dds";
+	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(m_Device.Get(),
+		m_CommandList.Get(), grassNorm->Filename.c_str(),
+		grassNorm->Resource, grassNorm->UploadHeap));
+
+	m_Textures[grassNorm->Name] = std::move(grassNorm);
+
+	auto mud = std::make_unique<Texture>();
+	mud->Name = "wetmud";
+	mud->Filename = L"../../Textures/wetmud.dds";
+	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(m_Device.Get(),
+		m_CommandList.Get(), mud->Filename.c_str(),
+		mud->Resource, mud->UploadHeap));
+
+	m_Textures[mud->Name] = std::move(mud);
+
+	auto wetmudNorm = std::make_unique<Texture>();
+	wetmudNorm->Name = "wetmud_norma";
+	wetmudNorm->Filename = L"../../Textures/wetmud_norm.dds";
+	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(m_Device.Get(),
+		m_CommandList.Get(), wetmudNorm->Filename.c_str(),
+		wetmudNorm->Resource, wetmudNorm->UploadHeap));
+
+	m_Textures[wetmudNorm->Name] = std::move(wetmudNorm);
 }
 
 void Renderer::createSrvDescriptorHeaps()
