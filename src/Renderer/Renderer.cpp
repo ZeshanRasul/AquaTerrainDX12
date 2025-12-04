@@ -136,24 +136,34 @@ void Renderer::Draw()
 	auto passCB = m_CurrentFrameResource->PassCB->Resource();
 	m_CommandList->SetGraphicsRootConstantBufferView(3, passCB->GetGPUVirtualAddress());
 
+	ID3D12DescriptorHeap* descriptorHeaps[] = { m_SrvHeap.Get() };
+	m_CommandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
+	CD3DX12_GPU_DESCRIPTOR_HANDLE tex(m_SrvHeap->GetGPUDescriptorHandleForHeapStart());
+	m_CommandList->SetGraphicsRootDescriptorTable(0, tex);
+
 	DrawRenderItems(m_CommandList.Get(), m_OpaqueRenderItems);
-
-
-	m_CommandList->SetPipelineState(m_PipelineStateObjects["sky"].Get());
-	m_CommandList->SetGraphicsRootSignature(m_OpaqueRootSignature.Get());
-	passCB = m_CurrentFrameResource->PassCB->Resource();
-	m_CommandList->SetGraphicsRootConstantBufferView(3, passCB->GetGPUVirtualAddress());
-	//m_CommandList->SetGraphicsRootDescriptorTable(4, CD3DX12_GPU_DESCRIPTOR_HANDLE(m_SrvHeap->GetGPUDescriptorHandleForHeapStart(), m_SkyTexHeapIndex, m_CbvSrvUavDescriptorSize));
-	DrawRenderItems(m_CommandList.Get(), m_SkyRenderItems);
 
 	m_CommandList->SetPipelineState(m_PipelineStateObjects["water"].Get());
 	m_CommandList->SetGraphicsRootSignature(m_TransparentRootSignature.Get());
+	m_CommandList->SetDescriptorHeaps(0, descriptorHeaps);
+
 	passCB = m_CurrentFrameResource->PassCB->Resource();
 	m_CommandList->SetGraphicsRootConstantBufferView(2, passCB->GetGPUVirtualAddress());
 	auto waterCB = m_CurrentFrameResource->WaterCB->Resource();
 	m_CommandList->SetGraphicsRootConstantBufferView(3, waterCB->GetGPUVirtualAddress());
 
 	DrawRenderItems(m_CommandList.Get(), m_TransparentRenderItems);
+
+	m_CommandList->SetPipelineState(m_PipelineStateObjects["sky"].Get());
+	m_CommandList->SetGraphicsRootSignature(m_OpaqueRootSignature.Get());
+	m_CommandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
+	passCB = m_CurrentFrameResource->PassCB->Resource();
+	m_CommandList->SetGraphicsRootConstantBufferView(3, passCB->GetGPUVirtualAddress());
+	tex = m_SrvHeap->GetGPUDescriptorHandleForHeapStart();
+	tex.Offset(1, m_CbvSrvUavDescriptorSize);
+	m_CommandList->SetGraphicsRootDescriptorTable(4, tex);
+
+	DrawRenderItems(m_CommandList.Get(), m_SkyRenderItems);
 
 	m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
 
@@ -470,7 +480,7 @@ void Renderer::createSrvDescriptorHeaps()
 
 	hDescriptor.Offset(1, m_CbvSrvUavDescriptorSize);
 
-	
+
 	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
 	srvDesc.TextureCube.MostDetailedMip = 0;
 	srvDesc.TextureCube.MipLevels = skyCubeMap->GetDesc().MipLevels;
@@ -543,7 +553,7 @@ void Renderer::CreateOpaqueRootSignature()
 	texTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0);
 	CD3DX12_DESCRIPTOR_RANGE texTable2;
 	texTable2.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1, 0);
-	
+
 
 
 	CD3DX12_ROOT_PARAMETER slotRootParameter[5];
@@ -1042,7 +1052,7 @@ void Renderer::BuildRenderItems()
 	m_WavesRitem = wavesRitem;
 	m_TransparentRenderItems.push_back(std::move(wavesRitem));
 
-	for (auto & e : m_SkyRenderItems)
+	for (auto& e : m_SkyRenderItems)
 		m_AllRenderItems.push_back(e);
 
 	for (auto& e : m_OpaqueRenderItems)
@@ -1068,27 +1078,11 @@ void Renderer::DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::ve
 		cmdList->IASetIndexBuffer(&ri->Geo->IndexBufferView());
 		cmdList->IASetPrimitiveTopology(ri->PrimitiveType);
 
-		if (ri->ObjCBIndex != 3)
-		{
-			D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objectCB->GetGPUVirtualAddress() + ri->ObjCBIndex * objCBByteSize;
-			D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = matCB->GetGPUVirtualAddress() + ri->Mat->MatCBIndex * matCBByteSize;
+		D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objectCB->GetGPUVirtualAddress() + ri->ObjCBIndex * objCBByteSize;
+		D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = matCB->GetGPUVirtualAddress() + ri->Mat->MatCBIndex * matCBByteSize;
 
-			cmdList->SetGraphicsRootConstantBufferView(1, objCBAddress);
-			cmdList->SetGraphicsRootConstantBufferView(2, matCBAddress);
-
-
-
-			if (ri->ObjCBIndex == 0) // grass
-			{
-				ID3D12DescriptorHeap* descriptorHeaps[] = { m_SrvHeap.Get() };
-				m_CommandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
-
-				CD3DX12_GPU_DESCRIPTOR_HANDLE tex(m_SrvHeap->GetGPUDescriptorHandleForHeapStart());
-				cmdList->SetGraphicsRootDescriptorTable(0, tex);
-				tex.Offset(m_SkyTexHeapIndex, m_CbvSrvUavDescriptorSize);
-				cmdList->SetGraphicsRootDescriptorTable(4, tex);
-			}
-		}
+		cmdList->SetGraphicsRootConstantBufferView(1, objCBAddress);
+		cmdList->SetGraphicsRootConstantBufferView(2, matCBAddress);
 
 		cmdList->DrawIndexedInstanced(ri->IndexCount, 1, ri->StartIndexLocation, ri->BaseVertexLocation, 0);
 	}
@@ -1166,7 +1160,7 @@ void Renderer::BuildFrameResources()
 {
 	for (int i = 0; i < NumFrameResources; ++i)
 	{
-		m_FrameResources.push_back(std::make_unique<FrameResource>(m_Device.Get(), 1, (UINT)m_OpaqueRenderItems.size(), (UINT)m_TransparentRenderItems.size(), (UINT)1, (UINT)m_Materials.size(), m_Waves->VertexCount()));
+		m_FrameResources.push_back(std::make_unique<FrameResource>(m_Device.Get(), 1, (UINT)m_OpaqueRenderItems.size(), (UINT)m_TransparentRenderItems.size(), (UINT)m_SkyRenderItems.size(), (UINT)m_Materials.size(), m_Waves->VertexCount()));
 	}
 }
 void Renderer::UpdateObjectCBs()
