@@ -1152,7 +1152,7 @@ void Renderer::BuildPSOs()
 	opaquePsoDesc.RTVFormats[0] = m_BackBufferFormat;
 	opaquePsoDesc.SampleDesc.Count = 1;
 	opaquePsoDesc.SampleDesc.Quality = 0;
-	opaquePsoDesc.DSVFormat = m_DepthStencilFormat;
+	opaquePsoDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 
 	ThrowIfFailed(m_Device->CreateGraphicsPipelineState(&opaquePsoDesc, IID_PPV_ARGS(&m_PipelineStateObjects["opaque"])));
 
