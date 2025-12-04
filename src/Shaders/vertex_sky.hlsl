@@ -10,7 +10,7 @@ cbuffer cbPerObject : register(b0)
     uint gObjPad2;
 };
 
-cbuffer cbPass : register(b1)
+cbuffer cbPass : register(b2)
 {
     float4x4 gView;
     float4x4 gInvView;
@@ -27,7 +27,11 @@ cbuffer cbPass : register(b1)
     float gTotalTime;
     float gDeltaTime;
     float4 gAmbientLight;
-
+    
+    float4 gFogColor;
+    float gFogStart;
+    float gFogRange;
+    
     Light gLights[MaxLights];
 };
 

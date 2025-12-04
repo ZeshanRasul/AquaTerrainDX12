@@ -32,6 +32,10 @@ cbuffer cbPass : register(b2)
     float cbPerObjectPad3;
     float4 gAmbientLight;
     
+    float4 gFogColor;
+    float gFogStart;
+    float gFogRange;
+    
     Light gLights[MaxLights];
 };
 
