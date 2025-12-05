@@ -64,8 +64,8 @@ float4 PS(PixelIn pIn) : SV_Target
     float gMudSlopeBias = 0.2f;
     float gMudSlopePower = 2.0f;
 
-    float gMudTiling = 1.0f;
-    float gGrassTiling = 2.0f;
+    float gMudTiling = 2.0f;
+    float gGrassTiling = 6.0f;
 
     float wGrass = smoothstep(gGrassStartHeight - gHeightBlendRange,
                               gGrassStartHeight + gHeightBlendRange,
