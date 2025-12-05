@@ -20,5 +20,11 @@ struct VertexOut
 
 float4 PS(VertexOut pin) : SV_Target
 {
+    float3 albedoGrass = gGrassDiffuseMap.Sample(gsamAnisotropicWrap, pin.PosL).rgb;
+    float3 albedoMud = gMudDiffuseMap.Sample(gsamAnisotropicWrap, pin.PosL).rgb;
+
+    float3 normalGrass = gGrassNormalMap.Sample(gsamAnisotropicWrap, pin.PosL).xyz * 2.0f - 1.0f;
+    float3 normalMud = gMudNormalMap.Sample(gsamAnisotropicWrap, pin.PosL).xyz * 2.0f - 1.0f;
+
     return gCubeMap.Sample(gsamLinearWrap, pin.PosL);
 }

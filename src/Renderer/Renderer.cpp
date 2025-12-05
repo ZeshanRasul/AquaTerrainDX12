@@ -161,7 +161,7 @@ void Renderer::Draw()
 	m_CommandList->SetPipelineState(m_PipelineStateObjects["water"].Get());
 	m_CommandList->SetGraphicsRootSignature(m_TransparentRootSignature.Get());
 	ID3D12DescriptorHeap* descriptorHeaps2[] = { m_SrvHeap.Get() };
-	m_CommandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps2);
+	m_CommandList->SetDescriptorHeaps(_countof(descriptorHeaps2), descriptorHeaps2);
 
 	passCB = m_CurrentFrameResource->PassCB->Resource();
 	m_CommandList->SetGraphicsRootConstantBufferView(3, passCB->GetGPUVirtualAddress());
@@ -580,7 +580,7 @@ void Renderer::CreateTextureSrvDescriptors()
 	srvDesc.Texture2D.MipLevels = wetmud_norm->GetDesc().MipLevels;
 	srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
 	m_Device->CreateShaderResourceView(wetmud_norm.Get(), &srvDesc, hDescriptor);
-
+	hDescriptor.Offset(1, m_CbvSrvUavDescriptorSize);
 	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
 	srvDesc.TextureCube.MostDetailedMip = 0;
 	srvDesc.TextureCube.MipLevels = skyCubeMap->GetDesc().MipLevels;
@@ -651,7 +651,7 @@ std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> Renderer::GetStaticSamplers()
 void Renderer::CreateOpaqueRootSignature()
 {
 	CD3DX12_DESCRIPTOR_RANGE texTable;
-	texTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 5, 0, 0);
+	texTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 5, 0);
 
 	CD3DX12_ROOT_PARAMETER slotRootParameter[4];
 

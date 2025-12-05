@@ -25,14 +25,6 @@ struct PixelIn
     float2 TexC : TEXCOORD;
 };
 
-cbuffer cbMaterial : register(b1)
-{
-    float4 gDiffuseAlbedo;
-    float3 gFresnelR0;
-    float gRoughness;
-    float4x4 gMatTransform;
-}
-
 cbuffer cbPass : register(b2)
 {
     float4x4 gView;
@@ -93,7 +85,7 @@ float4 PS(PixelIn pIn) : SV_Target
     float2 uvGrass = pIn.TexC * gGrassTiling;
     float2 uvMud = pIn.TexC * gMudTiling;
 
-    float3 albedoGrass = gGrassDiffuseMap.Sample(gsamAnisotropicWrap, uvGrass).rgb;
+    float3 albedoGrass = gGrassDiffuseMap.Sample(gsamAnisotropicWrap, uvGrass).rgb * 5.5f;
     float3 albedoMud = gMudDiffuseMap.Sample(gsamAnisotropicWrap, uvMud).rgb;
 
     float3 normalGrass = gGrassNormalMap.Sample(gsamAnisotropicWrap, uvGrass).xyz * 2.0f - 1.0f;
@@ -111,7 +103,6 @@ float4 PS(PixelIn pIn) : SV_Target
 
     float3 L = normalize(-gLights[0].Direction);
     float NdotL = saturate(dot(blendedNormal, L));
-
     float3 diffuse = albedo * NdotL;
 
     float3 ambient = albedo * 0.1f;
