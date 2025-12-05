@@ -87,6 +87,11 @@ private:
 
 	ID3D12Resource* CurrentBackBuffer() const;
 
+	void ShowImGUIWaterControl();
+	void ShowImGUICameraControl();
+	void ShowImGUILightControl();
+	void ShowImGUITerrainControl();
+
 	Microsoft::WRL::ComPtr<ID3D12Device> m_Device;
 	Microsoft::WRL::ComPtr<IDXGIAdapter> m_WarpAdapter;
 	Microsoft::WRL::ComPtr<ID3D12Debug> m_DebugController;
@@ -187,6 +192,9 @@ private:
 
 	PassConstants m_MainPassCB;
 	WaterConstants m_waterConstantsCB;
+	float m_WaterHeight[3] = {0.0f, 50.0f, 0.0f};
+	float m_WaterScale[3] = {10.0f, 0.0f, 10.0f};
+
 	Camera& m_Camera;
 
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_SrvHeap;

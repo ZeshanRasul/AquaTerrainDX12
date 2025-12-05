@@ -174,6 +174,7 @@ void Renderer::Update(GameTimer& gt, Camera& cam)
 		CloseHandle(eventHandle);
 	}
 
+
 	cam.UpdateViewMatrix();
 	XMStoreFloat4x4(&m_View, cam.GetView());
 	XMStoreFloat4x4(&m_Proj, cam.GetProj());
@@ -191,9 +192,9 @@ void Renderer::Draw()
 	ImGui_ImplDX12_NewFrame();
 	ImGui_ImplWin32_NewFrame();
 	ImGui::NewFrame();
+	ShowImGUIWaterControl();
 
 	showImgui = true;
-	ImGui::ShowDemoWindow(&showImgui);
 	ImGui::Render();
 
 	auto cmdListAlloc = m_CurrentFrameResource->CmdListAlloc;
@@ -546,7 +547,7 @@ void Renderer::LoadTextures()
 {
 	auto grassTex = std::make_unique<Texture>();
 	grassTex->Name = "grassTex";
-	grassTex->Filename = L"../../Textures/Grass/grass_diffuse.dds";
+	grassTex->Filename = L"../../Textures/Grass/grass4k.dds";
 	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(m_Device.Get(),
 		m_CommandList.Get(), grassTex->Filename.c_str(),
 		grassTex->Resource, grassTex->UploadHeap));
@@ -564,7 +565,7 @@ void Renderer::LoadTextures()
 
 	auto grassNorm = std::make_unique<Texture>();
 	grassNorm->Name = "grassNorm";
-	grassNorm->Filename = L"../../Textures/Grass/grass_normal.dds";
+	grassNorm->Filename = L"../../Textures/Grass/grassnorm4k.dds";
 	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(m_Device.Get(),
 		m_CommandList.Get(), grassNorm->Filename.c_str(),
 		grassNorm->Resource, grassNorm->UploadHeap));
@@ -573,7 +574,7 @@ void Renderer::LoadTextures()
 
 	auto mud = std::make_unique<Texture>();
 	mud->Name = "wetmud";
-	mud->Filename = L"../../Textures/Mud/mud_diffuse.dds";
+	mud->Filename = L"../../Textures/Mud/mud4k.dds";
 	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(m_Device.Get(),
 		m_CommandList.Get(), mud->Filename.c_str(),
 		mud->Resource, mud->UploadHeap));
@@ -582,7 +583,7 @@ void Renderer::LoadTextures()
 
 	auto wetmudNorm = std::make_unique<Texture>();
 	wetmudNorm->Name = "wetmud_norm";
-	wetmudNorm->Filename = L"../../Textures/Mud/mud_normal.dds";
+	wetmudNorm->Filename = L"../../Textures/Mud/mudnorm4k.dds";
 	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(m_Device.Get(),
 		m_CommandList.Get(), wetmudNorm->Filename.c_str(),
 		wetmudNorm->Resource, wetmudNorm->UploadHeap));
@@ -1487,7 +1488,7 @@ void Renderer::UpdateWaterCB(GameTimer& dt)
 {
 	for (int i = 0; i < m_TransparentRenderItems.size(); ++i)
 	{
-		XMMATRIX world = XMMatrixIdentity();
+		XMMATRIX world = XMMatrixIdentity() * XMMatrixTranslation(m_WaterHeight[0], m_WaterHeight[1], m_WaterHeight[2]);
 		XMStoreFloat4x4(&m_waterConstantsCB.gWorld, world);
 		XMStoreFloat4x4(&m_waterConstantsCB.gViewProj, XMMatrixMultiply(XMMatrixTranspose(XMLoadFloat4x4(&m_View)), XMMatrixTranspose(XMLoadFloat4x4(&m_Proj))));
 
@@ -1570,6 +1571,18 @@ void Renderer::FlushCommandQueue()
 ID3D12Resource* Renderer::CurrentBackBuffer() const
 {
 	return m_SwapChainBuffer[m_CurrentBackBuffer].Get();
+}
+
+void Renderer::ShowImGUIWaterControl()
+{
+	ImGui::Begin("Water Control");
+	//ImGui::SliderFloat("Wave Speed", &m_WaveSpeed, 0.1f, 5.0f);
+	ImGui::SliderFloat3("Water Position", m_WaterHeight, -300.0f, 300.0f);
+	ImGui::SliderFloat3("Water Scale", m_WaterScale , -100.0f, 100.0f);
+
+	XMStoreFloat4x4(&m_TransparentRenderItems[0]->World, XMMatrixScaling(m_WaterScale[0], m_WaterScale[1], m_WaterScale[2]) * XMMatrixTranslation(m_WaterHeight[0], m_WaterHeight[1], m_WaterHeight[2]));
+	m_TransparentRenderItems[0]->NumFramesDirty = NumFrameResources;
+	ImGui::End();
 }
 
 HeightMap Renderer::GeneratePerlinHeightmap(UINT width, UINT height, float scale, int octaves, float persistence, int seed)
