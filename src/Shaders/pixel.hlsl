@@ -4,6 +4,8 @@
 
 #include "LightingUtil.hlsl"
 Texture2D gGrassDiffuseMap : register(t0);
+TextureCube gCubeMap : register(t1);
+    
 Texture2D gGrassNormalMap : register(t2);
 Texture2D gMudDiffuseMap : register(t3);
 Texture2D gMudNormalMap : register(t4);
@@ -70,7 +72,7 @@ float4 PS(PixelIn pIn) : SV_Target
     float gMudSlopeBias = 0.2f;
     float gMudSlopePower = 2.0f;
 
-    float gMudTiling = 5.0f;
+    float gMudTiling = 1.0f;
     float gGrassTiling = 2.0f;
 
     float wGrass = smoothstep(gGrassStartHeight - gHeightBlendRange,
@@ -116,5 +118,5 @@ float4 PS(PixelIn pIn) : SV_Target
 
     float3 color = diffuse + ambient;
 
-    return float4(color, 1.0f);
+    return float4(albedo, 1.0f);
 }

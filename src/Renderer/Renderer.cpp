@@ -15,7 +15,7 @@ Renderer::Renderer(HWND& windowHandle, UINT width, UINT height, Camera& cam)
 bool Renderer::InitializeD3D12(HWND& windowHandle)
 {
 #if defined(DEBUG) || defined(_DEBUG)
-	//	CreateDebugController();
+	CreateDebugController();
 #endif
 
 	ThrowIfFailed(CreateDXGIFactory1(IID_PPV_ARGS(&m_DxgiFactory)));
@@ -56,8 +56,8 @@ bool Renderer::InitializeD3D12(HWND& windowHandle)
 	//	CreateCbvDescriptorHeaps();
 	LoadTextures();
 	CreateOpaqueRootSignature();
-	CreateTransparentRootSignature();
 	createSrvDescriptorHeaps();
+	CreateTransparentRootSignature();
 	BuildShadersAndInputLayout();
 	BuildShapeGeometry();
 	BuildLandGeometry();
@@ -138,10 +138,16 @@ void Renderer::Draw()
 
 	ID3D12DescriptorHeap* descriptorHeaps[] = { m_SrvHeap.Get() };
 	m_CommandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
-	CD3DX12_GPU_DESCRIPTOR_HANDLE tex(m_SrvHeap->GetGPUDescriptorHandleForHeapStart());
+	D3D12_GPU_DESCRIPTOR_HANDLE tex = m_SrvHeap->GetGPUDescriptorHandleForHeapStart();
 	m_CommandList->SetGraphicsRootDescriptorTable(0, tex);
-	tex.Offset(3, m_CbvSrvUavDescriptorSize);
+	//tex.ptr += 1 * m_CbvSrvUavDescriptorSize;
+	m_CommandList->SetGraphicsRootDescriptorTable(4, tex);
+	//tex.ptr += 2 * m_CbvSrvUavDescriptorSize;
 	m_CommandList->SetGraphicsRootDescriptorTable(5, tex);
+	//tex.ptr += 1 * m_CbvSrvUavDescriptorSize;
+	m_CommandList->SetGraphicsRootDescriptorTable(6, tex);
+	//tex.ptr += 1 * m_CbvSrvUavDescriptorSize;
+	m_CommandList->SetGraphicsRootDescriptorTable(7, tex);
 
 	DrawRenderItems(m_CommandList.Get(), m_OpaqueRenderItems);
 
@@ -151,7 +157,7 @@ void Renderer::Draw()
 	passCB = m_CurrentFrameResource->PassCB->Resource();
 	m_CommandList->SetGraphicsRootConstantBufferView(3, passCB->GetGPUVirtualAddress());
 	tex = m_SrvHeap->GetGPUDescriptorHandleForHeapStart();
-	tex.Offset(1, m_CbvSrvUavDescriptorSize);
+	tex.ptr += 1 * m_CbvSrvUavDescriptorSize;
 	m_CommandList->SetGraphicsRootDescriptorTable(4, tex);
 
 	DrawRenderItems(m_CommandList.Get(), m_SkyRenderItems);
@@ -167,7 +173,8 @@ void Renderer::Draw()
 	m_CommandList->SetGraphicsRootConstantBufferView(3, passCB->GetGPUVirtualAddress());
 	auto waterCB = m_CurrentFrameResource->WaterCB->Resource();
 	m_CommandList->SetGraphicsRootConstantBufferView(4, waterCB->GetGPUVirtualAddress());
-	tex.Offset(1, m_CbvSrvUavDescriptorSize);
+	tex = m_SrvHeap->GetGPUDescriptorHandleForHeapStart();
+	tex.ptr += 2 * m_CbvSrvUavDescriptorSize;
 	m_CommandList->SetGraphicsRootDescriptorTable(0, tex);
 
 	DrawRenderItems(m_CommandList.Get(), m_TransparentRenderItems);
@@ -573,6 +580,7 @@ void Renderer::createSrvDescriptorHeaps()
 	srvDesc.Texture2D.MipLevels = wetmud_norm->GetDesc().MipLevels;
 	srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
 	m_Device->CreateShaderResourceView(wetmud_norm.Get(), &srvDesc, hDescriptor);
+	hDescriptor.Offset(1, m_CbvSrvUavDescriptorSize);
 
 }
 
@@ -640,11 +648,15 @@ void Renderer::CreateOpaqueRootSignature()
 	CD3DX12_DESCRIPTOR_RANGE texTable2;
 	texTable2.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1, 0, 0);
 	CD3DX12_DESCRIPTOR_RANGE texTable3;
-	texTable3.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3, 2, 0, 2);
+	texTable3.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 2, 0, 2);
+	CD3DX12_DESCRIPTOR_RANGE texTable4;
+	texTable4.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 3, 0, 3);
+	CD3DX12_DESCRIPTOR_RANGE texTable5;
+	texTable5.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 4, 0, 4);
 
 
 
-	CD3DX12_ROOT_PARAMETER slotRootParameter[6];
+	CD3DX12_ROOT_PARAMETER slotRootParameter[8];
 
 	slotRootParameter[0].InitAsDescriptorTable(1, &texTable, D3D12_SHADER_VISIBILITY_PIXEL);
 	slotRootParameter[1].InitAsConstantBufferView(0);
@@ -652,11 +664,13 @@ void Renderer::CreateOpaqueRootSignature()
 	slotRootParameter[3].InitAsConstantBufferView(2);
 	slotRootParameter[4].InitAsDescriptorTable(1, &texTable2, D3D12_SHADER_VISIBILITY_PIXEL);
 	slotRootParameter[5].InitAsDescriptorTable(1, &texTable3, D3D12_SHADER_VISIBILITY_PIXEL);
+	slotRootParameter[6].InitAsDescriptorTable(1, &texTable4, D3D12_SHADER_VISIBILITY_PIXEL);
+	slotRootParameter[7].InitAsDescriptorTable(1, &texTable5, D3D12_SHADER_VISIBILITY_PIXEL);
 
 	auto staticSamplers = GetStaticSamplers();
 
 	// A root signature is an array of root parameters.
-	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(6, slotRootParameter,
+	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(8, slotRootParameter,
 		(UINT)staticSamplers.size(), staticSamplers.data(),
 		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
