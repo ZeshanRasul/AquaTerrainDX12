@@ -452,7 +452,7 @@ void Renderer::LoadTextures()
 {
 	auto grassTex = std::make_unique<Texture>();
 	grassTex->Name = "grassTex";
-	grassTex->Filename = L"../../Textures/grass.dds";
+	grassTex->Filename = L"../../Textures/Grass/grass_diffuse.dds";
 	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(m_Device.Get(),
 		m_CommandList.Get(), grassTex->Filename.c_str(),
 		grassTex->Resource, grassTex->UploadHeap));
@@ -470,7 +470,7 @@ void Renderer::LoadTextures()
 
 	auto grassNorm = std::make_unique<Texture>();
 	grassNorm->Name = "grassNorm";
-	grassNorm->Filename = L"../../Textures/grass_norm.dds";
+	grassNorm->Filename = L"../../Textures/Grass/grass_normal.dds";
 	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(m_Device.Get(),
 		m_CommandList.Get(), grassNorm->Filename.c_str(),
 		grassNorm->Resource, grassNorm->UploadHeap));
@@ -479,7 +479,7 @@ void Renderer::LoadTextures()
 
 	auto mud = std::make_unique<Texture>();
 	mud->Name = "wetmud";
-	mud->Filename = L"../../Textures/wetmud.dds";
+	mud->Filename = L"../../Textures/Mud/mud_diffuse.dds";
 	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(m_Device.Get(),
 		m_CommandList.Get(), mud->Filename.c_str(),
 		mud->Resource, mud->UploadHeap));
@@ -488,7 +488,7 @@ void Renderer::LoadTextures()
 
 	auto wetmudNorm = std::make_unique<Texture>();
 	wetmudNorm->Name = "wetmud_norm";
-	wetmudNorm->Filename = L"../../Textures/wetmud_norm.dds";
+	wetmudNorm->Filename = L"../../Textures/Mud/mud_normal.dds";
 	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(m_Device.Get(),
 		m_CommandList.Get(), wetmudNorm->Filename.c_str(),
 		wetmudNorm->Resource, wetmudNorm->UploadHeap));
