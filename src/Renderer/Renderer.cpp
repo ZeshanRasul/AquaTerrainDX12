@@ -1094,7 +1094,7 @@ void Renderer::BuildSkullGeometry()
 void Renderer::BuildLandGeometry()
 {
 	GeometryGenerator geoGen;
-	GeometryGenerator::MeshData grid = geoGen.CreateGrid(460.0f, 460.0f, 100, 100);
+	GeometryGenerator::MeshData grid = geoGen.CreateGrid(460.0f, 460.0f, 50, 50);
 
 	std::vector<Vertex> vertices(grid.Vertices.size());
 	for (size_t i = 0; i < grid.Vertices.size(); ++i)
@@ -1261,7 +1261,7 @@ void Renderer::BuildRenderItems()
 	m_OpaqueRenderItems.push_back(std::move(skullRitem));
 
 	auto wavesRitem = new RenderItem();
-	XMStoreFloat4x4(&wavesRitem->World, XMMatrixScaling(10.0f, 1.0f, 10.0f) * XMMatrixTranslation(0.0f, 24.0f, 0.0f));
+	XMStoreFloat4x4(&wavesRitem->World, XMMatrixScaling(10.0f, 1.0f, 10.0f) * XMMatrixTranslation(0.0f, 50.0f, 0.0f));
 	XMStoreFloat4x4(&wavesRitem->TexTransform, XMMatrixScaling(5.0f, 5.0f, 1.0f));
 	wavesRitem->ObjCBIndex = 3;
 	wavesRitem->Mat = m_Materials["water"].get();
