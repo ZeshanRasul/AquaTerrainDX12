@@ -3,7 +3,11 @@
 #endif
 
 #include "LightingUtil.hlsl"
-Texture2D gDiffuseMap : register(t0);
+Texture2D gGrassDiffuseMap : register(t0);
+Texture2D gGrassNormalMap : register(t2);
+Texture2D gMudDiffuseMap : register(t3);
+Texture2D gMudNormalMap : register(t4);
+
 SamplerState gsamPointWrap : register(s0);
 SamplerState gsamPointClamp : register(s1);
 SamplerState gsamLinearWrap : register(s2);
@@ -54,25 +58,63 @@ cbuffer cbPass : register(b2)
 
 float4 PS(PixelIn pIn) : SV_Target
 {
-    float4 diffuseAlbedo = gDiffuseMap.Sample(gsamAnisotropicWrap, pIn.TexC) * gDiffuseAlbedo;
-    pIn.NormalW = normalize(pIn.NormalW);
-    
-    float3 toEyeW = normalize(gEyePosW - pIn.PosW);
-    
-    float4 ambient = gAmbientLight * diffuseAlbedo;
-    
-    const float shininess = 1.0f - gRoughness;
-    Material mat = { diffuseAlbedo, gFresnelR0, shininess };
-    float3 shadowFactor = 1.0f;
-    
-    float4 directLight = ComputeLighting(gLights, mat, pIn.PosW, pIn.NormalW, toEyeW, shadowFactor);
-    
-    float4 litColor = ambient + directLight;
-    
-    float fogAmount = saturate((length(gEyePosW - pIn.PosW) - gFogStart) / gFogRange);
-    litColor = lerp(litColor, gFogColor, fogAmount);
-    
-    litColor.a = diffuseAlbedo.a;
-    
-    return litColor;
+    float height = pIn.PosW.y;
+    float3 N = normalize(pIn.NormalW);
+    float Ny = saturate(N.y); // 1 = flat, 0 = vertical
+
+    float gMudStartHeight = 7.0f; 
+    float gGrassStartHeight = 9.0f; 
+    float gHeightBlendRange = 3.0f; 
+
+    float gMaxGrassSlope = 0.75f;
+    float gMudSlopeBias = 0.2f;
+    float gMudSlopePower = 2.0f;
+
+    float gMudTiling = 5.0f;
+    float gGrassTiling = 2.0f;
+
+    float wGrass = smoothstep(gGrassStartHeight - gHeightBlendRange,
+                              gGrassStartHeight + gHeightBlendRange,
+                              height);
+
+    float wMud = 1.0f - wGrass;
+
+    float slopeFactor = 1.0f - Ny; // 0 flat, 1 vertical
+
+    float mudSlopeBoost = pow(saturate(slopeFactor + gMudSlopeBias), gMudSlopePower);
+    wMud = saturate(wMud + mudSlopeBoost);
+
+    float sumW = wGrass + wMud + 1e-5f;
+    wGrass /= sumW;
+    wMud /= sumW;
+
+    float2 uvGrass = pIn.TexC * gGrassTiling;
+    float2 uvMud = pIn.TexC * gMudTiling;
+
+    float3 albedoGrass = gGrassDiffuseMap.Sample(gsamAnisotropicWrap, uvGrass).rgb;
+    float3 albedoMud = gMudDiffuseMap.Sample(gsamAnisotropicWrap, uvMud).rgb;
+
+    float3 normalGrass = gGrassNormalMap.Sample(gsamAnisotropicWrap, uvGrass).xyz * 2.0f - 1.0f;
+    float3 normalMud = gMudNormalMap.Sample(gsamAnisotropicWrap, uvMud).xyz * 2.0f - 1.0f;
+
+    float3 blendedNormal =
+        wGrass * normalGrass +
+        wMud * normalMud;
+
+    blendedNormal = normalize(blendedNormal);
+
+    float3 albedo =
+        wGrass * albedoGrass +
+        wMud * albedoMud;
+
+    float3 L = normalize(-gLights[0].Direction);
+    float NdotL = saturate(dot(blendedNormal, L));
+
+    float3 diffuse = albedo * NdotL;
+
+    float3 ambient = albedo * 0.1f;
+
+    float3 color = diffuse + ambient;
+
+    return float4(color, 1.0f);
 }
