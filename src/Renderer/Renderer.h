@@ -257,4 +257,23 @@ private:
 
 
 	}
+
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_ImGuiSrvHeap;
+	D3D12_GPU_DESCRIPTOR_HANDLE imguiGpuStart;
+	D3D12_CPU_DESCRIPTOR_HANDLE	imguiCpuStart;
+	bool showImgui = true;
+
+	void CreateImGuiDescriptorHeap()
+	{
+		D3D12_DESCRIPTOR_HEAP_DESC desc = {};
+		desc.NumDescriptors = 1;
+		desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+		desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+		desc.NodeMask = 0;
+
+		ThrowIfFailed(m_Device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(m_ImGuiSrvHeap.GetAddressOf())));
+
+	}
 };
+
+

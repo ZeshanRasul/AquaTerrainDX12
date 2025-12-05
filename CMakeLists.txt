@@ -24,6 +24,10 @@ option(BUILD_WIN32_SUBSYSTEM "Build as a Win32 GUI app (no console window)" ON)
 file(GLOB APP_SOURCES
     "include/*.h"
     "include/*.cpp"
+    "include/imgui/*.cpp"
+    "include/imgui/*.h"
+    "include/imgui/backends/*.cpp"
+    "include/imgui/backends/*.h"
     "src/*.cpp"
     "src/*.h"
     "src/Events/*.cpp"

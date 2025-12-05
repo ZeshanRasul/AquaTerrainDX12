@@ -57,8 +57,8 @@ float4 PS(PixelIn pIn) : SV_Target
     float3 N = normalize(pIn.NormalW);
     float Ny = saturate(N.y); // 1 = flat, 0 = vertical
 
-    float gMudStartHeight = 7.0f; 
-    float gGrassStartHeight = 9.0f; 
+    float gMudStartHeight = 37.0f; 
+    float gGrassStartHeight = 49.0f; 
     float gHeightBlendRange = 3.0f; 
 
     float gMaxGrassSlope = 0.75f;

@@ -1,8 +1,58 @@
 #include "Renderer.h"
 #define STB_PERLIN_IMPLEMENTATION
 #include "stb_perlin.h"
+#include "imgui/imgui.h"
+#include "imgui/backends/imgui_impl_win32.h"
+#include "imgui/backends/imgui_impl_dx12.h"
 
 const int gNumFrameResources = 3;
+
+// Simple free list based allocator
+struct ExampleDescriptorHeapAllocator
+{
+	ID3D12DescriptorHeap* Heap = nullptr;
+	D3D12_DESCRIPTOR_HEAP_TYPE  HeapType = D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES;
+	D3D12_CPU_DESCRIPTOR_HANDLE HeapStartCpu;
+	D3D12_GPU_DESCRIPTOR_HANDLE HeapStartGpu;
+	UINT                        HeapHandleIncrement;
+	ImVector<int>               FreeIndices;
+
+	void Create(ID3D12Device* device, ID3D12DescriptorHeap* heap)
+	{
+		IM_ASSERT(Heap == nullptr && FreeIndices.empty());
+		Heap = heap;
+		D3D12_DESCRIPTOR_HEAP_DESC desc = heap->GetDesc();
+		HeapType = desc.Type;
+		HeapStartCpu = Heap->GetCPUDescriptorHandleForHeapStart();
+		HeapStartGpu = Heap->GetGPUDescriptorHandleForHeapStart();
+		HeapHandleIncrement = device->GetDescriptorHandleIncrementSize(HeapType);
+		FreeIndices.reserve((int)desc.NumDescriptors);
+		for (int n = desc.NumDescriptors; n > 0; n--)
+			FreeIndices.push_back(n - 1);
+	}
+	void Destroy()
+	{
+		Heap = nullptr;
+		FreeIndices.clear();
+	}
+	void Alloc(D3D12_CPU_DESCRIPTOR_HANDLE* out_cpu_desc_handle, D3D12_GPU_DESCRIPTOR_HANDLE* out_gpu_desc_handle)
+	{
+		IM_ASSERT(FreeIndices.Size > 0);
+		int idx = FreeIndices.back();
+		FreeIndices.pop_back();
+		out_cpu_desc_handle->ptr = HeapStartCpu.ptr + (idx * HeapHandleIncrement);
+		out_gpu_desc_handle->ptr = HeapStartGpu.ptr + (idx * HeapHandleIncrement);
+	}
+	void Free(D3D12_CPU_DESCRIPTOR_HANDLE out_cpu_desc_handle, D3D12_GPU_DESCRIPTOR_HANDLE out_gpu_desc_handle)
+	{
+		int cpu_idx = (int)((out_cpu_desc_handle.ptr - HeapStartCpu.ptr) / HeapHandleIncrement);
+		int gpu_idx = (int)((out_gpu_desc_handle.ptr - HeapStartGpu.ptr) / HeapHandleIncrement);
+		IM_ASSERT(cpu_idx == gpu_idx);
+		FreeIndices.push_back(cpu_idx);
+	}
+};
+
+static ExampleDescriptorHeapAllocator g_pd3dSrvDescHeapAlloc;
 
 Renderer::Renderer(HWND& windowHandle, UINT width, UINT height, Camera& cam)
 	:m_Hwnd(windowHandle),
@@ -55,7 +105,7 @@ bool Renderer::InitializeD3D12(HWND& windowHandle)
 	m_CbvSrvDescriptorSize = m_Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	m_Waves = std::make_unique<Waves>(128, 128, 1.0f, 0.03f, 4.0f, 0.2f);
 
-	HeightMap hm = GeneratePerlinHeightmap_Simple(460.0f, 460.f, 50.0f, 42);
+	HeightMap hm = GeneratePerlinHeightmap_Simple(460.0f, 460.f, 10.0f, 42);
 	CreateHeightMapTexture(hm);
 
 	//	CreateCbvDescriptorHeaps();
@@ -75,6 +125,34 @@ bool Renderer::InitializeD3D12(HWND& windowHandle)
 	BuildFrameResources();
 
 	BuildPSOs();
+
+	CreateImGuiDescriptorHeap();
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO();
+	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+	io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+//	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;         // IF using Docking Branch
+
+	ImGui_ImplDX12_InitInfo init_info = {};
+	init_info.Device = m_Device.Get();
+	init_info.CommandQueue = m_CommandQueue.Get();
+	init_info.NumFramesInFlight = SwapChainBufferCount;
+	init_info.RTVFormat = m_BackBufferFormat; // Or your render target format.
+
+	//Allocating SRV descriptors (for textures) is up to the application, so we provide callbacks.
+	//The example_win32_directx12/main.cpp application include a simple free-list based allocator.
+	g_pd3dSrvDescHeapAlloc.Create(m_Device.Get(), m_ImGuiSrvHeap.Get());
+	init_info.SrvDescriptorHeap = m_ImGuiSrvHeap.Get();
+	init_info.SrvDescriptorAllocFn = [](ImGui_ImplDX12_InitInfo*, D3D12_CPU_DESCRIPTOR_HANDLE* out_cpu_handle, D3D12_GPU_DESCRIPTOR_HANDLE* out_gpu_handle) { return g_pd3dSrvDescHeapAlloc.Alloc(out_cpu_handle, out_gpu_handle); };
+	init_info.SrvDescriptorFreeFn = [](ImGui_ImplDX12_InitInfo*, D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle, D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle) { return g_pd3dSrvDescHeapAlloc.Free(cpu_handle, gpu_handle);  };
+
+	imguiCpuStart = m_ImGuiSrvHeap->GetCPUDescriptorHandleForHeapStart();
+	imguiGpuStart = m_ImGuiSrvHeap->GetGPUDescriptorHandleForHeapStart();
+
+	ImGui_ImplDX12_Init(&init_info);
+	ImGui_ImplWin32_Init(m_Hwnd);
+
 
 	ThrowIfFailed(m_CommandList->Close());
 	ID3D12CommandList* cmdLists[] = { m_CommandList.Get() };
@@ -110,6 +188,14 @@ void Renderer::Update(GameTimer& gt, Camera& cam)
 
 void Renderer::Draw()
 {
+	ImGui_ImplDX12_NewFrame();
+	ImGui_ImplWin32_NewFrame();
+	ImGui::NewFrame();
+
+	showImgui = true;
+	ImGui::ShowDemoWindow(&showImgui);
+	ImGui::Render();
+
 	auto cmdListAlloc = m_CurrentFrameResource->CmdListAlloc;
 
 	ThrowIfFailed(cmdListAlloc->Reset());
@@ -179,8 +265,10 @@ void Renderer::Draw()
 	DrawRenderItems(m_CommandList.Get(), m_TransparentRenderItems);
 	m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_DepthStencilBuffer.Get(), D3D12_RESOURCE_STATE_DEPTH_READ | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE));
 
-	m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
+	m_CommandList->SetDescriptorHeaps(1, m_ImGuiSrvHeap.GetAddressOf());
+	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), m_CommandList.Get());
 
+	m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
 	ThrowIfFailed(m_CommandList->Close());
 
 	ID3D12CommandList* cmdLists[] = { m_CommandList.Get() };
@@ -1173,7 +1261,7 @@ void Renderer::BuildRenderItems()
 	m_OpaqueRenderItems.push_back(std::move(skullRitem));
 
 	auto wavesRitem = new RenderItem();
-	XMStoreFloat4x4(&wavesRitem->World, XMMatrixScaling(10.0f, 1.0f, 10.0f) * XMMatrixTranslation(0.0f, 3.0f, 0.0f));
+	XMStoreFloat4x4(&wavesRitem->World, XMMatrixScaling(10.0f, 1.0f, 10.0f) * XMMatrixTranslation(0.0f, 24.0f, 0.0f));
 	XMStoreFloat4x4(&wavesRitem->TexTransform, XMMatrixScaling(5.0f, 5.0f, 1.0f));
 	wavesRitem->ObjCBIndex = 3;
 	wavesRitem->Mat = m_Materials["water"].get();
@@ -1483,55 +1571,55 @@ ID3D12Resource* Renderer::CurrentBackBuffer() const
 {
 	return m_SwapChainBuffer[m_CurrentBackBuffer].Get();
 }
-//
-//HeightMap Renderer::GeneratePerlinHeightmap(UINT width, UINT height, float scale, int octaves, float persistence, int seed)
-//{
-//	HeightMap hm;
-//	hm.width = width;
-//	hm.height = height;
-//	hm.data.resize(width * height);
-//
-//	for (UINT j = 0; j < height; ++j)
-//	{
-//		for (UINT i = 0; i < width; ++i)
-//		{
-//			float u = static_cast<float>(i) / static_cast<float>(width - 1);
-//			float v = static_cast<float>(j) / static_cast<float>(height - 1);
-//
-//			float x = u * scale;
-//			float z = v * scale;
-//
-//			float amplitude = 1.0f;
-//			float frequency = 1.0f;
-//			float noiseValue = 0.0f;
-//
-//			for (int o = 0; o < octaves; ++o)
-//			{
-//				noiseValue += amplitude * stb_perlin_noise3_seed(x, z, 0.0f, 0, 0, 0, float(o) * 10.0f);
-//				amplitude *= persistence;
-//				frequency *= 2.0f;
-//			}
-//
-//			hm.data[j * width + i] = 1.0f;
-//		}
-//	}
-//
-//	float minVal = hm.data[0];
-//	float maxVal = hm.data[0];
-//	for (float v : hm.data)
-//	{
-//		minVal = std::min(minVal, v);
-//		maxVal = std::max(maxVal, v);
-//	}
-//
-//	float invRange = (maxVal - minVal) > 0.0f ? 1.0f / (maxVal - minVal) : 1.0f;
-//	for (float& v : hm.data)
-//	{
-//		v = (v - minVal) * invRange;
-//	}
-//
-//	return hm;
-//}
+
+HeightMap Renderer::GeneratePerlinHeightmap(UINT width, UINT height, float scale, int octaves, float persistence, int seed)
+{
+	HeightMap hm;
+	hm.width = width;
+	hm.height = height;
+	hm.data.resize(width * height);
+
+	for (UINT j = 0; j < height; ++j)
+	{
+		for (UINT i = 0; i < width; ++i)
+		{
+			float u = static_cast<float>(i) / static_cast<float>(width - 1);
+			float v = static_cast<float>(j) / static_cast<float>(height - 1);
+
+			float x = u * scale;
+			float z = v * scale;
+
+			float amplitude = 1.0f;
+			float frequency = 1.0f;
+			float noiseValue = 0.0f;
+
+			for (int o = 0; o < octaves; ++o)
+			{
+				noiseValue += amplitude * stb_perlin_noise3_seed(x, z, 0.0f, 0, 0, 0, float(o) * 10.0f);
+				amplitude *= persistence;
+				frequency *= 2.0f;
+			}
+
+			hm.data[j * width + i] = 1.0f;
+		}
+	}
+
+	float minVal = hm.data[0];
+	float maxVal = hm.data[0];
+	for (float v : hm.data)
+	{
+		minVal = std::min(minVal, v);
+		maxVal = std::max(maxVal, v);
+	}
+
+	float invRange = (maxVal - minVal) > 0.0f ? 1.0f / (maxVal - minVal) : 1.0f;
+	for (float& v : hm.data)
+	{
+		v = (v - minVal) * invRange;
+	}
+
+	return hm;
+}
 
 HeightMap Renderer::GeneratePerlinHeightmap_Simple(UINT width, UINT height, float scale, int seed)
 {
