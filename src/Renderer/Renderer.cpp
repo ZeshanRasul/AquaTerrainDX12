@@ -55,8 +55,9 @@ bool Renderer::InitializeD3D12(HWND& windowHandle)
 
 	//	CreateCbvDescriptorHeaps();
 	LoadTextures();
-	CreateOpaqueRootSignature();
 	createSrvDescriptorHeaps();
+	CreateTextureSrvDescriptors();
+	CreateOpaqueRootSignature();
 	CreateTransparentRootSignature();
 	BuildShadersAndInputLayout();
 	BuildShapeGeometry();
@@ -136,18 +137,11 @@ void Renderer::Draw()
 	auto passCB = m_CurrentFrameResource->PassCB->Resource();
 	m_CommandList->SetGraphicsRootConstantBufferView(3, passCB->GetGPUVirtualAddress());
 
-	ID3D12DescriptorHeap* descriptorHeaps[] = { m_SrvHeap.Get() };
+	ID3D12DescriptorHeap* descriptorHeaps[] = { m_TexSrvHeap.Get() };
 	m_CommandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
-	D3D12_GPU_DESCRIPTOR_HANDLE tex = m_SrvHeap->GetGPUDescriptorHandleForHeapStart();
+	D3D12_GPU_DESCRIPTOR_HANDLE tex = m_TexSrvHeap->GetGPUDescriptorHandleForHeapStart();
 	m_CommandList->SetGraphicsRootDescriptorTable(0, tex);
-	//tex.ptr += 1 * m_CbvSrvUavDescriptorSize;
-	m_CommandList->SetGraphicsRootDescriptorTable(4, tex);
-	//tex.ptr += 2 * m_CbvSrvUavDescriptorSize;
-	m_CommandList->SetGraphicsRootDescriptorTable(5, tex);
-	//tex.ptr += 1 * m_CbvSrvUavDescriptorSize;
-	m_CommandList->SetGraphicsRootDescriptorTable(6, tex);
-	//tex.ptr += 1 * m_CbvSrvUavDescriptorSize;
-	m_CommandList->SetGraphicsRootDescriptorTable(7, tex);
+
 
 	DrawRenderItems(m_CommandList.Get(), m_OpaqueRenderItems);
 
@@ -156,9 +150,8 @@ void Renderer::Draw()
 	m_CommandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
 	passCB = m_CurrentFrameResource->PassCB->Resource();
 	m_CommandList->SetGraphicsRootConstantBufferView(3, passCB->GetGPUVirtualAddress());
-	tex = m_SrvHeap->GetGPUDescriptorHandleForHeapStart();
-	tex.ptr += 1 * m_CbvSrvUavDescriptorSize;
-	m_CommandList->SetGraphicsRootDescriptorTable(4, tex);
+	tex = m_TexSrvHeap->GetGPUDescriptorHandleForHeapStart();
+	m_CommandList->SetGraphicsRootDescriptorTable(0, tex);
 
 	DrawRenderItems(m_CommandList.Get(), m_SkyRenderItems);
 
@@ -167,14 +160,14 @@ void Renderer::Draw()
 
 	m_CommandList->SetPipelineState(m_PipelineStateObjects["water"].Get());
 	m_CommandList->SetGraphicsRootSignature(m_TransparentRootSignature.Get());
-	m_CommandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
+	ID3D12DescriptorHeap* descriptorHeaps2[] = { m_SrvHeap.Get() };
+	m_CommandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps2);
 
 	passCB = m_CurrentFrameResource->PassCB->Resource();
 	m_CommandList->SetGraphicsRootConstantBufferView(3, passCB->GetGPUVirtualAddress());
 	auto waterCB = m_CurrentFrameResource->WaterCB->Resource();
 	m_CommandList->SetGraphicsRootConstantBufferView(4, waterCB->GetGPUVirtualAddress());
 	tex = m_SrvHeap->GetGPUDescriptorHandleForHeapStart();
-	tex.ptr += 2 * m_CbvSrvUavDescriptorSize;
 	m_CommandList->SetGraphicsRootDescriptorTable(0, tex);
 
 	DrawRenderItems(m_CommandList.Get(), m_TransparentRenderItems);
@@ -506,18 +499,45 @@ void Renderer::LoadTextures()
 void Renderer::createSrvDescriptorHeaps()
 {
 	D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
-	srvHeapDesc.NumDescriptors = 6;
+	srvHeapDesc.NumDescriptors = 1;
 	srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 	ThrowIfFailed(m_Device->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_SrvHeap)));
 
 	CD3DX12_CPU_DESCRIPTOR_HANDLE hDescriptor(m_SrvHeap->GetCPUDescriptorHandleForHeapStart());
 
+	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+
+
+
+	srvDesc = {};
+	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	srvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.Texture2D.MostDetailedMip = 0;
+	srvDesc.Texture2D.MipLevels = 1;
+	srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
+	m_Device->CreateShaderResourceView(m_DepthStencilBuffer.Get(), &srvDesc, hDescriptor);
+
+
+
+}
+
+void Renderer::CreateTextureSrvDescriptors()
+{
+	D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
+	srvHeapDesc.NumDescriptors = 5;
+	srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+	ThrowIfFailed(m_Device->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_TexSrvHeap)));
+
+	CD3DX12_CPU_DESCRIPTOR_HANDLE hDescriptor(m_TexSrvHeap->GetCPUDescriptorHandleForHeapStart());
+
 	auto grassTex = m_Textures["grassTex"]->Resource;
-	auto skyCubeMap = m_Textures["skyCubeMap"]->Resource;
 	auto grassNorm = m_Textures["grassNorm"]->Resource;
 	auto wetmud = m_Textures["wetmud"]->Resource;
 	auto wetmud_norm = m_Textures["wetmud_norm"]->Resource;
+	auto skyCubeMap = m_Textures["skyCubeMap"]->Resource;
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
@@ -530,26 +550,6 @@ void Renderer::createSrvDescriptorHeaps()
 
 	hDescriptor.Offset(1, m_CbvSrvUavDescriptorSize);
 
-
-	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
-	srvDesc.TextureCube.MostDetailedMip = 0;
-	srvDesc.TextureCube.MipLevels = skyCubeMap->GetDesc().MipLevels;
-	srvDesc.TextureCube.ResourceMinLODClamp = 0.0f;
-	srvDesc.Format = skyCubeMap->GetDesc().Format;
-	m_Device->CreateShaderResourceView(skyCubeMap.Get(), &srvDesc, hDescriptor);
-
-	hDescriptor.Offset(1, m_CbvSrvUavDescriptorSize);
-
-	srvDesc = {};
-	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-	srvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
-	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-	srvDesc.Texture2D.MostDetailedMip = 0;
-	srvDesc.Texture2D.MipLevels = 1;
-	srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
-	m_Device->CreateShaderResourceView(m_DepthStencilBuffer.Get(), &srvDesc, hDescriptor);
-
-	hDescriptor.Offset(1, m_CbvSrvUavDescriptorSize);	
 	srvDesc = {};
 	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 	srvDesc.Format = grassNorm->GetDesc().Format;
@@ -559,8 +559,8 @@ void Renderer::createSrvDescriptorHeaps()
 	srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
 	m_Device->CreateShaderResourceView(grassNorm.Get(), &srvDesc, hDescriptor);
 
-	hDescriptor.Offset(1, m_CbvSrvUavDescriptorSize);	
-	
+	hDescriptor.Offset(1, m_CbvSrvUavDescriptorSize);
+
 	srvDesc = {};
 	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 	srvDesc.Format = wetmud->GetDesc().Format;
@@ -580,8 +580,15 @@ void Renderer::createSrvDescriptorHeaps()
 	srvDesc.Texture2D.MipLevels = wetmud_norm->GetDesc().MipLevels;
 	srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
 	m_Device->CreateShaderResourceView(wetmud_norm.Get(), &srvDesc, hDescriptor);
-	hDescriptor.Offset(1, m_CbvSrvUavDescriptorSize);
 
+	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
+	srvDesc.TextureCube.MostDetailedMip = 0;
+	srvDesc.TextureCube.MipLevels = skyCubeMap->GetDesc().MipLevels;
+	srvDesc.TextureCube.ResourceMinLODClamp = 0.0f;
+	srvDesc.Format = skyCubeMap->GetDesc().Format;
+	m_Device->CreateShaderResourceView(skyCubeMap.Get(), &srvDesc, hDescriptor);
+
+	hDescriptor.Offset(1, m_CbvSrvUavDescriptorSize);
 }
 
 std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> Renderer::GetStaticSamplers()
@@ -644,33 +651,19 @@ std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> Renderer::GetStaticSamplers()
 void Renderer::CreateOpaqueRootSignature()
 {
 	CD3DX12_DESCRIPTOR_RANGE texTable;
-	texTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0);
-	CD3DX12_DESCRIPTOR_RANGE texTable2;
-	texTable2.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1, 0, 0);
-	CD3DX12_DESCRIPTOR_RANGE texTable3;
-	texTable3.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 2, 0, 2);
-	CD3DX12_DESCRIPTOR_RANGE texTable4;
-	texTable4.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 3, 0, 3);
-	CD3DX12_DESCRIPTOR_RANGE texTable5;
-	texTable5.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 4, 0, 4);
+	texTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 5, 0, 0);
 
-
-
-	CD3DX12_ROOT_PARAMETER slotRootParameter[8];
+	CD3DX12_ROOT_PARAMETER slotRootParameter[4];
 
 	slotRootParameter[0].InitAsDescriptorTable(1, &texTable, D3D12_SHADER_VISIBILITY_PIXEL);
 	slotRootParameter[1].InitAsConstantBufferView(0);
 	slotRootParameter[2].InitAsConstantBufferView(1);
 	slotRootParameter[3].InitAsConstantBufferView(2);
-	slotRootParameter[4].InitAsDescriptorTable(1, &texTable2, D3D12_SHADER_VISIBILITY_PIXEL);
-	slotRootParameter[5].InitAsDescriptorTable(1, &texTable3, D3D12_SHADER_VISIBILITY_PIXEL);
-	slotRootParameter[6].InitAsDescriptorTable(1, &texTable4, D3D12_SHADER_VISIBILITY_PIXEL);
-	slotRootParameter[7].InitAsDescriptorTable(1, &texTable5, D3D12_SHADER_VISIBILITY_PIXEL);
 
 	auto staticSamplers = GetStaticSamplers();
 
 	// A root signature is an array of root parameters.
-	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(8, slotRootParameter,
+	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(4, slotRootParameter,
 		(UINT)staticSamplers.size(), staticSamplers.data(),
 		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
@@ -692,7 +685,7 @@ void Renderer::CreateOpaqueRootSignature()
 void Renderer::CreateTransparentRootSignature()
 {
 	CD3DX12_DESCRIPTOR_RANGE srvTable;
-	srvTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, 2);
+	srvTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, 0);
 
 
 	CD3DX12_ROOT_PARAMETER slotRootParameter[5];

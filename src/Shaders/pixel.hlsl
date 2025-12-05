@@ -4,11 +4,11 @@
 
 #include "LightingUtil.hlsl"
 Texture2D gGrassDiffuseMap : register(t0);
-TextureCube gCubeMap : register(t1);
     
-Texture2D gGrassNormalMap : register(t2);
-Texture2D gMudDiffuseMap : register(t3);
-Texture2D gMudNormalMap : register(t4);
+Texture2D gGrassNormalMap : register(t1);
+Texture2D gMudDiffuseMap : register(t2);
+Texture2D gMudNormalMap : register(t3);
+TextureCube gCubeMap : register(t4);
 
 SamplerState gsamPointWrap : register(s0);
 SamplerState gsamPointClamp : register(s1);
@@ -118,5 +118,5 @@ float4 PS(PixelIn pIn) : SV_Target
 
     float3 color = diffuse + ambient;
 
-    return float4(albedo, 1.0f);
+    return float4(color, 1.0f);
 }

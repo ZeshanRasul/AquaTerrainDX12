@@ -48,6 +48,7 @@ private:
 	void CreateCbvDescriptorHeaps();
 	void CreateConstantBufferViews();
 	void createSrvDescriptorHeaps();
+	void CreateTextureSrvDescriptors();
 	void CreateOpaqueRootSignature();
 	void CreateTransparentRootSignature();
 
@@ -180,6 +181,7 @@ private:
 	Camera& m_Camera;
 
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_SrvHeap;
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_TexSrvHeap;
 	UINT m_SkyTexHeapIndex = 1;
 
 	void LoadTextures();
