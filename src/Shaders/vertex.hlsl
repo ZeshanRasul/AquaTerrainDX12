@@ -1,5 +1,20 @@
 #include "LightingUtil.hlsl"
 
+Texture2D gGrassDiffuseMap : register(t0);
+    
+Texture2D gGrassNormalMap : register(t1);
+Texture2D gMudDiffuseMap : register(t2);
+Texture2D gMudNormalMap : register(t3);
+TextureCube gCubeMap : register(t4);
+    
+Texture2D<float> gHeightMap : register(t5);
+SamplerState gsamPointWrap : register(s0);
+SamplerState gsamPointClamp : register(s1);
+SamplerState gsamLinearWrap : register(s2);
+SamplerState gsamLinearClamp : register(s3);
+SamplerState gsamAnisotropicWrap : register(s4);
+SamplerState gsamAnisotropicClamp : register(s5);
+
 cbuffer cbPerObject : register(b0)
 {
     float4x4 gWorld;
@@ -46,7 +61,8 @@ struct VertexIn
     float2 TexC : TEXCOORD;
 };
 
-struct VertexOut
+struct VSOutput
+    
 {
     float4 PosH : SV_POSITION;
     float3 PosW : POSITION;
@@ -54,20 +70,28 @@ struct VertexOut
     float2 TexC : TEXCOORD;
 };
 
-VertexOut VS(VertexIn vIn)
+VSOutput VS(VertexIn vIn)
 {
-    VertexOut vOut;
+    VSOutput vout;
+    float2 gTerrainSize = float2(200.0f, 200.0f); 
+    float gHeightScale = 50.0f; 
     
-    float4 posW = mul(float4(vIn.PosL, 1.0f), gWorld);
-    vOut.PosW = posW.xyz;
-    
-    vOut.NormalW = mul(vIn.NormalL, (float3x3)gWorld);
-    
-    vOut.PosH = mul(posW, gViewProj);
-    float4 texC = mul(float4(vIn.TexC, 0.0f, 1.0f), gTexTransform);
-    texC = mul(texC, gMatTransform);
-    vOut.TexC = texC.xy;
-    
-    
-    return vOut;
+    float3 posW = mul(float4(vIn.PosL, 1.0f), gWorld).xyz;
+
+    float u = (posW.x / gTerrainSize.x) + 0.5f;
+    float v = (posW.z / gTerrainSize.y) + 0.5f;
+    float2 uv = float2(u, v);
+
+    float height = gHeightMap.SampleLevel(gsamPointClamp, uv, 0.0f);
+
+    posW.y = height * gHeightScale;
+    float4x4 gWorldViewProj = mul(gWorld, gViewProj);
+    float4 posH = mul(float4(posW, 1.0f), gWorldViewProj);
+
+    vout.PosH = posH;
+    vout.PosW = posW;
+    vout.NormalW = vIn.NormalL; 
+    vout.TexC = uv;
+
+    return vout;
 }

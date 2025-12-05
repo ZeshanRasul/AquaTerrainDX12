@@ -9,6 +9,7 @@ Texture2D gGrassNormalMap : register(t1);
 Texture2D gMudDiffuseMap : register(t2);
 Texture2D gMudNormalMap : register(t3);
 TextureCube gCubeMap : register(t4);
+Texture2D<float> gHeightMap : register(t5);
 
 SamplerState gsamPointWrap : register(s0);
 SamplerState gsamPointClamp : register(s1);
