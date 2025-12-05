@@ -108,6 +108,11 @@ float4 PS(PixelIn pIn) : SV_Target
     float3 ambient = albedo * 0.1f;
 
     float3 color = diffuse + ambient;
+    
+    float dist = length(gEyePosW - pIn.PosW);
+    float fogAmount = saturate((dist - gFogStart) / gFogRange);
+    color = lerp(color, gFogColor.xyz, fogAmount);
+    
 
     return float4(color, 1.0f);
 }
