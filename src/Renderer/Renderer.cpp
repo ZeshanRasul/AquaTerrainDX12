@@ -1143,7 +1143,7 @@ void Renderer::BuildRenderItems()
 	m_OpaqueRenderItems.push_back(std::move(skullRitem));
 
 	auto wavesRitem = new RenderItem();
-	XMStoreFloat4x4(&wavesRitem->World, XMMatrixTranslation(0.0f, 5.0f, 0.0f));
+	XMStoreFloat4x4(&wavesRitem->World, XMMatrixScaling(10.0f, 1.0f, 10.0f)*   XMMatrixTranslation(0.0f, 3.0f, 0.0f));
 	XMStoreFloat4x4(&wavesRitem->TexTransform, XMMatrixScaling(5.0f, 5.0f, 1.0f));
 	wavesRitem->ObjCBIndex = 3;
 	wavesRitem->Mat = m_Materials["water"].get();
