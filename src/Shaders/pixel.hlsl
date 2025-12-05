@@ -105,9 +105,12 @@ float4 PS(PixelIn pIn) : SV_Target
     float NdotL = saturate(dot(blendedNormal, L));
     float3 diffuse = albedo * NdotL;
 
-    float3 ambient = albedo * 0.1f;
-
-    float3 color = diffuse + ambient;
+    float t = 0.5f * (blendedNormal.y + 1.0f);
+    float3 skyCol = float3(0.3, 0.4, 0.6);
+    float3 groundCol = float3(0.1, 0.08, 0.06);
+    float3 hemiAmbient = lerp(groundCol, skyCol, t);
+    float4 ambient = float4(hemiAmbient * albedo, 1.0f);
+    float3 color = diffuse + ambient.xyz;
     
     float dist = length(gEyePosW - pIn.PosW);
     float fogAmount = saturate((dist - gFogStart) / gFogRange);

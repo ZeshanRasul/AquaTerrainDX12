@@ -39,8 +39,8 @@ struct PassConstants
 	float TotalTime = 0.0f;
 	float DeltaTime = 0.0f;
 	XMFLOAT4 AmbientLight = { 0.2f, 0.2f, 0.2f, 1.0f };
-	XMFLOAT4 FogColor = { 0.3f, 0.4f, 0.7f, 1.0f };
-	float FogStart = 55.0f;
+	XMFLOAT4 FogColor = { 0.1f, 0.25f, 0.5f, 0.4f };
+	float FogStart = 75.0f;
 	float FogRange = 2000.0f;
 
 	Light Lights[MaxLights];
