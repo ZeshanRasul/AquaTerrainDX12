@@ -73,7 +73,7 @@ struct VSOutput
 VSOutput VS(VertexIn vIn)
 {
     VSOutput vout;
-    float2 gTerrainSize = float2(200.0f, 200.0f); 
+    float2 gTerrainSize = float2(460.0f, 460.0f); 
     float gHeightScale = 50.0f; 
     
     float3 posW = mul(float4(vIn.PosL, 1.0f), gWorld).xyz;
@@ -82,14 +82,15 @@ VSOutput VS(VertexIn vIn)
     float v = (posW.z / gTerrainSize.y) + 0.5f;
     float2 uv = float2(u, v);
 
-    float height = gHeightMap.SampleLevel(gsamPointClamp, uv, 0.0f);
+    float height = gHeightMap.SampleLevel(gsamLinearClamp, uv, 0.0f);
 
     posW.y = height * gHeightScale;
     float4x4 gWorldViewProj = mul(gWorld, gViewProj);
     float4 posH = mul(float4(posW, 1.0f), gWorldViewProj);
-
+    
     vout.PosH = posH;
     vout.PosW = posW;
+    vout.PosW.y = posH.y;
     vout.NormalW = vIn.NormalL; 
     vout.TexC = uv;
 

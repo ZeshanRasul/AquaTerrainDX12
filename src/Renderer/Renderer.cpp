@@ -55,7 +55,7 @@ bool Renderer::InitializeD3D12(HWND& windowHandle)
 	m_CbvSrvDescriptorSize = m_Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	m_Waves = std::make_unique<Waves>(128, 128, 1.0f, 0.03f, 4.0f, 0.2f);
 
-	HeightMap hm = GeneratePerlinHeightmap(512, 512, 16.0f, 5, 0.5f, 42);
+	HeightMap hm = GeneratePerlinHeightmap_Simple(460.0f, 460.f, 50.0f, 42);
 	CreateHeightMapTexture(hm);
 
 	//	CreateCbvDescriptorHeaps();
@@ -175,10 +175,6 @@ void Renderer::Draw()
 	m_CommandList->SetGraphicsRootConstantBufferView(4, waterCB->GetGPUVirtualAddress());
 	tex = m_SrvHeap->GetGPUDescriptorHandleForHeapStart();
 	m_CommandList->SetGraphicsRootDescriptorTable(0, tex);
-	descriptorHeaps2[0] = { m_TexSrvHeap.Get() };
-	m_CommandList->SetDescriptorHeaps(_countof(descriptorHeaps2), descriptorHeaps2);
-	tex = m_TexSrvHeap->GetGPUDescriptorHandleForHeapStart();
-	m_CommandList->SetGraphicsRootDescriptorTable(5, tex);
 
 	DrawRenderItems(m_CommandList.Get(), m_TransparentRenderItems);
 	m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_DepthStencilBuffer.Get(), D3D12_RESOURCE_STATE_DEPTH_READ | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE));
@@ -711,23 +707,20 @@ void Renderer::CreateTransparentRootSignature()
 {
 	CD3DX12_DESCRIPTOR_RANGE srvTable;
 	srvTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, 0);
-	CD3DX12_DESCRIPTOR_RANGE srvTable2;
-	srvTable2.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1, 0, 4);
 
 
-	CD3DX12_ROOT_PARAMETER slotRootParameter[6];
+	CD3DX12_ROOT_PARAMETER slotRootParameter[5];
 
 	slotRootParameter[0].InitAsDescriptorTable(1, &srvTable, D3D12_SHADER_VISIBILITY_ALL);
 	slotRootParameter[1].InitAsConstantBufferView(0);
 	slotRootParameter[2].InitAsConstantBufferView(1);
 	slotRootParameter[3].InitAsConstantBufferView(2);
 	slotRootParameter[4].InitAsConstantBufferView(3);
-	slotRootParameter[5].InitAsDescriptorTable(1, &srvTable2, D3D12_SHADER_VISIBILITY_ALL);
 
 	auto staticSamplers = GetStaticSamplers();
 
 
-	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(6, slotRootParameter, (UINT)staticSamplers.size(), staticSamplers.data(), D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(5, slotRootParameter, (UINT)staticSamplers.size(), staticSamplers.data(), D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
 	Microsoft::WRL::ComPtr<ID3DBlob> serializedRootSig = nullptr;
 	Microsoft::WRL::ComPtr<ID3DBlob> errorBlob = nullptr;
@@ -1016,24 +1009,24 @@ void Renderer::BuildLandGeometry()
 	GeometryGenerator::MeshData grid = geoGen.CreateGrid(460.0f, 460.0f, 100, 100);
 
 	std::vector<Vertex> vertices(grid.Vertices.size());
-	//for (size_t i = 0; i < grid.Vertices.size(); ++i)
-	//{
-	//	auto& p = grid.Vertices[i].Position;
-	//	vertices[i].Pos = p;
-	//	vertices[i].Pos.y = GetHillsHeight(p.x, p.z);
-	//	XMFLOAT3 n = GetHillsNormal(p.x, p.z);
-	//	vertices[i].Normal = n;
-	//	vertices[i].TexCoord = grid.Vertices[i].TexC;
-	//}
 	for (size_t i = 0; i < grid.Vertices.size(); ++i)
 	{
 		auto& p = grid.Vertices[i].Position;
 		vertices[i].Pos = p;
-		vertices[i].Pos.y = 0.0f;
-		XMFLOAT3 n = { 0.0f, 1.0f, 0.0f };
+		vertices[i].Pos.y = GetHillsHeight(p.x, p.z);
+		XMFLOAT3 n = GetHillsNormal(p.x, p.z);
 		vertices[i].Normal = n;
 		vertices[i].TexCoord = grid.Vertices[i].TexC;
 	}
+	//for (size_t i = 0; i < grid.Vertices.size(); ++i)
+	//{
+	//	auto& p = grid.Vertices[i].Position;
+	//	vertices[i].Pos = p;
+	//	vertices[i].Pos.y = 1.0f;
+	//	XMFLOAT3 n = { 0.0f, 1.0f, 0.0f };
+	//	vertices[i].Normal = n;
+	//	vertices[i].TexCoord = grid.Vertices[i].TexC;
+	//}
 
 	const UINT vbByteSize = (UINT)vertices.size() * sizeof(Vertex);
 
@@ -1490,8 +1483,57 @@ ID3D12Resource* Renderer::CurrentBackBuffer() const
 {
 	return m_SwapChainBuffer[m_CurrentBackBuffer].Get();
 }
+//
+//HeightMap Renderer::GeneratePerlinHeightmap(UINT width, UINT height, float scale, int octaves, float persistence, int seed)
+//{
+//	HeightMap hm;
+//	hm.width = width;
+//	hm.height = height;
+//	hm.data.resize(width * height);
+//
+//	for (UINT j = 0; j < height; ++j)
+//	{
+//		for (UINT i = 0; i < width; ++i)
+//		{
+//			float u = static_cast<float>(i) / static_cast<float>(width - 1);
+//			float v = static_cast<float>(j) / static_cast<float>(height - 1);
+//
+//			float x = u * scale;
+//			float z = v * scale;
+//
+//			float amplitude = 1.0f;
+//			float frequency = 1.0f;
+//			float noiseValue = 0.0f;
+//
+//			for (int o = 0; o < octaves; ++o)
+//			{
+//				noiseValue += amplitude * stb_perlin_noise3_seed(x, z, 0.0f, 0, 0, 0, float(o) * 10.0f);
+//				amplitude *= persistence;
+//				frequency *= 2.0f;
+//			}
+//
+//			hm.data[j * width + i] = 1.0f;
+//		}
+//	}
+//
+//	float minVal = hm.data[0];
+//	float maxVal = hm.data[0];
+//	for (float v : hm.data)
+//	{
+//		minVal = std::min(minVal, v);
+//		maxVal = std::max(maxVal, v);
+//	}
+//
+//	float invRange = (maxVal - minVal) > 0.0f ? 1.0f / (maxVal - minVal) : 1.0f;
+//	for (float& v : hm.data)
+//	{
+//		v = (v - minVal) * invRange;
+//	}
+//
+//	return hm;
+//}
 
-HeightMap Renderer::GeneratePerlinHeightmap(UINT width, UINT height, float scale, int octaves, float persistence, int seed)
+HeightMap Renderer::GeneratePerlinHeightmap_Simple(UINT width, UINT height, float scale, int seed)
 {
 	HeightMap hm;
 	hm.width = width;
@@ -1502,39 +1544,20 @@ HeightMap Renderer::GeneratePerlinHeightmap(UINT width, UINT height, float scale
 	{
 		for (UINT i = 0; i < width; ++i)
 		{
-			float u = static_cast<float>(i) / static_cast<float>(width - 1);
-			float v = static_cast<float>(j) / static_cast<float>(height - 1);
+			float u = static_cast<float>(i) / (width - 1);  // [0,1]
+			float v = static_cast<float>(j) / (height - 1);  // [0,1]
 
-			float x = u * scale;
-			float y = v * scale;
+			float x = u * scale;  // use X
+			float z = v * scale;  // use Z
 
-			float amplitude = 1.0f;
-			float frequency = 1.0f;
-			float noiseValue = 0.0f;
+			// Single octave Perlin in [-1,1]
+			float n = stb_perlin_noise3_seed(x, z, 0.0f, 0, 0, 0, seed);
 
-			for (int o = 0; o < octaves; ++o)
-			{
-				noiseValue += amplitude * stb_perlin_fbm_noise3(x * frequency, y * frequency, 0.0f, 0, 0, 0);
-				amplitude *= persistence;
-				frequency *= 2.0f;
-			}
+			// Map [-1,1] -> [0,1]
+			float h = 0.5f * (n + 1.0f);
 
-			hm.data[j * width + i] = noiseValue;
+			hm.data[j * width + i] = h;
 		}
-	}
-
-	float minVal = hm.data[0];
-	float maxVal = hm.data[0];
-	for (float v : hm.data)
-	{
-		minVal = std::min(minVal, v);
-		maxVal = std::max(maxVal, v);
-	}
-
-	float invRange = (maxVal - minVal) > 0.0f ? 1.0f / (maxVal - minVal) : 1.0f;
-	for (float& v : hm.data)
-	{
-		v = (v - minVal) * invRange;
 	}
 
 	return hm;

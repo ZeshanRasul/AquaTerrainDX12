@@ -201,6 +201,9 @@ private:
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> mHeightMapTex = nullptr;
 	D3D12_GPU_DESCRIPTOR_HANDLE mHeightMapSrvGpuHandle = {};
+	Microsoft::WRL::ComPtr<ID3D12Resource> heightMapUpload;
+
+	HeightMap GeneratePerlinHeightmap_Simple(UINT width, UINT height, float scale, int seed);
 
 
 	HeightMap GeneratePerlinHeightmap(UINT width, UINT height, float scale, int octaves, float persistence, int seed);
@@ -232,7 +235,6 @@ private:
 
 		const UINT64 uploadBufferSize = GetRequiredIntermediateSize(mHeightMapTex.Get(), 0, 1);
 
-		Microsoft::WRL::ComPtr<ID3D12Resource> heightMapUpload;
 
 		ThrowIfFailed(device->CreateCommittedResource(
 			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),

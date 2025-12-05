@@ -1,7 +1,6 @@
 #include "LightingUtil.hlsl"
 
 Texture2D gDepth : register(t0);
-TextureCube gCubeMap : register(t1);
 
 SamplerState gsamPointWrap : register(s0);
 SamplerState gsamPointClamp : register(s1);
@@ -98,9 +97,7 @@ float4 PS(VSOutput pin) : SV_TARGET
     float NdotV = saturate(dot(N, V));
 
     float fresnel = pow(1.0f - NdotV, 5.0f);
-    float3 R = reflect(-V, N);
-    float3 skyRef = gCubeMap.Sample(gsamLinearWrap, R).rgb;
-    waterColor = lerp(waterColor, skyRef, fresnel * 0.5f);
+
     
     float alpha = saturate(lerp(gBaseAlpha, 1.0f, fresnel));
 
