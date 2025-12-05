@@ -83,6 +83,11 @@ private:
 	void UpdateWaterCB(GameTimer& dt);
 	void UpdateWaves(GameTimer& dt);
 
+	void LoadTextures();
+	void BuildDescriptorHeaps();
+	std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> GetStaticSamplers();
+
+
 	void FlushCommandQueue();
 
 	ID3D12Resource* CurrentBackBuffer() const;
@@ -106,6 +111,7 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_RtvHeap;;
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_DsvHeap;
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_CbvHeap;
+	UINT mCbvSrvDescriptorSize = 0;
 
 	Microsoft::WRL::ComPtr<IDXGISwapChain> m_SwapChain;
 	static const int SwapChainBufferCount = 2;
@@ -149,7 +155,7 @@ private:
 	HWND& m_Hwnd;
 	UINT m_ClientWidth;
 	UINT m_ClientHeight;
-
+	D3D12_VIEWPORT vp;
 
 	Microsoft::WRL::ComPtr<ID3DBlob> m_VsByteCode;
 	Microsoft::WRL::ComPtr<ID3DBlob> m_PsByteCode;
