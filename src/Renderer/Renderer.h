@@ -192,8 +192,8 @@ private:
 
 	PassConstants m_MainPassCB;
 	WaterConstants m_waterConstantsCB;
-	float m_WaterHeight[3] = {0.0f, 50.0f, 0.0f};
-	float m_WaterScale[3] = {10.0f, 0.0f, 10.0f};
+	float m_WaterHeight[3] = {0.0f, 90.0f, 0.0f};
+	float m_WaterScale[3] = {10.0f, 5.0f, 10.0f};
 
 	Camera& m_Camera;
 

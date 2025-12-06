@@ -74,7 +74,7 @@ VSOutput VS(VertexIn vIn)
 {
     VSOutput vout;
     float2 gTerrainSize = float2(460.0f, 460.0f); 
-    float gHeightScale = 120.0f; 
+    float gHeightScale = 200.0f; 
     
     float3 posW = mul(float4(vIn.PosL, 1.0f), gWorld).xyz;
 

@@ -72,7 +72,7 @@ bool Renderer::InitializeD3D12(HWND& windowHandle)
 
 	ThrowIfFailed(CreateDXGIFactory1(IID_PPV_ARGS(&m_DxgiFactory)));
 
-	m_Camera.SetPosition(0.0f, 20.0f, -50.0f);
+	m_Camera.SetPosition(0.0f, 120.0f, -50.0f);
 	m_Camera.UpdateViewMatrix();
 	m_View = m_Camera.GetView4x4f();
 	m_Proj = m_Camera.GetProj4x4f();
@@ -589,6 +589,24 @@ void Renderer::LoadTextures()
 		wetmudNorm->Resource, wetmudNorm->UploadHeap));
 
 	m_Textures[wetmudNorm->Name] = std::move(wetmudNorm);
+
+	auto rock = std::make_unique<Texture>();
+	rock->Name = "rock";
+	rock->Filename = L"../../Textures/Rock/rock4k.dds";
+	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(m_Device.Get(),
+		m_CommandList.Get(), rock->Filename.c_str(),
+		rock->Resource, rock->UploadHeap));
+
+	m_Textures[rock->Name] = std::move(rock);
+
+	auto rockNorm = std::make_unique<Texture>();
+	rockNorm->Name = "rockNorm";
+	rockNorm->Filename = L"../../Textures/Rock/rocknorm4k.dds";
+	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(m_Device.Get(),
+		m_CommandList.Get(), rockNorm->Filename.c_str(),
+		rockNorm->Resource, rockNorm->UploadHeap));
+
+	m_Textures[rockNorm->Name] = std::move(rockNorm);
 }
 
 void Renderer::createSrvDescriptorHeaps()
@@ -619,7 +637,7 @@ void Renderer::createSrvDescriptorHeaps()
 void Renderer::CreateTextureSrvDescriptors()
 {
 	D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
-	srvHeapDesc.NumDescriptors = 6;
+	srvHeapDesc.NumDescriptors = 8;
 	srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 	ThrowIfFailed(m_Device->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_TexSrvHeap)));
@@ -631,6 +649,8 @@ void Renderer::CreateTextureSrvDescriptors()
 	auto wetmud = m_Textures["wetmud"]->Resource;
 	auto wetmud_norm = m_Textures["wetmud_norm"]->Resource;
 	auto skyCubeMap = m_Textures["skyCubeMap"]->Resource;
+	auto rock = m_Textures["rock"]->Resource;
+	auto rockNorm = m_Textures["rockNorm"]->Resource;
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
@@ -684,7 +704,6 @@ void Renderer::CreateTextureSrvDescriptors()
 
 	hDescriptor.Offset(1, m_CbvSrvUavDescriptorSize);
 
-	// Create SRV in your main SRV descriptor heap
 	srvDesc = {};
 	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 	srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
@@ -695,7 +714,29 @@ void Renderer::CreateTextureSrvDescriptors()
 
 	m_Device->CreateShaderResourceView(mHeightMapTex.Get(), &srvDesc, hDescriptor);
 
-	CD3DX12_GPU_DESCRIPTOR_HANDLE hGpu(m_TexSrvHeap->GetGPUDescriptorHandleForHeapStart());
+	hDescriptor.Offset(1, m_CbvSrvUavDescriptorSize);
+
+	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.TextureCube.MostDetailedMip = 0;
+	srvDesc.TextureCube.MipLevels = rock->GetDesc().MipLevels;
+	srvDesc.TextureCube.ResourceMinLODClamp = 0.0f;
+	srvDesc.Format = rock->GetDesc().Format;
+
+
+	m_Device->CreateShaderResourceView(rock.Get(), &srvDesc, hDescriptor);
+
+	hDescriptor.Offset(1, m_CbvSrvUavDescriptorSize);
+
+	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.TextureCube.MostDetailedMip = 0;
+	srvDesc.TextureCube.MipLevels = rockNorm->GetDesc().MipLevels;
+	srvDesc.TextureCube.ResourceMinLODClamp = 0.0f;
+	srvDesc.Format = rockNorm->GetDesc().Format;
+
+
+
+	m_Device->CreateShaderResourceView(rockNorm.Get(), &srvDesc, hDescriptor);
+
 	hDescriptor.Offset(1, m_CbvSrvUavDescriptorSize);
 
 
@@ -761,7 +802,7 @@ std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> Renderer::GetStaticSamplers()
 void Renderer::CreateOpaqueRootSignature()
 {
 	CD3DX12_DESCRIPTOR_RANGE texTable;
-	texTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 6, 0, 0, 0);
+	texTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 8, 0, 0, 0);
 
 	CD3DX12_ROOT_PARAMETER slotRootParameter[4];
 
