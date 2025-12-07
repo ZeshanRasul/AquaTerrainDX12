@@ -53,12 +53,36 @@ cbuffer cbPass : register(b2)
     Light gLights[MaxLights];
 };
 
+cbuffer cbTerrain : register(b3)
+{
+    float2 gTerrainSize;
+    float gHeightScale;
+    float gHeightOffset;
+	
+    float gMudStartHeight;
+    float gGrassStartHeight;
+	
+    float gRockStartHeight;
+    float gHeightBlendRange;
+
+    float gMudSlopeBias;
+    float gMudSlopePower;
+
+    float gRockSlopeBias;
+    float gRockSlopePower;
+
+    float gMudTiling;
+    float gGrassTiling;
+	
+    float gRockTiling;
+    float gPad;
+};
+
 float4 PS(PixelIn pIn) : SV_Target
 {
     float3 N = normalize(pIn.NormalW);
     float Ny = saturate(N.y); // 1 = flat up, 0 = vertical
     float slopeFactor = 1.0f - Ny; // 0 flat, 1 vertical
-    float gHeightScale = 200.0f;
     float gHeightOffset = 0.0f;
     float height = pIn.PosW.y;
 

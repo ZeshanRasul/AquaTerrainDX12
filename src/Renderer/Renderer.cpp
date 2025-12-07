@@ -117,7 +117,7 @@ bool Renderer::InitializeD3D12(HWND& windowHandle)
 
 	BuildShadersAndInputLayout();
 	BuildShapeGeometry();
-	BuildLandGeometry();
+	BuildLandGeometry(hm.width, hm.height);
 	BuildSkullGeometry();
 	BuildMaterials();
 	BuildWavesGeometry();
@@ -179,6 +179,7 @@ void Renderer::Update(GameTimer& gt, Camera& cam)
 	XMStoreFloat4x4(&m_Proj, cam.GetProj());
 	m_EyePos = cam.GetPosition3f();
 
+
 	UpdateObjectCBs();
 	UpdateMainPassCB();
 	UpdateMaterialCBs();
@@ -205,11 +206,14 @@ void Renderer::Draw()
 	UpdateTerrainCB();
 	if (m_NeedRegen)
 	{
-		m_NeedRegen = false;
 		RegenerateHeightMap();
 		UpdateHeightMapTexture();
+		RebuildLandGeometry(m_TerrainWidth, m_TerrainHeight);
+		RebuildLandRenderItem();
+		m_NeedRegen = false;
+		m_TerrainConstantsCB.gTerrainSize = XMFLOAT2(m_TerrainWidth, m_TerrainHeight);
+		m_TerrainConstantsCPU.gHeightScale = m_TerrainHeightScale;
 	}
-
 
 	D3D12_VIEWPORT vp;
 	vp.TopLeftX = 0.0f;
@@ -279,6 +283,7 @@ void Renderer::Draw()
 	m_CommandList->SetDescriptorHeaps(1, m_ImGuiSrvHeap.GetAddressOf());
 	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), m_CommandList.Get());
 
+
 	m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
 	ThrowIfFailed(m_CommandList->Close());
 
@@ -293,6 +298,7 @@ void Renderer::Draw()
 	m_CommandQueue->Signal(m_Fence.Get(), m_CurrentFence);
 
 	//	ThrowIfFailed(cmdListAlloc->Reset());
+
 
 }
 void Renderer::CreateDebugController()
@@ -1144,7 +1150,7 @@ void Renderer::BuildSkullGeometry()
 	m_Geometries[geo->Name] = std::move(geo);
 }
 
-void Renderer::BuildLandGeometry()
+void Renderer::BuildLandGeometry(float width, float height)
 {
 	GeometryGenerator geoGen;
 	GeometryGenerator::MeshData grid = geoGen.CreateGrid(460.0f, 460.0f, 50, 50);
@@ -1203,6 +1209,67 @@ void Renderer::BuildLandGeometry()
 
 	m_Geometries["landGeo"] = std::move(geo);
 }
+
+void Renderer::RebuildLandGeometry(float width, float height)
+{
+	GeometryGenerator geoGen;
+	GeometryGenerator::MeshData grid = geoGen.CreateGrid(m_TerrainConstantsCPU.gTerrainSize.x, m_TerrainConstantsCPU.gTerrainSize.y, 50, 50);
+
+	std::vector<Vertex> vertices(grid.Vertices.size());
+	for (size_t i = 0; i < grid.Vertices.size(); ++i)
+	{
+		auto& p = grid.Vertices[i].Position;
+		vertices[i].Pos = p;
+		vertices[i].Pos.y = GetHillsHeight(p.x, p.z);
+		XMFLOAT3 n = GetHillsNormal(p.x, p.z);
+		vertices[i].Normal = n;
+		vertices[i].TexCoord = grid.Vertices[i].TexC;
+	}
+	//for (size_t i = 0; i < grid.Vertices.size(); ++i)
+	//{
+	//	auto& p = grid.Vertices[i].Position;
+	//	vertices[i].Pos = p;
+	//	vertices[i].Pos.y = 1.0f;
+	//	XMFLOAT3 n = { 0.0f, 1.0f, 0.0f };
+	//	vertices[i].Normal = n;
+	//	vertices[i].TexCoord = grid.Vertices[i].TexC;
+	//}
+
+	const UINT vbByteSize = (UINT)vertices.size() * sizeof(Vertex);
+
+	std::vector<std::uint16_t> indices = grid.GetIndices16();
+	const UINT ibByteSize = (UINT)indices.size() * sizeof(std::uint16_t);
+
+	auto geo = std::make_unique<MeshGeometry>();
+	geo->Name = "landGeo";
+
+	ThrowIfFailed(D3DCreateBlob(vbByteSize, &geo->VertexBufferCPU));
+	CopyMemory(geo->VertexBufferCPU->GetBufferPointer(), vertices.data(), vbByteSize);
+
+	ThrowIfFailed(D3DCreateBlob(ibByteSize, &geo->IndexBufferCPU));
+	CopyMemory(geo->IndexBufferCPU->GetBufferPointer(), indices.data(), ibByteSize);
+
+	geo->VertexBufferGPU = d3dUtil::CreateDefaultBuffer(m_Device.Get(),
+		m_CommandList.Get(), vertices.data(), vbByteSize, geo->VertexBufferUploader);
+
+	geo->IndexBufferGPU = d3dUtil::CreateDefaultBuffer(m_Device.Get(),
+		m_CommandList.Get(), indices.data(), ibByteSize, geo->IndexBufferUploader);
+
+	geo->VertexByteStride = sizeof(Vertex);
+	geo->VertexBufferByteSize = vbByteSize;
+	geo->IndexFormat = DXGI_FORMAT_R16_UINT;
+	geo->IndexBufferByteSize = ibByteSize;
+
+	SubmeshGeometry submesh;
+	submesh.IndexCount = (UINT)indices.size();
+	submesh.StartIndexLocation = 0;
+	submesh.BaseVertexLocation = 0;
+
+	geo->DrawArgs["grid"] = submesh;
+
+	m_Geometries["landGeo"] = std::move(geo);
+}
+
 
 void Renderer::BuildWavesGeometry()
 {
@@ -1274,6 +1341,58 @@ XMFLOAT3 Renderer::GetHillsNormal(float x, float z)
 	XMStoreFloat3(&n, unitNormal);
 
 	return n;
+}
+
+void Renderer::RebuildLandRenderItem()
+{
+	auto isLand = [](RenderItem* ri) { return ri->ObjCBIndex == 1; };
+
+	auto itOpaque = std::remove_if(m_OpaqueRenderItems.begin(), m_OpaqueRenderItems.end(), isLand);
+	m_OpaqueRenderItems.erase(itOpaque, m_OpaqueRenderItems.end());
+
+	auto itAll = std::remove_if(m_AllRenderItems.begin(), m_AllRenderItems.end(), isLand);
+	m_AllRenderItems.erase(itAll, m_AllRenderItems.end());
+
+	auto landRitem = new RenderItem();
+	landRitem->World = MathHelper::Identity4x4();
+	XMStoreFloat4x4(&landRitem->TexTransform, XMMatrixScaling(8.0f, 8.0f, 10.0f));
+
+	landRitem->ObjCBIndex = 1;
+	landRitem->NumFramesDirty = NumFrameResources;
+	landRitem->Mat = m_Materials["grass"].get();
+	landRitem->Geo = m_Geometries["landGeo"].get();
+	landRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+
+	const auto& gridSubmesh = landRitem->Geo->DrawArgs["grid"];
+	landRitem->IndexCount = gridSubmesh.IndexCount;
+	landRitem->StartIndexLocation = gridSubmesh.StartIndexLocation;
+	landRitem->BaseVertexLocation = gridSubmesh.BaseVertexLocation;
+
+	m_OpaqueRenderItems.push_back(landRitem);
+	m_AllRenderItems.push_back(landRitem);
+
+}
+
+void Renderer::RebuildFrameResources()
+{
+	m_FrameResources.clear();
+
+	UINT passCount = gNumFrameResources;
+	UINT objectCount = (UINT)m_AllRenderItems.size();
+	UINT materialCount = (UINT)m_Materials.size();
+	UINT opaqueObjectCount = (UINT)m_OpaqueRenderItems.size();
+	UINT transparentObjectCount = (UINT)m_TransparentRenderItems.size();
+	UINT skyObjectCount = (UINT)m_SkyRenderItems.size();
+
+	for (int i = 0; i < gNumFrameResources; ++i)
+	{
+		m_FrameResources.push_back(
+			std::make_unique<FrameResource>(
+				m_Device.Get(), passCount, opaqueObjectCount, transparentObjectCount, skyObjectCount, materialCount, m_Waves->VertexCount()));
+	}
+
+	m_CurrentFrameResourceIndex = 0;
+	m_CurrentFrameResource = m_FrameResources[0].get();
 }
 
 void Renderer::BuildRenderItems()
@@ -1660,9 +1779,9 @@ void Renderer::ShowImGUIWaterControl()
 	ImGui::SliderFloat3("Water Position", m_WaterHeight, -300.0f, 300.0f);
 	ImGui::SliderFloat3("Water Scale", m_WaterScale, -100.0f, 100.0f);
 
-	ImGui::SliderFloat("Height", &m_TerrainConstantsCPU.gTerrainSize.y, 0.0f, 500.0f);
-	ImGui::SliderFloat("Width", &m_TerrainConstantsCPU.gTerrainSize.x, 0.01f, 500.0f);
-	ImGui::SliderFloat("Scale", &m_TerrainConstantsCPU.gHeightScale, 0.01f, 300.0f);
+	ImGui::SliderFloat("Height", &m_TerrainHeight, 0.0f, 500.0f);
+	ImGui::SliderFloat("Width", &m_TerrainWidth, 0.01f, 500.0f);
+	ImGui::SliderFloat("Scale", &m_TerrainHeightScale, 0.01f, 300.0f);
 	if (ImGui::Button("Regenerate"))
 		m_NeedRegen = true;
 	XMStoreFloat4x4(&m_TransparentRenderItems[0]->World, XMMatrixScaling(m_WaterScale[0], m_WaterScale[1], m_WaterScale[2]) * XMMatrixTranslation(m_WaterHeight[0], m_WaterHeight[1], m_WaterHeight[2]));
@@ -1777,26 +1896,11 @@ void Renderer::RegenerateHeightMap()
 
 void Renderer::UpdateHeightMapTexture()
 {
-	auto firstBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
-		m_HeightMapTex.Get(),
-		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
-		D3D12_RESOURCE_STATE_COPY_DEST);
-	m_CommandList->ResourceBarrier(1, &firstBarrier);
-	D3D12_SUBRESOURCE_DATA subresource = {};
-	subresource.pData = m_CpuHeightMap.data.data();
-	subresource.RowPitch = m_HeightMapWidth * sizeof(uint16_t);
-	subresource.SlicePitch = subresource.RowPitch * m_HeightMapHeight;
+	m_HeightMapTex.Reset();
+	m_HeightMapUpload.Reset();
 
-	UpdateSubresources(m_CommandList.Get(),
-		m_HeightMapTex.Get(),
-		m_HeightMapUpload.Get(),
-		0, 0, 1, &subresource);
+	CreateHeightMapTexture(m_CpuHeightMap);
 
-	auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-		m_HeightMapTex.Get(),
-		D3D12_RESOURCE_STATE_COPY_DEST,
-		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-	m_CommandList->ResourceBarrier(1, &barrier);
 }
 
 HeightMap Renderer::GeneratePerlinHeightmap_Simple(UINT width, UINT height, float scale, int seed)

@@ -68,15 +68,18 @@ private:
 	void BuildMaterials();
 	void BuildShapeGeometry();
 	void BuildSkullGeometry();
-	void BuildLandGeometry();
+	void BuildLandGeometry(float width, float height);
+	void RebuildLandGeometry(float width, float height);
 	void BuildWavesGeometry();
 	float GetHillsHeight(float x, float z);
 	XMFLOAT3 GetHillsNormal(float x, float z);
 	void BuildRenderItems();
+	void RebuildLandRenderItem();
 	void DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::vector<RenderItem*>& riItems);
 	void DrawRenderItemsWater(ID3D12GraphicsCommandList* cmdList, const std::vector<RenderItem*>& riItems);
 
 	void BuildFrameResources();
+	void RebuildFrameResources();
 	void UpdateObjectCBs();
 	void UpdateMaterialCBs();
 	void UpdateMainPassCB();
@@ -194,6 +197,9 @@ private:
 	PassConstants m_MainPassCB;
 	WaterConstants m_WaterConstantsCB;
 	TerrainConstants m_TerrainConstantsCB;
+	float m_TerrainWidth = 460.0f;
+	float m_TerrainHeight = 460.0f;
+	float m_TerrainHeightScale = 100.0f;
 	float m_WaterHeight[3] = {0.0f, 90.0f, 0.0f};
 	float m_WaterScale[3] = {10.0f, 5.0f, 10.0f};
 
