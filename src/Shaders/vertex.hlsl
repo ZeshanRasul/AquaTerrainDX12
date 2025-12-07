@@ -54,6 +54,31 @@ cbuffer cbPass : register(b2)
     Light gLights[MaxLights];
 };
 
+cbuffer cbTerrain : register(b3)
+{
+    float2 gTerrainSize;
+    float gHeightScale;
+    float gHeightOffset;
+	
+    float gMudStartHeight;
+    float gGrassStartHeight;
+	
+    float gRockStartHeight;
+    float gHeightBlendRange;
+
+    float gMudSlopeBias;
+    float gMudSlopePower;
+
+    float gRockSlopeBias;
+    float gRockSlopePower;
+
+    float gMudTiling;
+    float gGrassTiling;
+	
+    float gRockTiling;
+    float gPad;
+};
+
 struct VertexIn
 {
     float3 PosL : POSITION;
@@ -73,8 +98,6 @@ struct VSOutput
 VSOutput VS(VertexIn vIn)
 {
     VSOutput vout;
-    float2 gTerrainSize = float2(460.0f, 460.0f); 
-    float gHeightScale = 200.0f; 
     
     float3 posW = mul(float4(vIn.PosL, 1.0f), gWorld).xyz;
 

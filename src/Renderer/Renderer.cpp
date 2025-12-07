@@ -132,7 +132,7 @@ bool Renderer::InitializeD3D12(HWND& windowHandle)
 	ImGuiIO& io = ImGui::GetIO();
 	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
 	io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
-//	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;         // IF using Docking Branch
+	//	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;         // IF using Docking Branch
 
 	ImGui_ImplDX12_InitInfo init_info = {};
 	init_info.Device = m_Device.Get();
@@ -202,12 +202,15 @@ void Renderer::Draw()
 
 	ThrowIfFailed(m_CommandList->Reset(cmdListAlloc.Get(), m_PipelineStateObjects["opaque"].Get()));
 
+	UpdateTerrainCB();
 	if (m_NeedRegen)
 	{
 		m_NeedRegen = false;
 		RegenerateHeightMap();
 		UpdateHeightMapTexture();
 	}
+
+
 	D3D12_VIEWPORT vp;
 	vp.TopLeftX = 0.0f;
 	vp.TopLeftY = 0.0f;
@@ -234,6 +237,8 @@ void Renderer::Draw()
 
 	auto passCB = m_CurrentFrameResource->PassCB->Resource();
 	m_CommandList->SetGraphicsRootConstantBufferView(3, passCB->GetGPUVirtualAddress());
+	auto terrainCB = m_CurrentFrameResource->TerrainCB->Resource();
+	m_CommandList->SetGraphicsRootConstantBufferView(4, terrainCB->GetGPUVirtualAddress());
 
 	ID3D12DescriptorHeap* descriptorHeaps[] = { m_TexSrvHeap.Get() };
 	m_CommandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
@@ -809,17 +814,18 @@ void Renderer::CreateOpaqueRootSignature()
 	CD3DX12_DESCRIPTOR_RANGE texTable;
 	texTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 8, 0, 0, 0);
 
-	CD3DX12_ROOT_PARAMETER slotRootParameter[4];
+	CD3DX12_ROOT_PARAMETER slotRootParameter[5];
 
 	slotRootParameter[0].InitAsDescriptorTable(1, &texTable, D3D12_SHADER_VISIBILITY_ALL);
 	slotRootParameter[1].InitAsConstantBufferView(0);
 	slotRootParameter[2].InitAsConstantBufferView(1);
 	slotRootParameter[3].InitAsConstantBufferView(2);
+	slotRootParameter[4].InitAsConstantBufferView(3);
 
 	auto staticSamplers = GetStaticSamplers();
 
 	// A root signature is an array of root parameters.
-	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(4, slotRootParameter,
+	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(5, slotRootParameter,
 		(UINT)staticSamplers.size(), staticSamplers.data(),
 		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
@@ -1530,20 +1536,48 @@ void Renderer::UpdateMainPassCB()
 	currPassCB->CopyData(0, m_MainPassCB);
 }
 
+void Renderer::UpdateTerrainCB()
+{
+	m_TerrainConstantsCB.gTerrainSize = m_TerrainConstantsCPU.gTerrainSize;
+	m_TerrainConstantsCB.gHeightScale = m_TerrainConstantsCPU.gHeightScale;
+	m_TerrainConstantsCB.gHeightOffset = m_TerrainConstantsCPU.gHeightOffset;
+
+	m_TerrainConstantsCB.gMudStartHeight = m_TerrainConstantsCPU.gMudStartHeight;
+	m_TerrainConstantsCB.gGrassStartHeight = m_TerrainConstantsCPU.gGrassStartHeight;
+
+	m_TerrainConstantsCB.gRockStartHeight = m_TerrainConstantsCPU.gRockStartHeight;
+	m_TerrainConstantsCB.gHeightBlendRange = m_TerrainConstantsCPU.gHeightBlendRange;
+
+	m_TerrainConstantsCB.gMudSlopeBias = m_TerrainConstantsCPU.gMudSlopeBias;
+	m_TerrainConstantsCB.gMudSlopePower = m_TerrainConstantsCPU.gMudSlopePower;
+
+	m_TerrainConstantsCB.gRockSlopeBias = m_TerrainConstantsCPU.gRockSlopeBias;
+	m_TerrainConstantsCB.gRockSlopePower = m_TerrainConstantsCPU.gRockSlopePower;
+
+	m_TerrainConstantsCB.gMudTiling = m_TerrainConstantsCPU.gMudTiling;
+	m_TerrainConstantsCB.gGrassTiling = m_TerrainConstantsCPU.gGrassTiling;
+
+	m_TerrainConstantsCB.gRockTiling = m_TerrainConstantsCPU.gRockTiling;
+	m_TerrainConstantsCB.gPad = m_TerrainConstantsCPU.gPad;
+
+	auto currTerrainCB = m_CurrentFrameResource->TerrainCB.get();
+	currTerrainCB->CopyData(0, m_TerrainConstantsCB);
+}
+
 void Renderer::UpdateWaterCB(GameTimer& dt)
 {
 	for (int i = 0; i < m_TransparentRenderItems.size(); ++i)
 	{
 		XMMATRIX world = XMMatrixIdentity() * XMMatrixTranslation(m_WaterHeight[0], m_WaterHeight[1], m_WaterHeight[2]);
-		XMStoreFloat4x4(&m_waterConstantsCB.gWorld, world);
-		XMStoreFloat4x4(&m_waterConstantsCB.gViewProj, XMMatrixMultiply(XMMatrixTranspose(XMLoadFloat4x4(&m_View)), XMMatrixTranspose(XMLoadFloat4x4(&m_Proj))));
+		XMStoreFloat4x4(&m_WaterConstantsCB.gWorld, world);
+		XMStoreFloat4x4(&m_WaterConstantsCB.gViewProj, XMMatrixMultiply(XMMatrixTranspose(XMLoadFloat4x4(&m_View)), XMMatrixTranspose(XMLoadFloat4x4(&m_Proj))));
 
-		m_waterConstantsCB.gCameraPos = m_EyePos;
-		m_waterConstantsCB.gTime = dt.TotalTime();
-		m_waterConstantsCB.gWaterColor = XMFLOAT3(0.65f, 0.75f, 0.90f);
-		m_waterConstantsCB.gPad0 = 0.0f;
+		m_WaterConstantsCB.gCameraPos = m_EyePos;
+		m_WaterConstantsCB.gTime = dt.TotalTime();
+		m_WaterConstantsCB.gWaterColor = XMFLOAT3(0.65f, 0.75f, 0.90f);
+		m_WaterConstantsCB.gPad0 = 0.0f;
 		auto currWaterCB = m_CurrentFrameResource->WaterCB.get();
-		currWaterCB->CopyData(i, m_waterConstantsCB);
+		currWaterCB->CopyData(i, m_WaterConstantsCB);
 	}
 }
 
@@ -1624,12 +1658,12 @@ void Renderer::ShowImGUIWaterControl()
 	ImGui::Begin("Landscape Control");
 	//ImGui::SliderFloat("Wave Speed", &m_WaveSpeed, 0.1f, 5.0f);
 	ImGui::SliderFloat3("Water Position", m_WaterHeight, -300.0f, 300.0f);
-	ImGui::SliderFloat3("Water Scale", m_WaterScale , -100.0f, 100.0f);
+	ImGui::SliderFloat3("Water Scale", m_WaterScale, -100.0f, 100.0f);
 
-	ImGui::SliderFloat("Height", &m_HeightMapHeight, 0.0f, 100.0f);
-	ImGui::SliderFloat("Width", &m_HeightMapWidth, 0.01f, 100.0f);
-	ImGui::SliderFloat("Scale", &m_HeightMapScale, 0.01f, 150.0f);
-	if (ImGui::Button("Regenerate")) 
+	ImGui::SliderFloat("Height", &m_TerrainConstantsCPU.gTerrainSize.y, 0.0f, 500.0f);
+	ImGui::SliderFloat("Width", &m_TerrainConstantsCPU.gTerrainSize.x, 0.01f, 500.0f);
+	ImGui::SliderFloat("Scale", &m_TerrainConstantsCPU.gHeightScale, 0.01f, 300.0f);
+	if (ImGui::Button("Regenerate"))
 		m_NeedRegen = true;
 	XMStoreFloat4x4(&m_TransparentRenderItems[0]->World, XMMatrixScaling(m_WaterScale[0], m_WaterScale[1], m_WaterScale[2]) * XMMatrixTranslation(m_WaterHeight[0], m_WaterHeight[1], m_WaterHeight[2]));
 	m_TransparentRenderItems[0]->NumFramesDirty = NumFrameResources;
@@ -1736,7 +1770,7 @@ void Renderer::CreateHeightMapTexture(const HeightMap& hm)
 
 void Renderer::RegenerateHeightMap()
 {
-	m_CpuHeightMap = GeneratePerlinHeightmap_Simple(m_HeightMapWidth, m_HeightMapHeight, m_HeightMapScale, m_HeightMapSeed);
+	m_CpuHeightMap = GeneratePerlinHeightmap_Simple(m_TerrainConstantsCPU.gTerrainSize.x, m_TerrainConstantsCPU.gTerrainSize.y, m_TerrainConstantsCPU.gHeightScale, 1442);
 
 	m_HeightMapData = m_CpuHeightMap.data;
 }
@@ -1754,8 +1788,8 @@ void Renderer::UpdateHeightMapTexture()
 	subresource.SlicePitch = subresource.RowPitch * m_HeightMapHeight;
 
 	UpdateSubresources(m_CommandList.Get(),
-		m_HeightMapTex.Get(),     
-		m_HeightMapUpload.Get(),      
+		m_HeightMapTex.Get(),
+		m_HeightMapUpload.Get(),
 		0, 0, 1, &subresource);
 
 	auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(

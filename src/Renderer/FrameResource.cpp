@@ -7,6 +7,7 @@ FrameResource::FrameResource(ID3D12Device* device, UINT passCount, UINT opaqueOb
 	UINT totalObjectCount = opaqueObjectCount + transparentObjectCount + skyObjectCount;
 
 	PassCB = std::make_unique<UploadBuffer<PassConstants>>(device, passCount, true);
+	TerrainCB = std::make_unique<UploadBuffer<TerrainConstants>>(device, passCount, true);
 	ObjectCB = std::make_unique<UploadBuffer<ObjectConstants>>(device, totalObjectCount, true);
 	MaterialCB = std::make_unique<UploadBuffer<MaterialConstants>>(device, totalObjectCount, true);
 

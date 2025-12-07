@@ -81,6 +81,7 @@ private:
 	void UpdateMaterialCBs();
 	void UpdateMainPassCB();
 	void UpdateWaterCB(GameTimer& dt);
+	void UpdateTerrainCB();
 	void UpdateWaves(GameTimer& dt);
 
 	void FlushCommandQueue();
@@ -191,9 +192,23 @@ private:
 	RenderItem* m_WavesRitem = nullptr;
 
 	PassConstants m_MainPassCB;
-	WaterConstants m_waterConstantsCB;
+	WaterConstants m_WaterConstantsCB;
+	TerrainConstants m_TerrainConstantsCB;
 	float m_WaterHeight[3] = {0.0f, 90.0f, 0.0f};
 	float m_WaterScale[3] = {10.0f, 5.0f, 10.0f};
+
+	/*XMFLOAT2 m_TerrainSize;
+	float m_HeightScale;
+	float m_HeightOffset;
+	float m_MudStartHeight;
+	float m_GrassStartHeight;
+	float m_RockStartHeight;
+	float m_HeightBlendRange;*/
+
+	TerrainConstants m_TerrainConstantsCPU;
+
+
+
 
 	Camera& m_Camera;
 

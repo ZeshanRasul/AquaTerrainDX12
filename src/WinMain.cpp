@@ -8,6 +8,7 @@ int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 		Application* app = new Application();
 		app->Run();
 		delete app;
+		return 0;
 	}
 	catch (DxException& e)
 	{
