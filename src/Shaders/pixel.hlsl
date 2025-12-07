@@ -90,21 +90,6 @@ float4 PS(PixelIn pIn) : SV_Target
     float hSample = gHeightMap.SampleLevel(gsamLinearClamp, pIn.TexC, 0).r;
     height = hSample * gHeightScale + gHeightOffset;
 
-    float gMudStartHeight = 80.0f;
-    float gGrassStartHeight = 113.0f;
-    float gRockStartHeight = 155.0f;
-    float gHeightBlendRange = 3.0f; // shared blend range
-
-    float gMudSlopeBias = 0.20f;
-    float gMudSlopePower = 2.0f;
-
-    float gRockSlopeBias = 0.35f;
-    float gRockSlopePower = 3.0f;
-    
-    float gMudTiling = 2.0f;
-    float gGrassTiling = 6.0f;
-    float gRockTiling = 4.0f;
-
     float wMudHeight = 1.0f - smoothstep(gMudStartHeight,
                                          gMudStartHeight + gHeightBlendRange,
                                          height);
@@ -173,7 +158,7 @@ float4 PS(PixelIn pIn) : SV_Target
     float3 color = diffuse + hemiAmbient * albedo;
 
     float dist = length(gEyePosW - pIn.PosW);
-    float fogAmount = saturate((dist - gFogStart) / gFogRange);
+    float fogAmount = saturate((dist - gFogStart) / gFogRange) * 0.1f;
     color = lerp(color, gFogColor.xyz, fogAmount);
 
     return float4(color, 1.0f);

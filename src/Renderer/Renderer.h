@@ -199,7 +199,7 @@ private:
 	TerrainConstants m_TerrainConstantsCB;
 	float m_TerrainWidth = 460.0f;
 	float m_TerrainHeight = 460.0f;
-	float m_TerrainHeightScale = 100.0f;
+	float m_TerrainHeightScale = 160.0f;
 	float m_WaterHeight[3] = {0.0f, 90.0f, 0.0f};
 	float m_WaterScale[3] = {10.0f, 5.0f, 10.0f};
 

@@ -72,7 +72,7 @@ bool Renderer::InitializeD3D12(HWND& windowHandle)
 
 	ThrowIfFailed(CreateDXGIFactory1(IID_PPV_ARGS(&m_DxgiFactory)));
 
-	m_Camera.SetPosition(0.0f, 120.0f, -50.0f);
+	m_Camera.SetPosition(0.0f, 180.0f, -250.0f);
 	m_Camera.UpdateViewMatrix();
 	m_View = m_Camera.GetView4x4f();
 	m_Proj = m_Camera.GetProj4x4f();
@@ -203,7 +203,6 @@ void Renderer::Draw()
 
 	ThrowIfFailed(m_CommandList->Reset(cmdListAlloc.Get(), m_PipelineStateObjects["opaque"].Get()));
 
-	UpdateTerrainCB();
 	if (m_NeedRegen)
 	{
 		RegenerateHeightMap();
@@ -214,6 +213,7 @@ void Renderer::Draw()
 		m_TerrainConstantsCB.gTerrainSize = XMFLOAT2(m_TerrainWidth, m_TerrainHeight);
 		m_TerrainConstantsCPU.gHeightScale = m_TerrainHeightScale;
 	}
+	UpdateTerrainCB();
 
 	D3D12_VIEWPORT vp;
 	vp.TopLeftX = 0.0f;
@@ -1657,6 +1657,38 @@ void Renderer::UpdateMainPassCB()
 
 void Renderer::UpdateTerrainCB()
 {
+	// Height bands as fractions of [minH, maxH]
+	const float mudStartFrac = 0.15f;
+	const float grassStartFrac = 0.45f;
+	const float rockStartFrac = 0.70f;
+	const float mudRepeatSize = 16.0f;
+	const float grassRepeatSize = 8.0f;
+	const float rockRepeatSize = 12.0f;
+
+	const float blendFrac = 0.06f;
+	m_TerrainConstantsCPU.gHeightOffset = 0.0f;
+	m_TerrainConstantsCPU.gHeightScale = m_TerrainHeightScale;
+
+	float minH = m_TerrainConstantsCPU.gHeightOffset;
+	;
+	float maxH = m_TerrainConstantsCPU.gHeightOffset+ m_TerrainConstantsCPU.gHeightScale;
+	float rangeH = maxH - minH;
+
+	m_TerrainConstantsCPU.gMudStartHeight = minH + mudStartFrac * rangeH;
+	m_TerrainConstantsCPU.gGrassStartHeight = minH + grassStartFrac * rangeH;
+	m_TerrainConstantsCPU.gRockStartHeight = minH + rockStartFrac * rangeH;
+	m_TerrainConstantsCPU.gHeightBlendRange = blendFrac * rangeH;
+	m_TerrainConstantsCPU.gMudSlopeBias = 0.15f;
+	m_TerrainConstantsCPU.gMudSlopePower = 1.8f;
+	m_TerrainConstantsCPU.gRockSlopeBias = 0.3f;
+	m_TerrainConstantsCPU.gRockSlopePower = 3.0f;
+
+	m_TerrainConstantsCPU.gMudTiling = std::max(1.0f, m_TerrainConstantsCPU.gTerrainSize.x / mudRepeatSize);
+	m_TerrainConstantsCPU.gGrassTiling = std::max(1.0f, m_TerrainConstantsCPU.gTerrainSize.x / grassRepeatSize);
+	m_TerrainConstantsCPU.gRockTiling = std::max(1.0f, m_TerrainConstantsCPU.gTerrainSize.x / rockRepeatSize);
+
+
+
 	m_TerrainConstantsCB.gTerrainSize = m_TerrainConstantsCPU.gTerrainSize;
 	m_TerrainConstantsCB.gHeightScale = m_TerrainConstantsCPU.gHeightScale;
 	m_TerrainConstantsCB.gHeightOffset = m_TerrainConstantsCPU.gHeightOffset;
@@ -1776,7 +1808,7 @@ void Renderer::ShowImGUIWaterControl()
 {
 	ImGui::Begin("Landscape Control");
 	//ImGui::SliderFloat("Wave Speed", &m_WaveSpeed, 0.1f, 5.0f);
-	ImGui::SliderFloat3("Water Position", m_WaterHeight, -300.0f, 300.0f);
+	ImGui::SliderFloat3("Water Position", m_WaterHeight, -40.0f, 150.0f);
 	ImGui::SliderFloat3("Water Scale", m_WaterScale, -100.0f, 100.0f);
 
 	ImGui::SliderFloat("Height", &m_TerrainHeight, 0.0f, 500.0f);
