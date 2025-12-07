@@ -174,7 +174,6 @@ void Renderer::Update(GameTimer& gt, Camera& cam)
 		CloseHandle(eventHandle);
 	}
 
-
 	cam.UpdateViewMatrix();
 	XMStoreFloat4x4(&m_View, cam.GetView());
 	XMStoreFloat4x4(&m_Proj, cam.GetProj());
@@ -203,6 +202,12 @@ void Renderer::Draw()
 
 	ThrowIfFailed(m_CommandList->Reset(cmdListAlloc.Get(), m_PipelineStateObjects["opaque"].Get()));
 
+	if (m_NeedRegen)
+	{
+		m_NeedRegen = false;
+		RegenerateHeightMap();
+		UpdateHeightMapTexture();
+	}
 	D3D12_VIEWPORT vp;
 	vp.TopLeftX = 0.0f;
 	vp.TopLeftY = 0.0f;
@@ -712,7 +717,7 @@ void Renderer::CreateTextureSrvDescriptors()
 	srvDesc.Texture2D.MipLevels = 1;
 
 
-	m_Device->CreateShaderResourceView(mHeightMapTex.Get(), &srvDesc, hDescriptor);
+	m_Device->CreateShaderResourceView(m_HeightMapTex.Get(), &srvDesc, hDescriptor);
 
 	hDescriptor.Offset(1, m_CbvSrvUavDescriptorSize);
 
@@ -1616,11 +1621,16 @@ ID3D12Resource* Renderer::CurrentBackBuffer() const
 
 void Renderer::ShowImGUIWaterControl()
 {
-	ImGui::Begin("Water Control");
+	ImGui::Begin("Landscape Control");
 	//ImGui::SliderFloat("Wave Speed", &m_WaveSpeed, 0.1f, 5.0f);
 	ImGui::SliderFloat3("Water Position", m_WaterHeight, -300.0f, 300.0f);
 	ImGui::SliderFloat3("Water Scale", m_WaterScale , -100.0f, 100.0f);
 
+	ImGui::SliderFloat("Height", &m_HeightMapHeight, 0.0f, 100.0f);
+	ImGui::SliderFloat("Width", &m_HeightMapWidth, 0.01f, 100.0f);
+	ImGui::SliderFloat("Scale", &m_HeightMapScale, 0.01f, 150.0f);
+	if (ImGui::Button("Regenerate")) 
+		m_NeedRegen = true;
 	XMStoreFloat4x4(&m_TransparentRenderItems[0]->World, XMMatrixScaling(m_WaterScale[0], m_WaterScale[1], m_WaterScale[2]) * XMMatrixTranslation(m_WaterHeight[0], m_WaterHeight[1], m_WaterHeight[2]));
 	m_TransparentRenderItems[0]->NumFramesDirty = NumFrameResources;
 	ImGui::End();
@@ -1673,6 +1683,86 @@ HeightMap Renderer::GeneratePerlinHeightmap(UINT width, UINT height, float scale
 	}
 
 	return hm;
+}
+
+void Renderer::CreateHeightMapTexture(const HeightMap& hm)
+{
+	auto device = m_Device.Get();
+
+	D3D12_RESOURCE_DESC texDesc = {};
+	texDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+	texDesc.Alignment = 0;
+	texDesc.Width = hm.width;
+	texDesc.Height = hm.height;
+	texDesc.DepthOrArraySize = 1;
+	texDesc.MipLevels = 1;
+	texDesc.Format = DXGI_FORMAT_R32_FLOAT;
+	texDesc.SampleDesc.Count = 1;
+	texDesc.SampleDesc.Quality = 0;
+	texDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+	texDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+
+	ThrowIfFailed(device->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		D3D12_HEAP_FLAG_NONE,
+		&texDesc,
+		D3D12_RESOURCE_STATE_COPY_DEST,
+		nullptr,
+		IID_PPV_ARGS(&m_HeightMapTex)));
+
+	const UINT64 uploadBufferSize = GetRequiredIntermediateSize(m_HeightMapTex.Get(), 0, 1);
+
+
+	ThrowIfFailed(device->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+		D3D12_HEAP_FLAG_NONE,
+		&CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize),
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(&m_HeightMapUpload)));
+
+	D3D12_SUBRESOURCE_DATA subresourceData = {};
+	subresourceData.pData = hm.data.data();
+	subresourceData.RowPitch = hm.width * sizeof(float);
+	subresourceData.SlicePitch = subresourceData.RowPitch * hm.height;
+
+	auto cmdList = m_CommandList.Get();
+
+	UpdateSubresources(cmdList, m_HeightMapTex.Get(), m_HeightMapUpload.Get(), 0, 0, 1, &subresourceData);
+	cmdList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_HeightMapTex.Get(),
+		D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
+
+}
+
+void Renderer::RegenerateHeightMap()
+{
+	m_CpuHeightMap = GeneratePerlinHeightmap_Simple(m_HeightMapWidth, m_HeightMapHeight, m_HeightMapScale, m_HeightMapSeed);
+
+	m_HeightMapData = m_CpuHeightMap.data;
+}
+
+void Renderer::UpdateHeightMapTexture()
+{
+	auto firstBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
+		m_HeightMapTex.Get(),
+		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+		D3D12_RESOURCE_STATE_COPY_DEST);
+	m_CommandList->ResourceBarrier(1, &firstBarrier);
+	D3D12_SUBRESOURCE_DATA subresource = {};
+	subresource.pData = m_CpuHeightMap.data.data();
+	subresource.RowPitch = m_HeightMapWidth * sizeof(uint16_t);
+	subresource.SlicePitch = subresource.RowPitch * m_HeightMapHeight;
+
+	UpdateSubresources(m_CommandList.Get(),
+		m_HeightMapTex.Get(),     
+		m_HeightMapUpload.Get(),      
+		0, 0, 1, &subresource);
+
+	auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+		m_HeightMapTex.Get(),
+		D3D12_RESOURCE_STATE_COPY_DEST,
+		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	m_CommandList->ResourceBarrier(1, &barrier);
 }
 
 HeightMap Renderer::GeneratePerlinHeightmap_Simple(UINT width, UINT height, float scale, int seed)

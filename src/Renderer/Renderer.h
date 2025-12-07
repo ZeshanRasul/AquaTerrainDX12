@@ -207,64 +207,26 @@ private:
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_DepthSRV;
 
-	Microsoft::WRL::ComPtr<ID3D12Resource> mHeightMapTex = nullptr;
-	D3D12_GPU_DESCRIPTOR_HANDLE mHeightMapSrvGpuHandle = {};
-	Microsoft::WRL::ComPtr<ID3D12Resource> heightMapUpload;
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_HeightMapTex = nullptr;
+	D3D12_GPU_DESCRIPTOR_HANDLE m_HeightMapSrvGpuHandle = {};
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_HeightMapUpload;
+	std::vector<float> m_HeightMapData;
+	float m_HeightMapWidth = 0;
+	float m_HeightMapHeight = 0;
+	float m_HeightMapScale = 0;
+	int m_HeightMapSeed = 0;
+	int m_HeightMapOctaves = 0;
+	float m_HeightMapPersistance = 0.0f;
+	bool m_NeedRegen = false;
+	HeightMap m_CpuHeightMap;
+	void RegenerateHeightMap();
+	void UpdateHeightMapTexture();
 
 	HeightMap GeneratePerlinHeightmap_Simple(UINT width, UINT height, float scale, int seed);
 
-
 	HeightMap GeneratePerlinHeightmap(UINT width, UINT height, float scale, int octaves, float persistence, int seed);
 
-	void CreateHeightMapTexture(const HeightMap& hm)
-	{
-		auto device = m_Device.Get();
-
-		D3D12_RESOURCE_DESC texDesc = {};
-		texDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-		texDesc.Alignment = 0;
-		texDesc.Width = hm.width;
-		texDesc.Height = hm.height;
-		texDesc.DepthOrArraySize = 1;
-		texDesc.MipLevels = 1;
-		texDesc.Format = DXGI_FORMAT_R32_FLOAT;
-		texDesc.SampleDesc.Count = 1;
-		texDesc.SampleDesc.Quality = 0;
-		texDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-		texDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-
-		ThrowIfFailed(device->CreateCommittedResource(
-			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-			D3D12_HEAP_FLAG_NONE,
-			&texDesc,
-			D3D12_RESOURCE_STATE_COPY_DEST,
-			nullptr,
-			IID_PPV_ARGS(&mHeightMapTex)));
-
-		const UINT64 uploadBufferSize = GetRequiredIntermediateSize(mHeightMapTex.Get(), 0, 1);
-
-
-		ThrowIfFailed(device->CreateCommittedResource(
-			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
-			D3D12_HEAP_FLAG_NONE,
-			&CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize),
-			D3D12_RESOURCE_STATE_GENERIC_READ,
-			nullptr,
-			IID_PPV_ARGS(&heightMapUpload)));
-
-		D3D12_SUBRESOURCE_DATA subresourceData = {};
-		subresourceData.pData = hm.data.data();
-		subresourceData.RowPitch = hm.width * sizeof(float);
-		subresourceData.SlicePitch = subresourceData.RowPitch * hm.height;
-
-		auto cmdList = m_CommandList.Get();
-
-		UpdateSubresources(cmdList, mHeightMapTex.Get(), heightMapUpload.Get(), 0, 0, 1, &subresourceData);
-		cmdList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mHeightMapTex.Get(),
-			D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
-
-
-	}
+	void CreateHeightMapTexture(const HeightMap& hm);
 
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_ImGuiSrvHeap;
 	D3D12_GPU_DESCRIPTOR_HANDLE imguiGpuStart;
