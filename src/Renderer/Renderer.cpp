@@ -235,7 +235,14 @@ void Renderer::Draw()
 
 	m_CommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
 
-	m_CommandList->SetPipelineState(m_PipelineStateObjects["opaque"].Get());
+	if (m_WireframeMode)
+	{
+		m_CommandList->SetPipelineState(m_PipelineStateObjects["wireframe"].Get());
+	}
+	else
+	{
+		m_CommandList->SetPipelineState(m_PipelineStateObjects["opaque"].Get());
+	}
 	m_CommandList->SetGraphicsRootSignature(m_OpaqueRootSignature.Get());
 
 
@@ -1522,6 +1529,10 @@ void Renderer::BuildPSOs()
 
 	ThrowIfFailed(m_Device->CreateGraphicsPipelineState(&opaquePsoDesc, IID_PPV_ARGS(&m_PipelineStateObjects["opaque"])));
 
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC wireframePsoDesc = opaquePsoDesc;
+	wireframePsoDesc.RasterizerState.FillMode = D3D12_FILL_MODE_WIREFRAME;
+	ThrowIfFailed(m_Device->CreateGraphicsPipelineState(&wireframePsoDesc, IID_PPV_ARGS(&m_PipelineStateObjects["wireframe"])));
+
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC skyPsoDesc = opaquePsoDesc;
 	skyPsoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
 	skyPsoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
@@ -1671,7 +1682,7 @@ void Renderer::UpdateTerrainCB()
 
 	float minH = m_TerrainConstantsCPU.gHeightOffset;
 	;
-	float maxH = m_TerrainConstantsCPU.gHeightOffset+ m_TerrainConstantsCPU.gHeightScale;
+	float maxH = m_TerrainConstantsCPU.gHeightOffset + m_TerrainConstantsCPU.gHeightScale;
 	float rangeH = maxH - minH;
 
 	m_TerrainConstantsCPU.gMudStartHeight = minH + mudStartFrac * rangeH;
@@ -1816,6 +1827,8 @@ void Renderer::ShowImGUIWaterControl()
 	ImGui::SliderFloat("Scale", &m_TerrainHeightScale, 0.01f, 300.0f);
 	if (ImGui::Button("Regenerate"))
 		m_NeedRegen = true;
+
+	ImGui::Checkbox("Wireframe", &m_WireframeMode);
 	XMStoreFloat4x4(&m_TransparentRenderItems[0]->World, XMMatrixScaling(m_WaterScale[0], m_WaterScale[1], m_WaterScale[2]) * XMMatrixTranslation(m_WaterHeight[0], m_WaterHeight[1], m_WaterHeight[2]));
 	m_TransparentRenderItems[0]->NumFramesDirty = NumFrameResources;
 	ImGui::End();

@@ -193,6 +193,7 @@ private:
 	
 	std::unique_ptr<Waves> m_Waves;
 	RenderItem* m_WavesRitem = nullptr;
+	bool m_WireframeMode = false;
 
 	PassConstants m_MainPassCB;
 	WaterConstants m_WaterConstantsCB;
