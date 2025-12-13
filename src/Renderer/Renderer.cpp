@@ -205,13 +205,13 @@ void Renderer::Draw()
 
 	if (m_NeedRegen)
 	{
-		RegenerateHeightMap();
-		UpdateHeightMapTexture();
-		RebuildLandGeometry(m_TerrainWidth, m_TerrainHeight);
-		RebuildLandRenderItem();
-		m_NeedRegen = false;
 		m_TerrainConstantsCB.gTerrainSize = XMFLOAT2(m_TerrainWidth, m_TerrainHeight);
 		m_TerrainConstantsCPU.gHeightScale = m_TerrainHeightScale;
+		RegenerateHeightMap();
+		UpdateHeightMapTexture();
+		RebuildLandGeometry(m_TerrainConstantsCB.gTerrainSize.x, m_TerrainConstantsCB.gTerrainSize.y);
+		RebuildLandRenderItem();
+		m_NeedRegen = false;
 	}
 	UpdateTerrainCB();
 
@@ -1822,11 +1822,14 @@ void Renderer::ShowImGUIWaterControl()
 	ImGui::SliderFloat3("Water Position", m_WaterHeight, -40.0f, 150.0f);
 	ImGui::SliderFloat3("Water Scale", m_WaterScale, -100.0f, 100.0f);
 
-	ImGui::SliderFloat("Height", &m_TerrainHeight, 0.0f, 500.0f);
-	ImGui::SliderFloat("Width", &m_TerrainWidth, 0.01f, 500.0f);
-	ImGui::SliderFloat("Scale", &m_TerrainHeightScale, 0.01f, 300.0f);
+	ImGui::SliderFloat("Height", &m_TerrainHeight, 0.0f, 1500.0f);
+	ImGui::SliderFloat("Width", &m_TerrainWidth, 0.01f, 1500.0f);
+	ImGui::SliderFloat("Scale", &m_TerrainHeightScale, 0.01f, 800.0f);
+	
 	if (ImGui::Button("Regenerate"))
+	{
 		m_NeedRegen = true;
+	}
 
 	ImGui::Checkbox("Wireframe", &m_WireframeMode);
 	XMStoreFloat4x4(&m_TransparentRenderItems[0]->World, XMMatrixScaling(m_WaterScale[0], m_WaterScale[1], m_WaterScale[2]) * XMMatrixTranslation(m_WaterHeight[0], m_WaterHeight[1], m_WaterHeight[2]));
@@ -1934,7 +1937,7 @@ void Renderer::CreateHeightMapTexture(const HeightMap& hm)
 
 void Renderer::RegenerateHeightMap()
 {
-	m_CpuHeightMap = GeneratePerlinHeightmap_Simple(m_TerrainConstantsCPU.gTerrainSize.x, m_TerrainConstantsCPU.gTerrainSize.y, m_TerrainConstantsCPU.gHeightScale, 1442);
+	m_CpuHeightMap = GeneratePerlinHeightmap_Simple(m_TerrainConstantsCPU.gTerrainSize.x, m_TerrainConstantsCPU.gTerrainSize.y, m_TerrainConstantsCPU.gHeightScale, 102);
 
 	m_HeightMapData = m_CpuHeightMap.data;
 }

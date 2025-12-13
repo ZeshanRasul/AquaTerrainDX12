@@ -106,10 +106,6 @@ float4 PS(VSOutput pin) : SV_TARGET
         alpha *= 0.3f;
     }
 
-    float dist = length(gEyePosW - pin.PosW);
-    float fogAmount = saturate((dist - gFogStart) / gFogRange);
-    waterColor = lerp(waterColor, gFogColor.xyz, fogAmount);
-    
     return float4(waterColor, alpha);
 }
 
