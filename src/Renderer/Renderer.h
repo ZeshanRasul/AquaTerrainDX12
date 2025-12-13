@@ -91,10 +91,11 @@ private:
 
 	ID3D12Resource* CurrentBackBuffer() const;
 
-	void ShowImGUIWaterControl();
+	void ShowImGUIEnvironmentControl();
 	void ShowImGUICameraControl();
 	void ShowImGUILightControl();
 	void ShowImGUITerrainControl();
+	void UpdateHeightMapSrv();
 
 	Microsoft::WRL::ComPtr<ID3D12Device> m_Device;
 	Microsoft::WRL::ComPtr<IDXGIAdapter> m_WarpAdapter;
@@ -198,11 +199,20 @@ private:
 	PassConstants m_MainPassCB;
 	WaterConstants m_WaterConstantsCB;
 	TerrainConstants m_TerrainConstantsCB;
-	float m_TerrainWidth = 460.0f;
-	float m_TerrainHeight = 460.0f;
-	float m_TerrainHeightScale = 160.0f;
+	INT m_TerrainWidth = 360;
+	INT m_TerrainHeight = 360;
+	float m_TerrainHeightScale = 120.0f;
+	float m_TerrainNoiseFrequency = 1.0f;
+	float m_TerrainNoiseOctaves = 1.0f;
+	float m_TerrainNoisePersistance = 1.0f;
+	float m_TerrainNoiseAmplitude = 1.0f;
+	float m_TerrainNoiseValue = 0.2f;
+	int m_TerrainNoiseSeed = 1442;
 	float m_WaterHeight[3] = {0.0f, 90.0f, 0.0f};
 	float m_WaterScale[3] = {10.0f, 5.0f, 10.0f};
+	float m_WaterWaveSpeed = 0.1f;
+	float m_WaterWaveAmplitude = 0.1f;
+	float m_WaterWaveFrequency = 0.2f;
 
 	/*XMFLOAT2 m_TerrainSize;
 	float m_HeightScale;
@@ -213,9 +223,6 @@ private:
 	float m_HeightBlendRange;*/
 
 	TerrainConstants m_TerrainConstantsCPU;
-
-
-
 
 	Camera& m_Camera;
 

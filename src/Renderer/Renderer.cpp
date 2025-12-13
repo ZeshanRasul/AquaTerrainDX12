@@ -105,7 +105,7 @@ bool Renderer::InitializeD3D12(HWND& windowHandle)
 	m_CbvSrvDescriptorSize = m_Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	m_Waves = std::make_unique<Waves>(128, 128, 1.0f, 0.03f, 4.0f, 0.2f);
 
-	HeightMap hm = GeneratePerlinHeightmap_Simple(460.0f, 460.f, 10.0f, 42);
+	HeightMap hm = GeneratePerlinHeightmap(m_TerrainWidth, m_TerrainHeight, m_TerrainHeightScale, m_TerrainNoiseOctaves, m_TerrainNoisePersistance, m_TerrainNoiseSeed);
 	CreateHeightMapTexture(hm);
 
 	//	CreateCbvDescriptorHeaps();
@@ -192,7 +192,7 @@ void Renderer::Draw()
 	ImGui_ImplDX12_NewFrame();
 	ImGui_ImplWin32_NewFrame();
 	ImGui::NewFrame();
-	ShowImGUIWaterControl();
+	ShowImGUIEnvironmentControl();
 
 	showImgui = true;
 	ImGui::Render();
@@ -205,10 +205,12 @@ void Renderer::Draw()
 
 	if (m_NeedRegen)
 	{
+		FlushCommandQueue();
 		m_TerrainConstantsCB.gTerrainSize = XMFLOAT2(m_TerrainWidth, m_TerrainHeight);
 		m_TerrainConstantsCPU.gHeightScale = m_TerrainHeightScale;
 		RegenerateHeightMap();
 		UpdateHeightMapTexture();
+		UpdateHeightMapSrv();
 		RebuildLandGeometry(m_TerrainConstantsCB.gTerrainSize.x, m_TerrainConstantsCB.gTerrainSize.y);
 		RebuildLandRenderItem();
 		m_NeedRegen = false;
@@ -1698,8 +1700,6 @@ void Renderer::UpdateTerrainCB()
 	m_TerrainConstantsCPU.gGrassTiling = std::max(1.0f, m_TerrainConstantsCPU.gTerrainSize.x / grassRepeatSize);
 	m_TerrainConstantsCPU.gRockTiling = std::max(1.0f, m_TerrainConstantsCPU.gTerrainSize.x / rockRepeatSize);
 
-
-
 	m_TerrainConstantsCB.gTerrainSize = m_TerrainConstantsCPU.gTerrainSize;
 	m_TerrainConstantsCB.gHeightScale = m_TerrainConstantsCPU.gHeightScale;
 	m_TerrainConstantsCB.gHeightOffset = m_TerrainConstantsCPU.gHeightOffset;
@@ -1815,21 +1815,35 @@ ID3D12Resource* Renderer::CurrentBackBuffer() const
 	return m_SwapChainBuffer[m_CurrentBackBuffer].Get();
 }
 
-void Renderer::ShowImGUIWaterControl()
+void Renderer::ShowImGUIEnvironmentControl()
 {
 	ImGui::Begin("Landscape Control");
-	//ImGui::SliderFloat("Wave Speed", &m_WaveSpeed, 0.1f, 5.0f);
-	ImGui::SliderFloat3("Water Position", m_WaterHeight, -40.0f, 150.0f);
-	ImGui::SliderFloat3("Water Scale", m_WaterScale, -100.0f, 100.0f);
 
-	ImGui::SliderFloat("Height", &m_TerrainHeight, 0.0f, 1500.0f);
-	ImGui::SliderFloat("Width", &m_TerrainWidth, 0.01f, 1500.0f);
-	ImGui::SliderFloat("Scale", &m_TerrainHeightScale, 0.01f, 800.0f);
-	
-	if (ImGui::Button("Regenerate"))
+	if (ImGui::CollapsingHeader("Water Settings"))
 	{
-		m_NeedRegen = true;
+		ImGui::SliderFloat3("Water Position", m_WaterHeight, -40.0f, 150.0f);
+		ImGui::SliderFloat3("Water Scale", m_WaterScale, -50.0f, 50.0f);
+		ImGui::SliderFloat("Wave Speed", &m_WaterWaveSpeed, 0.1f, 5.0f);
+		ImGui::SliderFloat("Wave Amplitude", &m_WaterWaveAmplitude, 0.1f, 5.0f);
+		ImGui::SliderFloat("Wave Frequency", &m_WaterWaveFrequency, 0.1f, 5.0f);
 	}
+
+	if (ImGui::CollapsingHeader("Terrain Settings"))
+	{
+		ImGui::SliderInt("Height", &m_TerrainHeight, 1, 1500);
+		ImGui::SliderInt("Width", &m_TerrainWidth, 1, 1500);
+		ImGui::SliderFloat("Scale", &m_TerrainHeightScale, 0.01f, 800.0f);
+		ImGui::SliderFloat("Noise Frequency", &m_TerrainNoiseFrequency, 0.01f, 10.0f);
+		ImGui::SliderFloat("Noise Octaves", &m_TerrainNoiseOctaves, 0.01f, 10.0f);
+		ImGui::SliderFloat("Noise Amplitude", &m_TerrainNoiseAmplitude, 0.01f, 10.0f);
+		ImGui::SliderFloat("Noise Value", &m_TerrainNoiseValue, 0.01f, 10.0f);
+		ImGui::InputInt("Noise Seed", &m_TerrainNoiseSeed, 1, 2000);
+		if (ImGui::Button("Regenerate"))
+		{
+			m_NeedRegen = true;
+		}
+	}
+
 
 	ImGui::Checkbox("Wireframe", &m_WireframeMode);
 	XMStoreFloat4x4(&m_TransparentRenderItems[0]->World, XMMatrixScaling(m_WaterScale[0], m_WaterScale[1], m_WaterScale[2]) * XMMatrixTranslation(m_WaterHeight[0], m_WaterHeight[1], m_WaterHeight[2]));
@@ -1844,6 +1858,9 @@ HeightMap Renderer::GeneratePerlinHeightmap(UINT width, UINT height, float scale
 	hm.height = height;
 	hm.data.resize(width * height);
 
+	// Guard against division by zero
+	if (width <= 1 || height <= 1) return hm;
+
 	for (UINT j = 0; j < height; ++j)
 	{
 		for (UINT i = 0; i < width; ++i)
@@ -1854,34 +1871,36 @@ HeightMap Renderer::GeneratePerlinHeightmap(UINT width, UINT height, float scale
 			float x = u * scale;
 			float z = v * scale;
 
-			float amplitude = 1.0f;
-			float frequency = 1.0f;
-			float noiseValue = 0.0f;
+			float amplitude = m_TerrainNoisePersistance;
+			float frequency = m_TerrainNoiseFrequency;
+			float noiseValue = m_TerrainNoiseValue;
 
 			for (int o = 0; o < octaves; ++o)
 			{
-				noiseValue += amplitude * stb_perlin_noise3_seed(x, z, 0.0f, 0, 0, 0, float(o) * 10.0f);
+				noiseValue += amplitude * stb_perlin_noise3_seed(x * frequency, z * frequency, 0.0f, 0, 0, 0, m_TerrainNoiseSeed);
 				amplitude *= persistence;
 				frequency *= 2.0f;
 			}
 
-			hm.data[j * width + i] = 1.0f;
+			float h = 0.5f * (noiseValue + 1.0f);
+
+			hm.data[j * width + i] = h;
 		}
 	}
 
-	float minVal = hm.data[0];
-	float maxVal = hm.data[0];
-	for (float v : hm.data)
-	{
-		minVal = std::min(minVal, v);
-		maxVal = std::max(maxVal, v);
-	}
+	//float minVal = hm.data[0];
+	//float maxVal = hm.data[0];
+	//for (float v : hm.data)
+	//{
+	//	minVal = std::min(minVal, v);
+	//	maxVal = std::max(maxVal, v);
+	//}
 
-	float invRange = (maxVal - minVal) > 0.0f ? 1.0f / (maxVal - minVal) : 1.0f;
-	for (float& v : hm.data)
-	{
-		v = (v - minVal) * invRange;
-	}
+	//float invRange = (maxVal - minVal) > 0.0f ? 1.0f / (maxVal - minVal) : 1.0f;
+	//for (float& v : hm.data)
+	//{
+	//	v = (v - minVal) * invRange;
+	//}
 
 	return hm;
 }
@@ -1937,7 +1956,7 @@ void Renderer::CreateHeightMapTexture(const HeightMap& hm)
 
 void Renderer::RegenerateHeightMap()
 {
-	m_CpuHeightMap = GeneratePerlinHeightmap_Simple(m_TerrainConstantsCPU.gTerrainSize.x, m_TerrainConstantsCPU.gTerrainSize.y, m_TerrainConstantsCPU.gHeightScale, 102);
+	m_CpuHeightMap = GeneratePerlinHeightmap(m_TerrainWidth, m_TerrainHeight, m_TerrainHeightScale, m_TerrainNoiseOctaves, m_TerrainNoisePersistance, m_TerrainNoiseSeed);
 
 	m_HeightMapData = m_CpuHeightMap.data;
 }
@@ -1979,4 +1998,21 @@ HeightMap Renderer::GeneratePerlinHeightmap_Simple(UINT width, UINT height, floa
 	}
 
 	return hm;
+}
+
+void Renderer::UpdateHeightMapSrv()
+{
+	// heightmap SRV is descriptor #5 in m_TexSrvHeap
+	CD3DX12_CPU_DESCRIPTOR_HANDLE h(m_TexSrvHeap->GetCPUDescriptorHandleForHeapStart());
+	h.Offset(5, m_CbvSrvUavDescriptorSize);
+
+	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
+	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.Texture2D.MostDetailedMip = 0;
+	srvDesc.Texture2D.MipLevels = 1;
+	srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
+
+	m_Device->CreateShaderResourceView(m_HeightMapTex.Get(), &srvDesc, h);
 }
