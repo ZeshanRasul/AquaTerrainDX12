@@ -8,7 +8,7 @@ Terrain is generated using Perlin noise algorithms and can be regenerated at run
 
 Work on the project is ongoing. Screenshots of the project in it's current state can be found below.
 
-![AquaTerrainDX12 Screenshot](./docs/images/AquaTerrain-NOGUI.png)
+![AquaTerrainDX12 Screenshot](./docs/images/AquaTerrain-NoGUI.png)
 
 Figure 1: AquaTerrainDX12 - Procedural Terrain with Dynamic Water Simulation
 
