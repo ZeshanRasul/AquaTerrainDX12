@@ -1672,12 +1672,12 @@ void Renderer::UpdateTerrainCB()
 {
 	const float mudStartFrac = 0.15f;
 	const float grassStartFrac = 0.45f;
-	const float rockStartFrac = 0.99f;
+	const float rockStartFrac = 0.69f;
 	const float mudRepeatSize = 16.0f;
 	const float grassRepeatSize = 8.0f;
 	const float rockRepeatSize = 12.0f;
 
-	const float blendFrac = 0.06f;
+	const float blendFrac = 0.12f;
 	m_TerrainConstantsCPU.gHeightOffset = 0.0f;
 	m_TerrainConstantsCPU.gHeightScale = m_TerrainHeightScale;
 
