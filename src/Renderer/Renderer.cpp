@@ -1670,7 +1670,6 @@ void Renderer::UpdateMainPassCB()
 
 void Renderer::UpdateTerrainCB()
 {
-	// Height bands as fractions of [minH, maxH]
 	const float mudStartFrac = 0.15f;
 	const float grassStartFrac = 0.45f;
 	const float rockStartFrac = 0.70f;
@@ -1696,9 +1695,9 @@ void Renderer::UpdateTerrainCB()
 	m_TerrainConstantsCPU.gRockSlopeBias = 0.3f;
 	m_TerrainConstantsCPU.gRockSlopePower = 3.0f;
 
-	m_TerrainConstantsCPU.gMudTiling = std::max(1.0f, m_TerrainConstantsCPU.gTerrainSize.x / mudRepeatSize);
-	m_TerrainConstantsCPU.gGrassTiling = std::max(1.0f, m_TerrainConstantsCPU.gTerrainSize.x / grassRepeatSize);
-	m_TerrainConstantsCPU.gRockTiling = std::max(1.0f, m_TerrainConstantsCPU.gTerrainSize.x / rockRepeatSize);
+	m_TerrainConstantsCPU.gMudTiling = std::max(1.0f, m_TerrainConstantsCPU.gTerrainSize.x / mudRepeatSize);;
+	m_TerrainConstantsCPU.gGrassTiling = std::max(1.0f, m_TerrainConstantsCPU.gTerrainSize.x / grassRepeatSize);;
+	m_TerrainConstantsCPU.gRockTiling = std::max(1.0f, m_TerrainConstantsCPU.gTerrainSize.x / rockRepeatSize);;
 
 	m_TerrainConstantsCB.gTerrainSize = m_TerrainConstantsCPU.gTerrainSize;
 	m_TerrainConstantsCB.gHeightScale = m_TerrainConstantsCPU.gHeightScale;
