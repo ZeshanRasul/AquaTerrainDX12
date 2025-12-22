@@ -203,12 +203,12 @@ private:
 	INT m_TerrainHeight = 360;
 	float m_TerrainHeightScale = 135.0f;
 	float m_TerrainNoiseFrequency = 1.0f;
-	float m_TerrainNoiseOctaves = 1.0f;
-	float m_TerrainNoisePersistance = 1.0f;
+	float m_TerrainNoiseOctaves = 5.0f;
+	float m_TerrainNoisePersistance = 0.5f;
 	float m_TerrainNoiseAmplitude = 1.0f;
-	float m_TerrainNoiseValue = 0.2f;
+	float m_TerrainNoiseValue = 0.0f;
 	int m_TerrainNoiseSeed = 1442;
-	float m_WaterHeight[3] = {0.0f, 75.0f, 0.0f};
+	float m_WaterHeight[3] = {0.0f, 63.0f, 0.0f};
 	float m_WaterScale[3] = {10.0f, 5.0f, 10.0f};
 	float m_WaterWaveSpeed = 0.1f;
 	float m_WaterWaveAmplitude = 0.1f;

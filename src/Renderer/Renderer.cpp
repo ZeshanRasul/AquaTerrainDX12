@@ -1672,7 +1672,7 @@ void Renderer::UpdateTerrainCB()
 {
 	const float mudStartFrac = 0.15f;
 	const float grassStartFrac = 0.45f;
-	const float rockStartFrac = 0.70f;
+	const float rockStartFrac = 0.99f;
 	const float mudRepeatSize = 16.0f;
 	const float grassRepeatSize = 8.0f;
 	const float rockRepeatSize = 12.0f;
@@ -1860,6 +1860,11 @@ HeightMap Renderer::GeneratePerlinHeightmap(UINT width, UINT height, float scale
 	// Guard against division by zero
 	if (width <= 1 || height <= 1) return hm;
 
+	float minH = FLT_MAX;
+	float maxH = -FLT_MAX;
+
+	std::vector<float> noiseValues(width * height, 0.0f);
+
 	for (UINT j = 0; j < height; ++j)
 	{
 		for (UINT i = 0; i < width; ++i)
@@ -1881,26 +1886,23 @@ HeightMap Renderer::GeneratePerlinHeightmap(UINT width, UINT height, float scale
 				frequency *= 2.0f;
 			}
 
-			float h = 0.5f * (noiseValue + 1.0f);
+			//float h = 0.5f * (noiseValue + 1.0f);
 
-			hm.data[j * width + i] = h;
+			noiseValues[j * width + i] = noiseValue;
+
+			minH = std::min(minH, noiseValue);
+			maxH = std::max(maxH, noiseValue);
+
 		}
 	}
 
-	//float minVal = hm.data[0];
-	//float maxVal = hm.data[0];
-	//for (float v : hm.data)
-	//{
-	//	minVal = std::min(minVal, v);
-	//	maxVal = std::max(maxVal, v);
-	//}
-
-	//float invRange = (maxVal - minVal) > 0.0f ? 1.0f / (maxVal - minVal) : 1.0f;
-	//for (float& v : hm.data)
-	//{
-	//	v = (v - minVal) * invRange;
-	//}
-
+	float invRange = (maxH - minH) > 1e-6f ? 1.0f / (maxH - minH) : 1.0f;
+	
+	for (UINT j = 0; j < width * height; ++j)
+	{
+		float normalizedHeight = (noiseValues[j] - minH) * invRange;
+		hm.data[j] = std::clamp(normalizedHeight, 0.0f, 1.0f);
+	}
 	return hm;
 }
 

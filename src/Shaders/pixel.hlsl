@@ -99,36 +99,30 @@ float4 PS(PixelIn pIn) : SV_Target
 
     float slope = saturate(sqrt(dHx * dHx + dHz * dHz) * 1.0f);
     float slopeFactor = slope;
-    
-    float wMudHeight = 1.0f - smoothstep(gMudStartHeight,
-                                         gMudStartHeight + gHeightBlendRange,
-                                         height);
+    slopeFactor = pow(slopeFactor, 2.0f);
 
-    float wGrassHeight = smoothstep(gMudStartHeight,
-                                    gMudStartHeight + gHeightBlendRange,
-                                    height) *
-                         (1.0f - smoothstep(gGrassStartHeight,
-                                            gGrassStartHeight + gHeightBlendRange,
-                                            height));
+    float mud = 1.0f - smoothstep(gMudStartHeight, gMudStartHeight + gHeightBlendRange, height);
 
-    float wRockHeight = smoothstep(gRockStartHeight,
-                                   gRockStartHeight + gHeightBlendRange,
-                                   height);
+    float grassUp = smoothstep(gMudStartHeight, gMudStartHeight + gHeightBlendRange, height);
+    float grassDown = 1.0f - smoothstep(gRockStartHeight, gRockStartHeight + gHeightBlendRange, height);
+    float grass = grassUp * grassDown;
 
-    float wGrass = wGrassHeight;
-    float wMud = wMudHeight;
-    float wRock = wRockHeight;
+    float rock = smoothstep(gRockStartHeight, gRockStartHeight + gHeightBlendRange, height);
+
+    float wMud = mud;
+    float wGrass = grass;
+    float wRock = rock;
 
     float highFactor = smoothstep(gGrassStartHeight, gRockStartHeight, height);
     float lowFactor = 1.0f - smoothstep(gMudStartHeight, gGrassStartHeight, height);
     
     float mudSlopeBoost = pow(saturate(slopeFactor + gMudSlopeBias), gMudSlopePower);
-    wMud = saturate(wMud + mudSlopeBoost * 0.5f);
+    wMud = saturate(wMud + mudSlopeBoost * 0.5f * lowFactor);
 
     float rockSlopeBoost = pow(saturate(slopeFactor + gRockSlopeBias), gRockSlopePower);
-    wRock = saturate(wRock + rockSlopeBoost);
+    wRock = saturate(wRock + rockSlopeBoost * 0.75f * highFactor);
 
-    float grassSlopeDamp = saturate(1.0f - slopeFactor * 1.2f);
+    float grassSlopeDamp = saturate(1.0f - slopeFactor * 0.8f);
     wGrass *= grassSlopeDamp;
 
     float sumW = wGrass + wMud + wRock + 1e-5f;
@@ -140,7 +134,7 @@ float4 PS(PixelIn pIn) : SV_Target
     float2 uvMud = pIn.TexC * gMudTiling;
     float2 uvRock = pIn.TexC * gRockTiling;
 
-    float3 albedoGrass = gGrassDiffuseMap.Sample(gsamAnisotropicWrap, uvGrass).rgb * 5.0f;
+    float3 albedoGrass = gGrassDiffuseMap.Sample(gsamAnisotropicWrap, uvGrass).rgb * 2.0f;
     float3 albedoMud = gMudDiffuseMap.Sample(gsamAnisotropicWrap, uvMud).rgb;
     float3 albedoRock = gRockDiffuseMap.Sample(gsamAnisotropicWrap, uvRock).rgb * 1.5f;
 
@@ -174,8 +168,7 @@ float4 PS(PixelIn pIn) : SV_Target
     float fogAmount = saturate((dist - gFogStart) / gFogRange) * 0.1f;
     color = lerp(color, gFogColor.xyz, fogAmount);
    
-    //return float4(wGrass, wMud, wRock, 1.0f);
-
     return float4(color, 1.0f);
+   
 }
 
