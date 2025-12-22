@@ -19,3 +19,11 @@ Figure 2: AquaTerrainDX12 - Procedural Terrain with Dynamic Water Simulation and
 ![AquaTerrainDX12 Screenshot with GUI Adjusted](./docs/images/AquaTerrain-GUIPostAdjustment.png)
 
 Figure 3: AquaTerrainDX12 - Procedural Terrain with Dynamic Water Simulation and GUI with parameters adjusted by the user
+
+![AquaTerrainDX12 Screenshot with Wireframe Rendering](./docs/images/AquaTerrain-Wireframe.png)
+
+Figure 4: AquaTerrainDX12 - Procedural Terrain with Dynamic Water Simulation and Wireframe Terrain Rendering Enabled through GUI
+
+![AquaTerrainDX12 Screenshot with Wireframe Rendering](./docs/images/AquaTerrain-NonWireframe.png)
+
+Figure 5: AquaTerrainDX12 - Opaque Terrain Rendering of same view as Figure 4 for comparison
