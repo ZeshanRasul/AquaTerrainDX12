@@ -72,8 +72,8 @@ bool Renderer::InitializeD3D12(HWND& windowHandle)
 
 	ThrowIfFailed(CreateDXGIFactory1(IID_PPV_ARGS(&m_DxgiFactory)));
 
-	m_Camera.SetPosition(0.0f, 350.0f, -350.0f);
-	XMFLOAT3 target = { -11.0f, 193.0f, -138.3f};
+	m_Camera.SetPosition(-161.0f, 245.0f, -101.0f);
+	XMFLOAT3 target = { -147.0f, 183.0f, 38.3f};
 	XMFLOAT3 up = { 0.0f, 1.0f, 0.0f };
 	m_Camera.LookAt(m_Camera.GetPosition3f(), target, up);
 	m_Camera.UpdateViewMatrix();
