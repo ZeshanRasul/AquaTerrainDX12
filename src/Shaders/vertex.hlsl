@@ -113,7 +113,7 @@ VSOutput VS(VertexIn vIn)
     
     vout.PosH = posH;
     vout.PosW = posW;
-    vout.NormalW = vIn.NormalL; 
+    vout.NormalW = normalize(vIn.NormalL);
     vout.TexC = uv;
 
     return vout;

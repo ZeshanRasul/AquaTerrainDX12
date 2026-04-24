@@ -107,11 +107,8 @@ float4 PS(PixelIn pIn) : SV_Target
 {
     float height = pIn.PosW.y;
     float3 N = normalize(pIn.NormalW);
-    float Ny = saturate(N.y); // 1 = flat, 0 = vertical
+    float Ny = saturate(N.y);
 
-    // -------------------------------------------------------------------------
-    // Sample all three diffuse and normal maps
-    // -------------------------------------------------------------------------
     float2 uvGrass = pIn.TexC * gGrassTiling;
     float2 uvMud = pIn.TexC * gMudTiling;
     float2 uvRock = pIn.TexC * gRockTiling;
@@ -124,57 +121,27 @@ float4 PS(PixelIn pIn) : SV_Target
     float3 tsNormalMud = gMudNormalMap.Sample(gsamAnisotropicWrap, uvMud).xyz * 2.0f - 1.0f;
     float3 tsNormalRock = gRockNormalMap.Sample(gsamAnisotropicWrap, uvRock).xyz * 2.0f - 1.0f;
 
-    // -------------------------------------------------------------------------
-    // Height-based weights
-    //
-    //  Mud   : low altitudes, covers everything below gGrassStartHeight
-    //  Grass : mid altitudes, fades in at gGrassStartHeight, fades out at gRockStartHeight
-    //  Rock  : high altitudes (above gRockStartHeight)
-    // -------------------------------------------------------------------------
-    float wMud = 1.0f - smoothstep(gMudStartHeight,
-                               gMudStartHeight + gHeightBlendRange,
-                               height);
+    float mudToGrass = smoothstep(gMudStartHeight, gGrassStartHeight, height);
+    float grassToRock = smoothstep(gRockStartHeight - gHeightBlendRange, gRockStartHeight + gHeightBlendRange, height);
 
-    float wGrass = smoothstep(gMudStartHeight,
-                          gMudStartHeight + gHeightBlendRange,
-                          height)
-             * (1.0f - smoothstep(gRockStartHeight - gHeightBlendRange,
-                                  gRockStartHeight + gHeightBlendRange,
-                                  height));
+    float wMud = 1.0f - mudToGrass;
+    float wGrass = mudToGrass * (1.0f - grassToRock);
+    float wRock = grassToRock;
 
-    float wRock = smoothstep(gRockStartHeight - gHeightBlendRange,
-                         gRockStartHeight + gHeightBlendRange,
-                         height); 
-    
-    // -------------------------------------------------------------------------
-    // Slope-based blending
-    //
-    //  Steep slopes  -> show rock and mud regardless of height
-    //  Flat surfaces -> respect height-based zones
-    // -------------------------------------------------------------------------
     float slopeFactor = 1.0f - Ny;
 
-    // Mud on gentle-to-medium slopes
-    float mudSlopeIn = smoothstep(0.10f, 0.25f, slopeFactor);
-    float mudSlopeOut = 1.0f - smoothstep(0.45f, 0.70f, slopeFactor);
-    float mudSlopeMask = mudSlopeIn * mudSlopeOut;
+    float mudSlope = 1.0f - pow(saturate((slopeFactor - gMudSlopeBias) / max(1e-5f, 1.0f - gMudSlopeBias)), gMudSlopePower);
+    float rockSlope = pow(saturate((slopeFactor - gRockSlopeBias) / max(1e-5f, 1.0f - gRockSlopeBias)), gRockSlopePower);
 
-    wMud = saturate(wMud + 0.75f * mudSlopeMask);
-    wGrass *= (1.0f - 0.45f * mudSlopeMask);
-    
-    // Rock on steep slopes
-    float rockSlope = pow(saturate((slopeFactor - gRockSlopeBias) /
-                               (1.0f - gRockSlopeBias)),
-                      gRockSlopePower);
+    mudSlope *= (1.0f - smoothstep(gGrassStartHeight, gRockStartHeight, height));
+    rockSlope *= smoothstep(gGrassStartHeight, gRockStartHeight + gHeightBlendRange, height);
 
-    wRock = saturate(wRock + rockSlope);
-    
-    // -------------------------------------------------------------------------
-    // Normalize so weights always sum to 1.0
-    // -------------------------------------------------------------------------
-    float sumW = wGrass + wMud + wRock + 1e-5f;
-    wGrass /= sumW;
+    wMud *= mudSlope;
+    wRock = saturate(max(wRock, rockSlope));
+
+    float sumW = wMud + wGrass + wRock + 1e-5f;
     wMud /= sumW;
+    wGrass /= sumW;
     wRock /= sumW;
 
     // -------------------------------------------------------------------------
@@ -202,11 +169,12 @@ float4 PS(PixelIn pIn) : SV_Target
     float NdotL = saturate(dot(blendedNormal, L));
     float3 diffuse = albedo * gLights[0].Strength * NdotL;
 
-    // Hemisphere ambient: sky tint above, ground tint below
     float t = 0.5f * (blendedNormal.y + 1.0f);
-    float3 skyCol = float3(0.3f, 0.4f, 0.6f);
-    float3 groundCol = float3(0.1f, 0.08f, 0.06f);
-    float3 ambient = lerp(groundCol, skyCol, t) * albedo;
+    float3 skyCol = float3(0.45f, 0.50f, 0.60f);
+    float3 groundCol = float3(0.12f, 0.10f, 0.08f);
+    float3 hemiAmbient = lerp(groundCol, skyCol, t) * albedo;
+
+    float3 ambient = gAmbientLight.rgb * albedo + hemiAmbient;
 
     float3 color = diffuse + ambient;
 

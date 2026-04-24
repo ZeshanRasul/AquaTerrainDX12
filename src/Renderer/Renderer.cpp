@@ -72,7 +72,10 @@ bool Renderer::InitializeD3D12(HWND& windowHandle)
 
 	ThrowIfFailed(CreateDXGIFactory1(IID_PPV_ARGS(&m_DxgiFactory)));
 
-	m_Camera.SetPosition(0.0f, 180.0f, -250.0f);
+	m_Camera.SetPosition(0.0f, 350.0f, -350.0f);
+	XMFLOAT3 target = { -11.0f, 193.0f, -138.3f};
+	XMFLOAT3 up = { 0.0f, 1.0f, 0.0f };
+	m_Camera.LookAt(m_Camera.GetPosition3f(), target, up);
 	m_Camera.UpdateViewMatrix();
 	m_View = m_Camera.GetView4x4f();
 	m_Proj = m_Camera.GetProj4x4f();
@@ -1652,13 +1655,13 @@ void Renderer::UpdateMainPassCB()
 	m_MainPassCB.InvRenderTargetSize = XMFLOAT2(1.0f / m_ClientWidth, 1.0f / m_ClientHeight);
 	m_MainPassCB.NearZ = 1.0f;
 	m_MainPassCB.FarZ = 1000.0f;
-	m_MainPassCB.AmbientLight = { 0.25f, 0.25f, 0.35f, 1.0f };
+	m_MainPassCB.AmbientLight = { 0.40f, 0.40f, 0.45f, 1.0f };
 	m_MainPassCB.FogColor = { 0.7f, 0.7f, 0.7f, 1.0f };
 	m_MainPassCB.FogStart = 5.0f;
 	m_MainPassCB.FogRange = 150.0f;
 
 	m_MainPassCB.Lights[0].Direction = { 0.57735f, -0.57735f, 0.57735f };
-	m_MainPassCB.Lights[0].Strength = { 0.6f, 0.6f, 0.6f };
+	m_MainPassCB.Lights[0].Strength = { 1.0f, 1.0f, 1.0f };
 	m_MainPassCB.Lights[1].Direction = { -0.57735f, -0.57735f, 0.57735f };
 	m_MainPassCB.Lights[1].Strength = { 0.3f, 0.3f, 0.3f };
 	m_MainPassCB.Lights[2].Direction = { 0.0f, -0.707f, -0.707f };
@@ -1670,14 +1673,6 @@ void Renderer::UpdateMainPassCB()
 
 void Renderer::UpdateTerrainCB()
 {
-	const float mudStartFrac = 0.30f;  
-	const float grassStartFrac = 0.70f;
-	const float rockStartFrac = 0.85f;
-	const float blendFrac = 0.18f;
-	const float mudRepeatSize = 16.0f;
-	const float grassRepeatSize = 8.0f;
-	const float rockRepeatSize = 12.0f;
-
 	m_TerrainConstantsCPU.gHeightOffset = 0.0f;
 	m_TerrainConstantsCPU.gHeightScale = m_TerrainHeightScale;
 
@@ -1685,18 +1680,18 @@ void Renderer::UpdateTerrainCB()
 	float maxH = m_TerrainConstantsCPU.gHeightOffset + m_TerrainConstantsCPU.gHeightScale;
 	float rangeH = maxH - minH;
 
-	m_TerrainConstantsCPU.gMudStartHeight = minH + mudStartFrac * rangeH;  // ~13.5
-	m_TerrainConstantsCPU.gGrassStartHeight = minH + grassStartFrac * rangeH;  // ~40.5
-	m_TerrainConstantsCPU.gRockStartHeight = minH + rockStartFrac * rangeH;  // ~87.75
-	m_TerrainConstantsCPU.gHeightBlendRange = blendFrac * rangeH;               // ~24.3
-	m_TerrainConstantsCPU.gMudSlopeBias = 0.15f;
-	m_TerrainConstantsCPU.gMudSlopePower = 1.8f;
-	m_TerrainConstantsCPU.gRockSlopeBias = 0.3f;
-	m_TerrainConstantsCPU.gRockSlopePower = 3.0f;
+	m_TerrainConstantsCPU.gMudStartHeight = m_MudStartHeight;
+	m_TerrainConstantsCPU.gGrassStartHeight = m_GrassStartHeight;
+	m_TerrainConstantsCPU.gRockStartHeight = m_RockStartHeight;
+	m_TerrainConstantsCPU.gHeightBlendRange = m_blendFrac * rangeH;
+	m_TerrainConstantsCPU.gMudSlopeBias = m_MudSlopeBias;
+	m_TerrainConstantsCPU.gMudSlopePower = m_MudSlopePower;
+	m_TerrainConstantsCPU.gRockSlopeBias = m_RockSlopeBias;
+	m_TerrainConstantsCPU.gRockSlopePower = m_RockSlopePower;
 
-	m_TerrainConstantsCPU.gMudTiling = std::max(1.0f, m_TerrainConstantsCPU.gTerrainSize.x / mudRepeatSize);
-	m_TerrainConstantsCPU.gGrassTiling = std::max(1.0f, m_TerrainConstantsCPU.gTerrainSize.x / grassRepeatSize);
-	m_TerrainConstantsCPU.gRockTiling = std::max(1.0f, m_TerrainConstantsCPU.gTerrainSize.x / rockRepeatSize);
+	m_TerrainConstantsCPU.gMudTiling = std::max(1.0f, m_TerrainConstantsCPU.gTerrainSize.x / m_mudRepeatSize);
+	m_TerrainConstantsCPU.gGrassTiling = std::max(1.0f, m_TerrainConstantsCPU.gTerrainSize.x / m_grassRepeatSize);
+	m_TerrainConstantsCPU.gRockTiling = std::max(1.0f, m_TerrainConstantsCPU.gTerrainSize.x / m_rockRepeatSize);
 
 	m_TerrainConstantsCB = m_TerrainConstantsCPU;
 
@@ -1816,12 +1811,28 @@ void Renderer::ShowImGUIEnvironmentControl()
 		ImGui::SliderFloat("Noise Amplitude", &m_TerrainNoiseAmplitude, 0.01f, 10.0f);
 		ImGui::SliderFloat("Noise Value", &m_TerrainNoiseValue, 0.01f, 10.0f);
 		ImGui::InputInt("Noise Seed", &m_TerrainNoiseSeed, 1, 2000);
+		ImGui::SliderFloat("Mud Start Frac", &m_mudStartFrac, 0.01f, 1.0f);
+		ImGui::SliderFloat("Grass Start Frac", &m_grassStartFrac, 0.01f, 1.0f);
+		ImGui::SliderFloat("Rock Start Frac", &m_rockStartFrac, 0.01f, 1.0f);
+		ImGui::SliderFloat("Mud Start Height", &m_MudStartHeight, 0.01f, 300.0f);
+		ImGui::SliderFloat("Grass Start Height", &m_GrassStartHeight, 0.01f, 300.0f);
+		ImGui::SliderFloat("Rock Start Height", &m_RockStartHeight, 0.01f, 300.0f);
+		ImGui::SliderFloat("Mud Repeat Size", &m_mudRepeatSize, 0.01f, 20.0f);
+		ImGui::SliderFloat("Grass Repeat Size", &m_grassRepeatSize, 0.01f, 20.0f);
+		ImGui::SliderFloat("Rock Repeat Size", &m_rockRepeatSize, 0.01f, 20.0f);
+		ImGui::SliderFloat("Mud Slope Bias", &m_MudSlopeBias, 0.01f, 3.0f);
+		ImGui::SliderFloat("Mud Slope Power", &m_MudSlopePower, 0.01f, 30.0f);
+		ImGui::SliderFloat("Rock Slope Bias", &m_RockSlopeBias, 0.01f, 3.0f);
+		ImGui::SliderFloat("Rock Slope Power", &m_RockSlopePower, 0.01f, 30.0f);
+		ImGui::SliderFloat("Blend Frac", &m_blendFrac, 0.01f, 1.0f);
+
 		if (ImGui::Button("Regenerate"))
 		{
 			m_NeedRegen = true;
 		}
 	}
 
+	ImGui::Text("Camera Position: (%.1f, %.1f, %.1f)", m_Camera.GetPosition3f().x, m_Camera.GetPosition3f().y, m_Camera.GetPosition3f().z);
 
 	ImGui::Checkbox("Wireframe", &m_WireframeMode);
 	XMStoreFloat4x4(&m_TransparentRenderItems[0]->World, XMMatrixScaling(m_WaterScale[0], m_WaterScale[1], m_WaterScale[2]) * XMMatrixTranslation(m_WaterHeight[0], m_WaterHeight[1], m_WaterHeight[2]));
