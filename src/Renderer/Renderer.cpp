@@ -118,7 +118,6 @@ bool Renderer::InitializeD3D12(HWND& windowHandle)
 	CreateOpaqueRootSignature();
 	CreateTransparentRootSignature();
 
-	LoadTextures();
 	BuildShadersAndInputLayout();
 	BuildShapeGeometry();
 	BuildLandGeometry(hm.width, hm.height);
@@ -577,7 +576,7 @@ void Renderer::LoadTextures()
 {
 	auto grassTex = std::make_unique<Texture>();
 	grassTex->Name = "grassTex";
-	grassTex->Filename = L"../../Textures/Grass/grass4k.dds";
+	grassTex->Filename = L"Textures/Grass/grass4k.dds";
 	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(m_Device.Get(),
 		m_CommandList.Get(), grassTex->Filename.c_str(),
 		grassTex->Resource, grassTex->UploadHeap));
@@ -586,7 +585,7 @@ void Renderer::LoadTextures()
 
 	auto skyCubeMap = std::make_unique<Texture>();
 	skyCubeMap->Name = "skyCubeMap";
-	skyCubeMap->Filename = L"../../Textures/grasscube1024.dds";
+	skyCubeMap->Filename = L"Textures/grasscube1024.dds";
 	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(m_Device.Get(),
 		m_CommandList.Get(), skyCubeMap->Filename.c_str(),
 		skyCubeMap->Resource, skyCubeMap->UploadHeap));
@@ -595,7 +594,7 @@ void Renderer::LoadTextures()
 
 	auto grassNorm = std::make_unique<Texture>();
 	grassNorm->Name = "grassNorm";
-	grassNorm->Filename = L"../../Textures/Grass/grassnorm4k.dds";
+	grassNorm->Filename = L"Textures/Grass/grassnorm4k.dds";
 	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(m_Device.Get(),
 		m_CommandList.Get(), grassNorm->Filename.c_str(),
 		grassNorm->Resource, grassNorm->UploadHeap));
@@ -604,7 +603,7 @@ void Renderer::LoadTextures()
 
 	auto mud = std::make_unique<Texture>();
 	mud->Name = "wetmud";
-	mud->Filename = L"../../Textures/Mud/mud4k.dds";
+	mud->Filename = L"Textures/Mud/mud4k.dds";
 	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(m_Device.Get(),
 		m_CommandList.Get(), mud->Filename.c_str(),
 		mud->Resource, mud->UploadHeap));
@@ -613,7 +612,7 @@ void Renderer::LoadTextures()
 
 	auto wetmudNorm = std::make_unique<Texture>();
 	wetmudNorm->Name = "wetmud_norm";
-	wetmudNorm->Filename = L"../../Textures/Mud/mudnorm4k.dds";
+	wetmudNorm->Filename = L"Textures/Mud/mudnorm4k.dds";
 	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(m_Device.Get(),
 		m_CommandList.Get(), wetmudNorm->Filename.c_str(),
 		wetmudNorm->Resource, wetmudNorm->UploadHeap));
@@ -622,7 +621,7 @@ void Renderer::LoadTextures()
 
 	auto rock = std::make_unique<Texture>();
 	rock->Name = "rock";
-	rock->Filename = L"../../Textures/Rock/rock4k.dds";
+	rock->Filename = L"Textures/Rock/rock4k.dds";
 	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(m_Device.Get(),
 		m_CommandList.Get(), rock->Filename.c_str(),
 		rock->Resource, rock->UploadHeap));
@@ -631,7 +630,7 @@ void Renderer::LoadTextures()
 
 	auto rockNorm = std::make_unique<Texture>();
 	rockNorm->Name = "rockNorm";
-	rockNorm->Filename = L"../../Textures/Rock/rocknorm4k.dds";
+	rockNorm->Filename = L"Textures/Rock/rocknorm4k.dds";
 	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(m_Device.Get(),
 		m_CommandList.Get(), rockNorm->Filename.c_str(),
 		rockNorm->Resource, rockNorm->UploadHeap));
@@ -725,6 +724,7 @@ void Renderer::CreateTextureSrvDescriptors()
 	m_Device->CreateShaderResourceView(wetmud_norm.Get(), &srvDesc, hDescriptor);
 
 	hDescriptor.Offset(1, m_CbvSrvUavDescriptorSize);
+
 	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
 	srvDesc.TextureCube.MostDetailedMip = 0;
 	srvDesc.TextureCube.MipLevels = skyCubeMap->GetDesc().MipLevels;
@@ -896,63 +896,6 @@ void Renderer::CreateTransparentRootSignature()
 	ThrowIfFailed(hr);
 
 	ThrowIfFailed(m_Device->CreateRootSignature(0, serializedRootSig->GetBufferPointer(), serializedRootSig->GetBufferSize(), IID_PPV_ARGS(m_TransparentRootSignature.GetAddressOf())));
-}
-
-std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> Renderer::GetStaticSamplers()
-{
-	// Applications usually only need a handful of samplers.  So just define them all up front
-	// and keep them available as part of the root signature.  
-
-	const CD3DX12_STATIC_SAMPLER_DESC pointWrap(
-		0, // shaderRegister
-		D3D12_FILTER_MIN_MAG_MIP_POINT, // filter
-		D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressU
-		D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressV
-		D3D12_TEXTURE_ADDRESS_MODE_WRAP); // addressW
-
-	const CD3DX12_STATIC_SAMPLER_DESC pointClamp(
-		1, // shaderRegister
-		D3D12_FILTER_MIN_MAG_MIP_POINT, // filter
-		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,  // addressU
-		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,  // addressV
-		D3D12_TEXTURE_ADDRESS_MODE_CLAMP); // addressW
-
-	const CD3DX12_STATIC_SAMPLER_DESC linearWrap(
-		2, // shaderRegister
-		D3D12_FILTER_MIN_MAG_MIP_LINEAR, // filter
-		D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressU
-		D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressV
-		D3D12_TEXTURE_ADDRESS_MODE_WRAP); // addressW
-
-	const CD3DX12_STATIC_SAMPLER_DESC linearClamp(
-		3, // shaderRegister
-		D3D12_FILTER_MIN_MAG_MIP_LINEAR, // filter
-		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,  // addressU
-		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,  // addressV
-		D3D12_TEXTURE_ADDRESS_MODE_CLAMP); // addressW
-
-	const CD3DX12_STATIC_SAMPLER_DESC anisotropicWrap(
-		4, // shaderRegister
-		D3D12_FILTER_ANISOTROPIC, // filter
-		D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressU
-		D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressV
-		D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressW
-		0.0f,                             // mipLODBias
-		8);                               // maxAnisotropy
-
-	const CD3DX12_STATIC_SAMPLER_DESC anisotropicClamp(
-		5, // shaderRegister
-		D3D12_FILTER_ANISOTROPIC, // filter
-		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,  // addressU
-		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,  // addressV
-		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,  // addressW
-		0.0f,                              // mipLODBias
-		8);                                // maxAnisotropy
-
-	return {
-		pointWrap, pointClamp,
-		linearWrap, linearClamp,
-		anisotropicWrap, anisotropicClamp };
 }
 
 void Renderer::BuildShadersAndInputLayout()
@@ -1588,6 +1531,7 @@ void Renderer::BuildPSOs()
 	opaquePsoDesc.SampleDesc.Count = 1;
 	opaquePsoDesc.SampleDesc.Quality = 0;
 	opaquePsoDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	opaquePsoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
 
 	ThrowIfFailed(m_Device->CreateGraphicsPipelineState(&opaquePsoDesc, IID_PPV_ARGS(&m_PipelineStateObjects["opaque"])));
 
@@ -1813,67 +1757,6 @@ void Renderer::UpdateWaves(GameTimer& gt)
 	// Set the dynamic VB of the wave renderitem to the current frame VB.
 	m_WavesRitem->Geo->VertexBufferGPU = currWavesVB->Resource();
 }
-void Renderer::LoadTextures()
-{
-	auto grassTex = std::make_unique<Texture>();
-	grassTex->Name = "grassTex";
-	grassTex->Filename = L"../../Textures/grass.dds";
-	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(m_Device.Get(),
-		m_CommandList.Get(), grassTex->Filename.c_str(),
-		grassTex->Resource, grassTex->UploadHeap));
-
-	auto waterTex = std::make_unique<Texture>();
-	waterTex->Name = "waterTex";
-	waterTex->Filename = L"../../Textures/water1.dds";
-	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(m_Device.Get(),
-		m_CommandList.Get(), waterTex->Filename.c_str(),
-		waterTex->Resource, waterTex->UploadHeap));
-
-	auto fenceTex = std::make_unique<Texture>();
-	fenceTex->Name = "fenceTex";
-	fenceTex->Filename = L"../../Textures/WoodCrate01.dds";
-	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(m_Device.Get(),
-		m_CommandList.Get(), fenceTex->Filename.c_str(),
-		fenceTex->Resource, fenceTex->UploadHeap));
-
-	m_Textures[grassTex->Name] = std::move(grassTex);
-	m_Textures[waterTex->Name] = std::move(waterTex);
-	m_Textures[fenceTex->Name] = std::move(fenceTex);
-}
-void Renderer::BuildDescriptorHeaps()
-{
-	D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
-	srvHeapDesc.NumDescriptors = 3;
-	srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-	srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-	ThrowIfFailed(m_Device->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_SrvHeap)));
-
-	CD3DX12_CPU_DESCRIPTOR_HANDLE hDescriptor(m_SrvHeap->GetCPUDescriptorHandleForHeapStart());
-
-	auto grassTex = m_Textures["grassTex"]->Resource;
-	auto waterTex = m_Textures["waterTex"]->Resource;
-	auto fenceTex = m_Textures["fenceTex"]->Resource;
-
-	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-	srvDesc.Format = grassTex->GetDesc().Format;
-	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-	srvDesc.Texture2D.MostDetailedMip = 0;
-	srvDesc.Texture2D.MipLevels = -1;
-	m_Device->CreateShaderResourceView(grassTex.Get(), &srvDesc, hDescriptor);
-
-	hDescriptor.Offset(1, m_CbvSrvUavDescriptorSize);
-
-	srvDesc.Format = waterTex->GetDesc().Format;
-	m_Device->CreateShaderResourceView(waterTex.Get(), &srvDesc, hDescriptor);
-
-	hDescriptor.Offset(1, m_CbvSrvUavDescriptorSize);
-
-	srvDesc.Format = fenceTex->GetDesc().Format;
-	m_Device->CreateShaderResourceView(fenceTex.Get(), &srvDesc, hDescriptor);
-
-};
-
 
 void Renderer::CreateVertexBufferView()
 {

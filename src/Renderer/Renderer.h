@@ -250,8 +250,6 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_TexSrvHeap;
 	UINT m_SkyTexHeapIndex = 1;
 
-	void LoadTextures();
-	std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> GetStaticSamplers();
 	UINT m_CbvSrvDescriptorSize;
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_DepthSRV;
