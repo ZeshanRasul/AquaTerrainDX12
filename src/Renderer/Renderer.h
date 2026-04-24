@@ -205,16 +205,18 @@ private:
 	PassConstants m_MainPassCB;
 	WaterConstants m_WaterConstantsCB;
 	TerrainConstants m_TerrainConstantsCB;
-	INT m_TerrainWidth = 900;
-	INT m_TerrainHeight = 500;
+	INT m_TerrainWorldWidth = 1200;
+	INT m_TerrainWorldHeight = 1200;
+	INT m_HeightMapWidth = 1024;
+	INT m_HeightMapHeight = 1024;
 	float m_TerrainHeightScale = 360.0f;
-	float m_TerrainNoiseFrequency = 0.01f;
+	float m_TerrainNoiseFrequency = 0.014f;
 	float m_TerrainNoiseOctaves = 5.0f;
 	float m_TerrainNoisePersistance = 0.35f;
 	float m_TerrainNoiseAmplitude = 0.25f;
 	float m_TerrainNoiseValue = 0.0f;
 	int m_TerrainNoiseSeed = 1442;
-	float m_WaterHeight[3] = {0.0f, 97.0f, 0.0f};
+	float m_WaterHeight[3] = {0.0f, 150.0f, 0.0f};
 	float m_WaterScale[3] = {10.0f, 5.0f, 10.0f};
 	float m_WaterWaveSpeed = 0.1f;
 	float m_WaterWaveAmplitude = 0.1f;
@@ -230,9 +232,9 @@ private:
 	float m_MudSlopePower = 2.0f;
 	float m_RockSlopeBias = 0.55f;
 	float m_RockSlopePower = 3.5f;
-	float m_MudStartHeight = 114.0f;
-	float m_GrassStartHeight = 156.0f;
-	float m_RockStartHeight = 177.0f;
+	float m_MudStartHeight = 164.0f;
+	float m_GrassStartHeight = 190.0f;
+	float m_RockStartHeight = 220.0f;
 
 	/*XMFLOAT2 m_TerrainSize;
 	float m_HeightScale;
@@ -258,8 +260,6 @@ private:
 	D3D12_GPU_DESCRIPTOR_HANDLE m_HeightMapSrvGpuHandle = {};
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_HeightMapUpload;
 	std::vector<float> m_HeightMapData;
-	float m_HeightMapWidth = 0;
-	float m_HeightMapHeight = 0;
 	float m_HeightMapScale = 0;
 	int m_HeightMapSeed = 0;
 	int m_HeightMapOctaves = 0;

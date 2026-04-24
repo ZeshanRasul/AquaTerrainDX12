@@ -108,7 +108,7 @@ bool Renderer::InitializeD3D12(HWND& windowHandle)
 	m_CbvSrvDescriptorSize = m_Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	m_Waves = std::make_unique<Waves>(128, 128, 1.0f, 0.03f, 4.0f, 0.2f);
 
-	HeightMap hm = GeneratePerlinHeightmap(m_TerrainWidth, m_TerrainHeight, m_TerrainHeightScale, m_TerrainNoiseOctaves, m_TerrainNoisePersistance, m_TerrainNoiseSeed);
+	HeightMap hm = GeneratePerlinHeightmap(m_HeightMapWidth, m_HeightMapHeight, m_TerrainHeightScale, m_TerrainNoiseOctaves, m_TerrainNoisePersistance, m_TerrainNoiseSeed);
 	CreateHeightMapTexture(hm);
 
 	//	CreateCbvDescriptorHeaps();
@@ -120,7 +120,7 @@ bool Renderer::InitializeD3D12(HWND& windowHandle)
 
 	BuildShadersAndInputLayout();
 	BuildShapeGeometry();
-	BuildLandGeometry(hm.width, hm.height);
+	BuildLandGeometry(static_cast<float>(m_TerrainWorldWidth), static_cast<float>(m_TerrainWorldHeight));
 	BuildSkullGeometry();
 	BuildMaterials();
 	BuildWavesGeometry();
@@ -209,12 +209,12 @@ void Renderer::Draw()
 	if (m_NeedRegen)
 	{
 		FlushCommandQueue();
-		m_TerrainConstantsCB.gTerrainSize = XMFLOAT2(m_TerrainWidth, m_TerrainHeight);
+		m_TerrainConstantsCB.gTerrainSize = XMFLOAT2(m_TerrainWorldWidth, m_TerrainWorldHeight);
 		m_TerrainConstantsCPU.gHeightScale = m_TerrainHeightScale;
 		RegenerateHeightMap();
 		UpdateHeightMapTexture();
 		UpdateHeightMapSrv();
-		RebuildLandGeometry(m_TerrainConstantsCB.gTerrainSize.x, m_TerrainConstantsCB.gTerrainSize.y);
+		RebuildLandGeometry(m_TerrainWorldWidth, m_TerrainWorldHeight);
 		RebuildLandRenderItem();
 		m_NeedRegen = false;
 	}
@@ -1167,7 +1167,7 @@ void Renderer::BuildSkullGeometry()
 void Renderer::BuildLandGeometry(float width, float height)
 {
 	GeometryGenerator geoGen;
-	GeometryGenerator::MeshData grid = geoGen.CreateGrid(460.0f, 460.0f, 50, 50);
+	GeometryGenerator::MeshData grid = geoGen.CreateGrid(width, height, 200, 200);
 
 	std::vector<Vertex> vertices(grid.Vertices.size());
 	for (size_t i = 0; i < grid.Vertices.size(); ++i)
@@ -1227,7 +1227,7 @@ void Renderer::BuildLandGeometry(float width, float height)
 void Renderer::RebuildLandGeometry(float width, float height)
 {
 	GeometryGenerator geoGen;
-	GeometryGenerator::MeshData grid = geoGen.CreateGrid(m_TerrainConstantsCPU.gTerrainSize.x, m_TerrainConstantsCPU.gTerrainSize.y, 50, 50);
+	GeometryGenerator::MeshData grid = geoGen.CreateGrid(width, height, 200, 200);
 
 	std::vector<Vertex> vertices(grid.Vertices.size());
 	for (size_t i = 0; i < grid.Vertices.size(); ++i)
@@ -1678,6 +1678,7 @@ void Renderer::UpdateTerrainCB()
 {
 	m_TerrainConstantsCPU.gHeightOffset = 0.0f;
 	m_TerrainConstantsCPU.gHeightScale = m_TerrainHeightScale;
+	m_TerrainConstantsCPU.gTerrainSize = { static_cast<float>(m_TerrainWorldWidth), static_cast<float>(m_TerrainWorldHeight) };
 
 	float minH = m_TerrainConstantsCPU.gHeightOffset;
 	float maxH = m_TerrainConstantsCPU.gHeightOffset + m_TerrainConstantsCPU.gHeightScale;
@@ -1805,10 +1806,12 @@ void Renderer::ShowImGUIEnvironmentControl()
 
 	if (ImGui::CollapsingHeader("Terrain Settings"))
 	{
-		ImGui::SliderInt("Height", &m_TerrainHeight, 1, 1500);
-		ImGui::SliderInt("Width", &m_TerrainWidth, 1, 1500);
+		ImGui::SliderInt("Height", &m_TerrainWorldHeight, 1, 3500);
+		ImGui::SliderInt("Width", &m_TerrainWorldWidth, 1, 3500);
+		ImGui::SliderInt("Heightmap Width", &m_HeightMapWidth, 64, 2048);
+		ImGui::SliderInt("Heightmap Height", &m_HeightMapHeight, 64, 2048);
 		ImGui::SliderFloat("Scale", &m_TerrainHeightScale, 0.01f, 800.0f);
-		ImGui::SliderFloat("Noise Frequency", &m_TerrainNoiseFrequency, 0.01f, 10.0f);
+		ImGui::SliderFloat("Noise Frequency", &m_TerrainNoiseFrequency, 0.01f, 1.0f);
 		ImGui::SliderFloat("Noise Octaves", &m_TerrainNoiseOctaves, 0.01f, 10.0f);
 		ImGui::SliderFloat("Noise Amplitude", &m_TerrainNoiseAmplitude, 0.01f, 10.0f);
 		ImGui::SliderFloat("Noise Value", &m_TerrainNoiseValue, 0.01f, 10.0f);
@@ -1949,7 +1952,7 @@ void Renderer::CreateHeightMapTexture(const HeightMap& hm)
 
 void Renderer::RegenerateHeightMap()
 {
-	m_CpuHeightMap = GeneratePerlinHeightmap(m_TerrainWidth, m_TerrainHeight, m_TerrainHeightScale, m_TerrainNoiseOctaves, m_TerrainNoisePersistance, m_TerrainNoiseSeed);
+	m_CpuHeightMap = GeneratePerlinHeightmap(m_HeightMapWidth, m_HeightMapHeight, m_TerrainHeightScale, m_TerrainNoiseOctaves, m_TerrainNoisePersistance, m_TerrainNoiseSeed);
 
 	m_HeightMapData = m_CpuHeightMap.data;
 }

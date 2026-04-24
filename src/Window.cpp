@@ -330,16 +330,16 @@ void Window::OnKeyboardInput(GameTimer& gt)
 	const float dt = gt.DeltaTime();
 
 	if (GetAsyncKeyState('W') & 0x8000)
-		m_Camera.Walk(30.0f * dt);
+		m_Camera.Walk(50.0f * dt);
 
 	if (GetAsyncKeyState('S') & 0x8000)
-		m_Camera.Walk(-30.0f * dt);
+		m_Camera.Walk(-50.0f * dt);
 
 	if (GetAsyncKeyState('A') & 0x8000)
-		m_Camera.Strafe(-30.0f * dt);
+		m_Camera.Strafe(-50.0f * dt);
 
 	if (GetAsyncKeyState('D') & 0x8000)
-		m_Camera.Strafe(30.0f * dt);
+		m_Camera.Strafe(50.0f * dt);
 
 	m_Camera.UpdateViewMatrix();
 }
