@@ -217,10 +217,10 @@ private:
 	float m_TerrainNoiseValue = 0.0f;
 	int m_TerrainNoiseSeed = 1442;
 	float m_WaterHeight[3] = {0.0f, 150.0f, 0.0f};
-	float m_WaterScale[3] = {10.0f, 5.0f, 10.0f};
-	float m_WaterWaveSpeed = 0.1f;
+	float m_WaterScale[3] = {10.0f, 25.0f, 10.0f};
+	float m_WaterWaveSpeed = 0.15f;
 	float m_WaterWaveAmplitude = 0.1f;
-	float m_WaterWaveFrequency = 0.2f;
+	float m_WaterWaveFrequency = 0.25f;
 	float m_mudStartFrac = 0.15f;
 	float m_grassStartFrac = 0.35f;
 	float m_rockStartFrac = 0.65f;
