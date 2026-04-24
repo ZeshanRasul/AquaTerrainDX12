@@ -201,11 +201,11 @@ private:
 	TerrainConstants m_TerrainConstantsCB;
 	INT m_TerrainWidth = 360;
 	INT m_TerrainHeight = 360;
-	float m_TerrainHeightScale = 135.0f;
-	float m_TerrainNoiseFrequency = 1.0f;
+	float m_TerrainHeightScale = 120.0f;
+	float m_TerrainNoiseFrequency = 0.05f;
 	float m_TerrainNoiseOctaves = 5.0f;
-	float m_TerrainNoisePersistance = 0.5f;
-	float m_TerrainNoiseAmplitude = 1.0f;
+	float m_TerrainNoisePersistance = 0.35f;
+	float m_TerrainNoiseAmplitude = 0.25f;
 	float m_TerrainNoiseValue = 0.0f;
 	int m_TerrainNoiseSeed = 1442;
 	float m_WaterHeight[3] = {0.0f, 63.0f, 0.0f};

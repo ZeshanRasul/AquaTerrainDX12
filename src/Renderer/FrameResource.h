@@ -19,24 +19,25 @@ struct WaterConstants
 struct TerrainConstants
 {
 	XMFLOAT2 gTerrainSize = { 460.0f, 460.0f };
-	float gHeightScale = 200.0f;
+	float gHeightScale = 300.0f;   // match m_TerrainHeightScale
 	float gHeightOffset = 0.0f;
+
+	float gMudStartHeight = 90.0f;  // low valleys show mud
+	float gGrassStartHeight = 40.0f;  // mid-range grass
+
+	float gRockStartHeight = 25.0f;  // well within 0–135 range
+	float gHeightBlendRange = 18.0f;  // wide, gradual transitions
+
+	float gMudSlopeBias = 0.10f;
+	float gMudSlopePower = 1.5f;
+
+	float gRockSlopeBias = 0.55f;
+	float gRockSlopePower = 2.5f;
 	
-	float gMudStartHeight = 80.0f;
-	float gGrassStartHeight = 113.0f;
+	float gMudTiling = 3.0f;
 	
-	float gRockStartHeight = 155.0f;
-	float gHeightBlendRange = 3.0f;
-
-	float gMudSlopeBias = 0.20f;
-	float gMudSlopePower = 2.0f;
-
-	float gRockSlopeBias = 0.35f;
-	float gRockSlopePower = 3.0f;
-
-	float gMudTiling = 2.0f;
 	float gGrassTiling = 6.0f;
-	
+
 	float gRockTiling = 4.0f;
 	float gPad = 0.0f;
 };

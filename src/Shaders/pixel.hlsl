@@ -3,8 +3,8 @@
 #endif
 
 #include "LightingUtil.hlsl"
+
 Texture2D gGrassDiffuseMap : register(t0);
-    
 Texture2D gGrassNormalMap : register(t1);
 Texture2D gMudDiffuseMap : register(t2);
 Texture2D gMudNormalMap : register(t3);
@@ -45,11 +45,11 @@ cbuffer cbPass : register(b2)
     float cbPerObjectPad2;
     float cbPerObjectPad3;
     float4 gAmbientLight;
-    
+
     float4 gFogColor;
     float gFogStart;
     float gFogRange;
-    
+
     Light gLights[MaxLights];
 };
 
@@ -58,10 +58,10 @@ cbuffer cbTerrain : register(b3)
     float2 gTerrainSize;
     float gHeightScale;
     float gHeightOffset;
-	
+
     float gMudStartHeight;
     float gGrassStartHeight;
-	
+
     float gRockStartHeight;
     float gHeightBlendRange;
 
@@ -73,85 +73,142 @@ cbuffer cbTerrain : register(b3)
 
     float gMudTiling;
     float gGrassTiling;
-	
+
     float gRockTiling;
     float gPad;
 };
+
+// Reconstruct a TBN matrix from screen-space derivatives so normal maps
+// are correctly transformed to world space without needing a tangent vertex attribute.
+float3x3 ReconstructTBN(float3 N, float3 posW, float2 uv)
+{
+    float3 dp1 = ddx(posW);
+    float3 dp2 = ddy(posW);
+    float2 duv1 = ddx(uv);
+    float2 duv2 = ddy(uv);
+
+    float3 dp2perp = cross(dp2, N);
+    float3 dp1perp = cross(N, dp1);
+    float3 T = dp2perp * duv1.x + dp1perp * duv2.x;
+    float3 B = dp2perp * duv1.y + dp1perp * duv2.y;
+
+    float invMax = rsqrt(max(dot(T, T), dot(B, B)));
+    return float3x3(T * invMax, B * invMax, N);
+}
+
+// Perturb the geometric normal using a tangent-space normal map sample.
+float3 PerturbNormal(float3 N, float3 posW, float2 uv, float3 tsNormal)
+{
+    float3x3 TBN = ReconstructTBN(N, posW, uv);
+    return normalize(mul(tsNormal, TBN));
+}
 
 float4 PS(PixelIn pIn) : SV_Target
 {
     float height = pIn.PosW.y;
     float3 N = normalize(pIn.NormalW);
-    float Ny = saturate(N.y); 
+    float Ny = saturate(N.y); // 1 = flat, 0 = vertical
 
-    float gMudStartHeight = 37.0f;
-    float gGrassStartHeight = 49.0f;
-    float gRockStartHeight = 89.0f;
-    float gHeightBlendRange = 3.0f;
-
-    float gMaxGrassSlope = 0.75f;
-    float gMudSlopeBias = 0.2f;
-    float gMudSlopePower = 2.0f;
-
-    float gMudTiling = 2.0f;
-    float gGrassTiling = 6.0f;
-
-    float wGrass = smoothstep(gGrassStartHeight - gHeightBlendRange,
-                              gGrassStartHeight + gHeightBlendRange,
-                              height);
-
-    float wMud = smoothstep(gMudStartHeight - gHeightBlendRange,
-                             gMudStartHeight + gHeightBlendRange,
-                             height);
-    
-    float wRock = smoothstep(gRockStartHeight - gHeightBlendRange,
-                              gRockStartHeight + gHeightBlendRange,
-                              height);
-    
-    wRock = saturate(wRock - wMud - wGrass);
-    
-    float slopeFactor = 1.0f - Ny;
-
-    float mudSlopeBoost = pow(saturate(slopeFactor + gMudSlopeBias), gMudSlopePower);
-    wMud = saturate(wMud + mudSlopeBoost);
-
-    float sumW = wGrass + wMud + 1e-5f;
-    wGrass /= sumW;
-    wMud /= sumW;
-
+    // -------------------------------------------------------------------------
+    // Sample all three diffuse and normal maps
+    // -------------------------------------------------------------------------
     float2 uvGrass = pIn.TexC * gGrassTiling;
     float2 uvMud = pIn.TexC * gMudTiling;
+    float2 uvRock = pIn.TexC * gRockTiling;
 
-    float3 albedoGrass = gGrassDiffuseMap.Sample(gsamAnisotropicWrap, uvGrass).rgb * 5.5f;
+    float3 albedoGrass = gGrassDiffuseMap.Sample(gsamAnisotropicWrap, uvGrass).rgb;
     float3 albedoMud = gMudDiffuseMap.Sample(gsamAnisotropicWrap, uvMud).rgb;
-    float3 albedoRock = gRockDiffuseMap.Sample(gsamAnisotropicWrap, pIn.TexC * gRockTiling).rgb;
+    float3 albedoRock = gRockDiffuseMap.Sample(gsamAnisotropicWrap, uvRock).rgb;
+
+    float3 tsNormalGrass = gGrassNormalMap.Sample(gsamAnisotropicWrap, uvGrass).xyz * 2.0f - 1.0f;
+    float3 tsNormalMud = gMudNormalMap.Sample(gsamAnisotropicWrap, uvMud).xyz * 2.0f - 1.0f;
+    float3 tsNormalRock = gRockNormalMap.Sample(gsamAnisotropicWrap, uvRock).xyz * 2.0f - 1.0f;
+
+    // -------------------------------------------------------------------------
+    // Height-based weights
+    //
+    //  Mud   : low altitudes, covers everything below gGrassStartHeight
+    //  Grass : mid altitudes, fades in at gGrassStartHeight, fades out at gRockStartHeight
+    //  Rock  : high altitudes (above gRockStartHeight)
+    // -------------------------------------------------------------------------
+    float wMud = 1.0f - smoothstep(gMudStartHeight,
+                               gMudStartHeight + gHeightBlendRange,
+                               height);
+
+    float wGrass = smoothstep(gMudStartHeight,
+                          gMudStartHeight + gHeightBlendRange,
+                          height)
+             * (1.0f - smoothstep(gRockStartHeight - gHeightBlendRange,
+                                  gRockStartHeight + gHeightBlendRange,
+                                  height));
+
+    float wRock = smoothstep(gRockStartHeight - gHeightBlendRange,
+                         gRockStartHeight + gHeightBlendRange,
+                         height); 
     
-    float3 normalGrass = gGrassNormalMap.Sample(gsamAnisotropicWrap, uvGrass).xyz * 2.0f - 1.0f;
-    float3 normalMud = gMudNormalMap.Sample(gsamAnisotropicWrap, uvMud).xyz * 2.0f - 1.0f;
-    float3 normalRock = gRockNormalMap.Sample(gsamAnisotropicWrap, pIn.TexC * gRockTiling).xyz * 2.0f - 1.0f;
+    // -------------------------------------------------------------------------
+    // Slope-based blending
+    //
+    //  Steep slopes  -> show rock and mud regardless of height
+    //  Flat surfaces -> respect height-based zones
+    // -------------------------------------------------------------------------
+    float slopeFactor = 1.0f - Ny;
 
-    float3 blendedNormal =
-        wGrass * normalGrass +
-        wMud * normalMud + wRock * normalRock;
+    // Mud on gentle-to-medium slopes
+    float mudSlopeIn = smoothstep(0.10f, 0.25f, slopeFactor);
+    float mudSlopeOut = 1.0f - smoothstep(0.45f, 0.70f, slopeFactor);
+    float mudSlopeMask = mudSlopeIn * mudSlopeOut;
 
-    blendedNormal = normalize(blendedNormal);
+    wMud = saturate(wMud + 0.75f * mudSlopeMask);
+    wGrass *= (1.0f - 0.45f * mudSlopeMask);
+    
+    // Rock on steep slopes
+    float rockSlope = pow(saturate((slopeFactor - gRockSlopeBias) /
+                               (1.0f - gRockSlopeBias)),
+                      gRockSlopePower);
 
-    float3 albedo =
-        wGrass * albedoGrass +
-        wMud * albedoMud
-        + wRock * albedoRock;
+    wRock = saturate(wRock + rockSlope);
+    
+    // -------------------------------------------------------------------------
+    // Normalize so weights always sum to 1.0
+    // -------------------------------------------------------------------------
+    float sumW = wGrass + wMud + wRock + 1e-5f;
+    wGrass /= sumW;
+    wMud /= sumW;
+    wRock /= sumW;
 
+    // -------------------------------------------------------------------------
+    // Blend albedo
+    // -------------------------------------------------------------------------
+    float3 albedo = wGrass * albedoGrass
+                  + wMud * albedoMud
+                  + wRock * albedoRock;
+
+    // -------------------------------------------------------------------------
+    // Blend and perturb normals (each layer transformed through its own TBN)
+    // -------------------------------------------------------------------------
+    float3 worldNormalGrass = PerturbNormal(N, pIn.PosW, uvGrass, tsNormalGrass);
+    float3 worldNormalMud = PerturbNormal(N, pIn.PosW, uvMud, tsNormalMud);
+    float3 worldNormalRock = PerturbNormal(N, pIn.PosW, uvRock, tsNormalRock);
+
+    float3 blendedNormal = normalize(wGrass * worldNormalGrass
+                                   + wMud * worldNormalMud
+                                   + wRock * worldNormalRock);
+
+    // -------------------------------------------------------------------------
+    // Lighting — diffuse + hemisphere ambient
+    // -------------------------------------------------------------------------
     float3 L = normalize(-gLights[0].Direction);
     float NdotL = saturate(dot(blendedNormal, L));
-    float3 diffuse = albedo * NdotL;
+    float3 diffuse = albedo * gLights[0].Strength * NdotL;
 
+    // Hemisphere ambient: sky tint above, ground tint below
     float t = 0.5f * (blendedNormal.y + 1.0f);
-    float3 skyCol = float3(0.3, 0.4, 0.6);
-    float3 groundCol = float3(0.1, 0.08, 0.06);
-    float3 hemiAmbient = lerp(groundCol, skyCol, t);
-    float4 ambient = float4(hemiAmbient * albedo, 1.0f);
-    float3 color = diffuse + ambient.xyz;
-    
+    float3 skyCol = float3(0.3f, 0.4f, 0.6f);
+    float3 groundCol = float3(0.1f, 0.08f, 0.06f);
+    float3 ambient = lerp(groundCol, skyCol, t) * albedo;
+
+    float3 color = diffuse + ambient;
+
     return float4(color, 1.0f);
 }
-

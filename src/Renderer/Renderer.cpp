@@ -1670,56 +1670,35 @@ void Renderer::UpdateMainPassCB()
 
 void Renderer::UpdateTerrainCB()
 {
-	const float mudStartFrac = 0.15f;
-	const float grassStartFrac = 0.45f;
-	const float rockStartFrac = 0.69f;
+	const float mudStartFrac = 0.30f;  
+	const float grassStartFrac = 0.70f;
+	const float rockStartFrac = 0.85f;
+	const float blendFrac = 0.18f;
 	const float mudRepeatSize = 16.0f;
 	const float grassRepeatSize = 8.0f;
 	const float rockRepeatSize = 12.0f;
 
-	const float blendFrac = 0.12f;
 	m_TerrainConstantsCPU.gHeightOffset = 0.0f;
 	m_TerrainConstantsCPU.gHeightScale = m_TerrainHeightScale;
 
 	float minH = m_TerrainConstantsCPU.gHeightOffset;
-	;
 	float maxH = m_TerrainConstantsCPU.gHeightOffset + m_TerrainConstantsCPU.gHeightScale;
 	float rangeH = maxH - minH;
 
-	m_TerrainConstantsCPU.gMudStartHeight = minH + mudStartFrac * rangeH;
-	m_TerrainConstantsCPU.gGrassStartHeight = minH + grassStartFrac * rangeH;
-	m_TerrainConstantsCPU.gRockStartHeight = minH + rockStartFrac * rangeH;
-	m_TerrainConstantsCPU.gHeightBlendRange = blendFrac * rangeH;
+	m_TerrainConstantsCPU.gMudStartHeight = minH + mudStartFrac * rangeH;  // ~13.5
+	m_TerrainConstantsCPU.gGrassStartHeight = minH + grassStartFrac * rangeH;  // ~40.5
+	m_TerrainConstantsCPU.gRockStartHeight = minH + rockStartFrac * rangeH;  // ~87.75
+	m_TerrainConstantsCPU.gHeightBlendRange = blendFrac * rangeH;               // ~24.3
 	m_TerrainConstantsCPU.gMudSlopeBias = 0.15f;
 	m_TerrainConstantsCPU.gMudSlopePower = 1.8f;
 	m_TerrainConstantsCPU.gRockSlopeBias = 0.3f;
 	m_TerrainConstantsCPU.gRockSlopePower = 3.0f;
 
-	m_TerrainConstantsCPU.gMudTiling = std::max(1.0f, m_TerrainConstantsCPU.gTerrainSize.x / mudRepeatSize);;
-	m_TerrainConstantsCPU.gGrassTiling = std::max(1.0f, m_TerrainConstantsCPU.gTerrainSize.x / grassRepeatSize);;
-	m_TerrainConstantsCPU.gRockTiling = std::max(1.0f, m_TerrainConstantsCPU.gTerrainSize.x / rockRepeatSize);;
+	m_TerrainConstantsCPU.gMudTiling = std::max(1.0f, m_TerrainConstantsCPU.gTerrainSize.x / mudRepeatSize);
+	m_TerrainConstantsCPU.gGrassTiling = std::max(1.0f, m_TerrainConstantsCPU.gTerrainSize.x / grassRepeatSize);
+	m_TerrainConstantsCPU.gRockTiling = std::max(1.0f, m_TerrainConstantsCPU.gTerrainSize.x / rockRepeatSize);
 
-	m_TerrainConstantsCB.gTerrainSize = m_TerrainConstantsCPU.gTerrainSize;
-	m_TerrainConstantsCB.gHeightScale = m_TerrainConstantsCPU.gHeightScale;
-	m_TerrainConstantsCB.gHeightOffset = m_TerrainConstantsCPU.gHeightOffset;
-
-	m_TerrainConstantsCB.gMudStartHeight = m_TerrainConstantsCPU.gMudStartHeight;
-	m_TerrainConstantsCB.gGrassStartHeight = m_TerrainConstantsCPU.gGrassStartHeight;
-
-	m_TerrainConstantsCB.gRockStartHeight = m_TerrainConstantsCPU.gRockStartHeight;
-	m_TerrainConstantsCB.gHeightBlendRange = m_TerrainConstantsCPU.gHeightBlendRange;
-
-	m_TerrainConstantsCB.gMudSlopeBias = m_TerrainConstantsCPU.gMudSlopeBias;
-	m_TerrainConstantsCB.gMudSlopePower = m_TerrainConstantsCPU.gMudSlopePower;
-
-	m_TerrainConstantsCB.gRockSlopeBias = m_TerrainConstantsCPU.gRockSlopeBias;
-	m_TerrainConstantsCB.gRockSlopePower = m_TerrainConstantsCPU.gRockSlopePower;
-
-	m_TerrainConstantsCB.gMudTiling = m_TerrainConstantsCPU.gMudTiling;
-	m_TerrainConstantsCB.gGrassTiling = m_TerrainConstantsCPU.gGrassTiling;
-
-	m_TerrainConstantsCB.gRockTiling = m_TerrainConstantsCPU.gRockTiling;
-	m_TerrainConstantsCB.gPad = m_TerrainConstantsCPU.gPad;
+	m_TerrainConstantsCB = m_TerrainConstantsCPU;
 
 	auto currTerrainCB = m_CurrentFrameResource->TerrainCB.get();
 	currTerrainCB->CopyData(0, m_TerrainConstantsCB);
