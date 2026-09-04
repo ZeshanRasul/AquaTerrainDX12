@@ -192,6 +192,7 @@ void StableFluids::Reset()
 
 	m_RmsDivergenceBeforeProjection = 0.0f;
 	m_RmsDivergenceAfterProjection = 0.0f;
+
 }
 
 float StableFluids::CalculateRmsDivergence(const float* velocityX, const float* velocityY) const

@@ -10,6 +10,7 @@
 #include "../Camera.h"
 #include "../Utils/GameTimer.h"
 #include "../Simulation/StableFluids.h"
+#include "../Simulation/StableFluids3D.h"
 
 
 using namespace DirectX;
@@ -18,6 +19,13 @@ enum class RenderLayer : int
 {
 	Opaque = 0,
 	Count
+};
+
+enum class FluidDemoMode : int
+{
+	Off = 0,
+	Fluid2D,
+	Fluid3D
 };
 
 struct HeightMap
@@ -48,6 +56,7 @@ private:
 	void CreateRtvAndDsvDescriptorHeaps();
 	D3D12_CPU_DESCRIPTOR_HANDLE CurrentBackBufferView() const;
 	D3D12_CPU_DESCRIPTOR_HANDLE DepthStencilView() const;
+	D3D12_CPU_DESCRIPTOR_HANDLE ReadOnlyDepthStencilView() const;
 	void CreateRenderTargetView();
 	void CreateDepthStencilView();
 
@@ -64,6 +73,10 @@ private:
 	void CreateOpaqueRootSignature();
 	void CreateTransparentRootSignature();
 	void CreateWaterComputeRootSignature();
+	void CreateSmokeRootSignature();
+	void CreateSmokeResources();
+	void UploadSmokeDensity(ID3D12GraphicsCommandList* commandList);
+	void DrawSmokeVolume(ID3D12GraphicsCommandList* commandList);
 
 	void BuildShadersAndInputLayout();
 	
@@ -175,6 +188,8 @@ private:
 	Microsoft::WRL::ComPtr<ID3DBlob> m_CsByteCodeWaveUpdate;
 	Microsoft::WRL::ComPtr<ID3DBlob> m_CsByteCodeWaveDisturb;
 	Microsoft::WRL::ComPtr<ID3DBlob> m_CsByteCodeWaveNormals;
+	Microsoft::WRL::ComPtr<ID3DBlob> m_VsByteCodeSmoke;
+	Microsoft::WRL::ComPtr<ID3DBlob> m_PsByteCodeSmoke;
 	std::vector<D3D12_INPUT_ELEMENT_DESC> m_InputLayoutDescs;
 
 	XMFLOAT4X4 m_World = MathHelper::Identity4x4();
@@ -184,6 +199,7 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_OpaqueRootSignature;
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_TransparentRootSignature;
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_ComputeRootSignature;
+	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_SmokeRootSignature;
 	std::unordered_map<std::string, Microsoft::WRL::ComPtr<ID3D12PipelineState>> m_PipelineStateObjects;
 
 	float m_Theta = 1.5f * DirectX::XM_PI;
@@ -314,13 +330,43 @@ private:
 
 	void CreateWaterSimTextures();
 
+	void DrawFluidDemoSelector();
 	void DrawFluidDebug(StableFluids& fluid);
+	void DrawFluid3DDebug(StableFluids3D& fluid);
+
+	FluidDemoMode m_FluidDemoMode = FluidDemoMode::Fluid2D;
+	bool m_ShowFluid3DSliceViewer = true;
+	bool m_ShowSmokeVolume = true;
 
 	StableFluids m_Fluid{};
 	float m_FluidAccumulator = 0.0f;
 	bool m_FluidEmitterEnabled = true;
 	bool m_FluidPaused = false;
 	bool m_FluidSingleStepRequested = false;
+
+	StableFluids3D m_Fluid3D{ StableFluids3D::GridSize,
+		StableFluids3D::GridSize, StableFluids3D::GridSize };
+	float m_Fluid3DAccumulator = 0.0f;
+	bool m_Fluid3DEmitterEnabled = true;
+	bool m_Fluid3DPaused = false;
+	bool m_Fluid3DSingleStepRequested = false;
+
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_SmokeDensityTexture;
+	std::array<Microsoft::WRL::ComPtr<ID3D12Resource>, NumFrameResources>
+		m_SmokeUploadBuffers;
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_SmokeSrvHeap;
+	D3D12_PLACED_SUBRESOURCE_FOOTPRINT m_SmokeUploadFootprint = {};
+	UINT m_SmokeUploadRowCount = 0;
+	UINT64 m_SmokeUploadRowSize = 0;
+	UINT64 m_SmokeUploadBufferSize = 0;
+	bool m_SmokeDensityDirty = true;
+
+	float m_SmokePosition[3] = { -120.0f, 210.0f, 35.0f };
+	float m_SmokeSize[3] = { 80.0f, 120.0f, 80.0f };
+	float m_SmokeColour[3] = { 0.72f, 0.78f, 0.86f };
+	float m_SmokeDensityScale = 0.12f;
+	float m_SmokeAbsorption = 3.0f;
+	float m_SmokeStepScale = 0.75f;
 };
 
 

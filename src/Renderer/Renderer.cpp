@@ -4,6 +4,7 @@
 #include "imgui/imgui.h"
 #include "imgui/backends/imgui_impl_win32.h"
 #include "imgui/backends/imgui_impl_dx12.h"
+#include <cstring>
 
 const int gNumFrameResources = 3;
 
@@ -101,6 +102,7 @@ bool Renderer::InitializeD3D12(HWND& windowHandle)
 	CreateDepthStencilView();
 
 	CreateWaterSimTextures();
+	CreateSmokeResources();
 
 	HeightMap hm = GeneratePerlinHeightmap(m_HeightMapWidth, m_HeightMapHeight, m_TerrainHeightScale, m_TerrainNoiseOctaves, m_TerrainNoisePersistance, m_TerrainNoiseSeed);
 	CreateHeightMapTexture(hm);
@@ -111,6 +113,7 @@ bool Renderer::InitializeD3D12(HWND& windowHandle)
 	CreateOpaqueRootSignature();
 	CreateTransparentRootSignature();
 	CreateWaterComputeRootSignature();
+	CreateSmokeRootSignature();
 
 	BuildShadersAndInputLayout();
 	BuildShapeGeometry();
@@ -211,7 +214,7 @@ void Renderer::Update(GameTimer& gt, Camera& cam)
 			m_Fluid.Step(step);
 		};
 
-	if (m_FluidPaused)
+	if (m_FluidDemoMode == FluidDemoMode::Fluid2D && m_FluidPaused)
 	{
 		// Prevent elapsed paused time from accumulating.
 		m_FluidAccumulator = 0.0f;
@@ -222,7 +225,7 @@ void Renderer::Update(GameTimer& gt, Camera& cam)
 			m_FluidSingleStepRequested = false;
 		}
 	}
-	else
+	else if (m_FluidDemoMode == FluidDemoMode::Fluid2D)
 	{
 		m_FluidSingleStepRequested = false;
 
@@ -235,6 +238,55 @@ void Renderer::Update(GameTimer& gt, Camera& cam)
 			m_FluidAccumulator -= step;
 		}
 	}
+	else
+	{
+		m_FluidAccumulator = 0.0f;
+		m_FluidSingleStepRequested = false;
+	}
+
+	auto advanceFluid3DOneStep = [&]()
+		{
+			const int centreX = m_Fluid3D.Width() / 2;
+			const int centreY = m_Fluid3D.Height() / 4;
+			const int centreZ = m_Fluid3D.Depth() / 2;
+
+			if (m_Fluid3DEmitterEnabled)
+			{
+				for (int k = centreZ - 1; k <= centreZ + 1; ++k)
+					for (int j = centreY - 1; j <= centreY + 1; ++j)
+						for (int i = centreX - 1; i <= centreX + 1; ++i)
+							m_Fluid3D.AddSourceRates(
+								i, j, k, 30.0f, 0.0f, 4.0f, 0.0f);
+			}
+
+			m_Fluid3D.Step(step);
+			m_SmokeDensityDirty = true;
+		};
+
+	if (m_FluidDemoMode == FluidDemoMode::Fluid3D && m_Fluid3DPaused)
+	{
+		m_Fluid3DAccumulator = 0.0f;
+		if (m_Fluid3DSingleStepRequested)
+		{
+			advanceFluid3DOneStep();
+			m_Fluid3DSingleStepRequested = false;
+		}
+	}
+	else if (m_FluidDemoMode == FluidDemoMode::Fluid3D)
+	{
+		m_Fluid3DSingleStepRequested = false;
+		m_Fluid3DAccumulator += std::clamp(gt.DeltaTime(), 0.0f, 0.1f);
+		while (m_Fluid3DAccumulator >= step)
+		{
+			advanceFluid3DOneStep();
+			m_Fluid3DAccumulator -= step;
+		}
+	}
+	else
+	{
+		m_Fluid3DAccumulator = 0.0f;
+		m_Fluid3DSingleStepRequested = false;
+	}
 }
 
 void Renderer::Draw()
@@ -243,9 +295,13 @@ void Renderer::Draw()
 	ImGui_ImplWin32_NewFrame();
 	ImGui::NewFrame();
 	ShowImGUIEnvironmentControl();
+	DrawFluidDemoSelector();
 
-	ShowImGUIEnvironmentControl();
-	DrawFluidDebug(m_Fluid);
+	if (m_FluidDemoMode == FluidDemoMode::Fluid2D)
+		DrawFluidDebug(m_Fluid);
+	else if (m_FluidDemoMode == FluidDemoMode::Fluid3D &&
+		m_ShowFluid3DSliceViewer)
+		DrawFluid3DDebug(m_Fluid3D);
 
 	showImgui = true;
 	ImGui::Render();
@@ -433,7 +489,11 @@ void Renderer::Draw()
 	DrawRenderItems(m_CommandList.Get(), m_SkyRenderItems);
 
 	m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_DepthStencilBuffer.Get(), D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_DEPTH_READ | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
-	m_CommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
+	m_CommandList->OMSetRenderTargets(
+		1,
+		&CurrentBackBufferView(),
+		true,
+		&ReadOnlyDepthStencilView());
 
 	m_CommandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
 	m_CommandList->SetPipelineState(m_PipelineStateObjects["water"].Get());
@@ -453,6 +513,10 @@ void Renderer::Draw()
 	m_CommandList->SetGraphicsRootDescriptorTable(0, tex);
 
 	DrawRenderItems(m_CommandList.Get(), m_TransparentRenderItems);
+
+	if (m_FluidDemoMode == FluidDemoMode::Fluid3D && m_ShowSmokeVolume)
+		DrawSmokeVolume(m_CommandList.Get());
+
 	m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_DepthStencilBuffer.Get(), D3D12_RESOURCE_STATE_DEPTH_READ | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE));
 
 	m_CommandList->SetDescriptorHeaps(1, m_ImGuiSrvHeap.GetAddressOf());
@@ -571,7 +635,7 @@ void Renderer::CreateRtvAndDsvDescriptorHeaps()
 	ThrowIfFailed(m_Device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(m_RtvHeap.GetAddressOf())));
 
 	D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc;
-	dsvHeapDesc.NumDescriptors = 1;
+	dsvHeapDesc.NumDescriptors = 2;
 	dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
 	dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 	dsvHeapDesc.NodeMask = 0;
@@ -587,6 +651,14 @@ D3D12_CPU_DESCRIPTOR_HANDLE Renderer::CurrentBackBufferView() const
 D3D12_CPU_DESCRIPTOR_HANDLE Renderer::DepthStencilView() const
 {
 	return m_DsvHeap->GetCPUDescriptorHandleForHeapStart();
+}
+
+D3D12_CPU_DESCRIPTOR_HANDLE Renderer::ReadOnlyDepthStencilView() const
+{
+	return CD3DX12_CPU_DESCRIPTOR_HANDLE(
+		m_DsvHeap->GetCPUDescriptorHandleForHeapStart(),
+		1,
+		m_DsvDescriptorSize);
 }
 
 void Renderer::CreateRenderTargetView()
@@ -632,6 +704,14 @@ void Renderer::CreateDepthStencilView()
 	dsvDesc.Texture2D.MipSlice = 0;
 
 	m_Device->CreateDepthStencilView(m_DepthStencilBuffer.Get(), &dsvDesc, DepthStencilView());
+
+	dsvDesc.Flags = static_cast<D3D12_DSV_FLAGS>(
+		D3D12_DSV_FLAG_READ_ONLY_DEPTH |
+		D3D12_DSV_FLAG_READ_ONLY_STENCIL);
+	m_Device->CreateDepthStencilView(
+		m_DepthStencilBuffer.Get(),
+		&dsvDesc,
+		ReadOnlyDepthStencilView());
 
 	m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_DepthStencilBuffer.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE));
 }
@@ -849,6 +929,86 @@ void Renderer::CreateWaterSimTextures()
 		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
 		nullptr,
 		IID_PPV_ARGS(&m_WaterHeightCurrentUav)));
+}
+
+void Renderer::CreateSmokeResources()
+{
+	D3D12_RESOURCE_DESC textureDesc = {};
+	textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE3D;
+	textureDesc.Width = static_cast<UINT64>(m_Fluid3D.Width());
+	textureDesc.Height = static_cast<UINT>(m_Fluid3D.Height());
+	textureDesc.DepthOrArraySize = static_cast<UINT16>(m_Fluid3D.Depth());
+	textureDesc.MipLevels = 1;
+	textureDesc.Format = DXGI_FORMAT_R32_FLOAT;
+	textureDesc.SampleDesc.Count = 1;
+	textureDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+	textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+
+	ThrowIfFailed(m_Device->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		D3D12_HEAP_FLAG_NONE,
+		&textureDesc,
+		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+		nullptr,
+		IID_PPV_ARGS(&m_SmokeDensityTexture)));
+
+	m_Device->GetCopyableFootprints(
+		&textureDesc,
+		0,
+		1,
+		0,
+		&m_SmokeUploadFootprint,
+		&m_SmokeUploadRowCount,
+		&m_SmokeUploadRowSize,
+		&m_SmokeUploadBufferSize);
+
+	for (auto& uploadBuffer : m_SmokeUploadBuffers)
+	{
+		const auto uploadDesc =
+			CD3DX12_RESOURCE_DESC::Buffer(m_SmokeUploadBufferSize);
+
+		ThrowIfFailed(m_Device->CreateCommittedResource(
+			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+			D3D12_HEAP_FLAG_NONE,
+			&uploadDesc,
+			D3D12_RESOURCE_STATE_GENERIC_READ,
+			nullptr,
+			IID_PPV_ARGS(&uploadBuffer)));
+	}
+
+	D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
+	heapDesc.NumDescriptors = 2;
+	heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+	ThrowIfFailed(m_Device->CreateDescriptorHeap(
+		&heapDesc, IID_PPV_ARGS(&m_SmokeSrvHeap)));
+
+	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
+	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE3D;
+	srvDesc.Texture3D.MostDetailedMip = 0;
+	srvDesc.Texture3D.MipLevels = 1;
+	srvDesc.Texture3D.ResourceMinLODClamp = 0.0f;
+	m_Device->CreateShaderResourceView(
+		m_SmokeDensityTexture.Get(),
+		&srvDesc,
+		m_SmokeSrvHeap->GetCPUDescriptorHandleForHeapStart());
+
+	CD3DX12_CPU_DESCRIPTOR_HANDLE depthHandle(
+		m_SmokeSrvHeap->GetCPUDescriptorHandleForHeapStart(),
+		1,
+		m_CbvSrvUavDescriptorSize);
+	D3D12_SHADER_RESOURCE_VIEW_DESC depthSrvDesc = {};
+	depthSrvDesc.Shader4ComponentMapping =
+		D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	depthSrvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+	depthSrvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	depthSrvDesc.Texture2D.MostDetailedMip = 0;
+	depthSrvDesc.Texture2D.MipLevels = 1;
+	depthSrvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
+	m_Device->CreateShaderResourceView(
+		m_DepthStencilBuffer.Get(), &depthSrvDesc, depthHandle);
 }
 
 void Renderer::createSrvDescriptorHeaps()
@@ -1208,6 +1368,53 @@ void Renderer::CreateWaterComputeRootSignature()
 
 }
 
+void Renderer::CreateSmokeRootSignature()
+{
+	constexpr UINT smokeConstantCount = 44;
+
+	CD3DX12_DESCRIPTOR_RANGE densityTable;
+	densityTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2, 0);
+
+	CD3DX12_ROOT_PARAMETER rootParameters[2];
+	rootParameters[0].InitAsConstants(
+		smokeConstantCount, 0, 0, D3D12_SHADER_VISIBILITY_ALL);
+	rootParameters[1].InitAsDescriptorTable(
+		1, &densityTable, D3D12_SHADER_VISIBILITY_PIXEL);
+
+	const CD3DX12_STATIC_SAMPLER_DESC linearClamp(
+		0,
+		D3D12_FILTER_MIN_MAG_MIP_LINEAR,
+		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+		D3D12_TEXTURE_ADDRESS_MODE_CLAMP);
+
+	CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc(
+		_countof(rootParameters),
+		rootParameters,
+		1,
+		&linearClamp,
+		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+	Microsoft::WRL::ComPtr<ID3DBlob> serializedRootSignature;
+	Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
+	const HRESULT result = D3D12SerializeRootSignature(
+		&rootSignatureDesc,
+		D3D_ROOT_SIGNATURE_VERSION_1,
+		serializedRootSignature.GetAddressOf(),
+		errorBlob.GetAddressOf());
+
+	if (errorBlob)
+		::OutputDebugStringA(
+			static_cast<const char*>(errorBlob->GetBufferPointer()));
+
+	ThrowIfFailed(result);
+	ThrowIfFailed(m_Device->CreateRootSignature(
+		0,
+		serializedRootSignature->GetBufferPointer(),
+		serializedRootSignature->GetBufferSize(),
+		IID_PPV_ARGS(m_SmokeRootSignature.GetAddressOf())));
+}
+
 void Renderer::BuildShadersAndInputLayout()
 {
 	const D3D_SHADER_MACRO alphaTestDefines[] =
@@ -1226,6 +1433,8 @@ void Renderer::BuildShadersAndInputLayout()
 	m_PsByteCodeSky = d3dUtil::CompileShader(L"Shaders\\pixel_sky.hlsl", nullptr, "PS", "ps_5_0");
 	m_CsByteCodeWaveUpdate = d3dUtil::CompileShader(L"Shaders\\compute_water_update.hlsl", nullptr, "CS", "cs_5_0");
 	m_CsByteCodeWaveDisturb = d3dUtil::CompileShader(L"Shaders\\compute_water_disturb.hlsl", nullptr, "CS", "cs_5_0");
+	m_VsByteCodeSmoke = d3dUtil::CompileShader(L"Shaders\\vertex_smoke.hlsl", nullptr, "VS", "vs_5_0");
+	m_PsByteCodeSmoke = d3dUtil::CompileShader(L"Shaders\\pixel_smoke.hlsl", nullptr, "PS", "ps_5_0");
 //	m_CsByteCodeWaveNormals = d3dUtil::CompileShader(L"Shaders\\compute_water_normals.hlsl", nullptr, "CS", "cs_5_0");
 
 
@@ -1830,6 +2039,162 @@ void Renderer::DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::ve
 	}
 }
 
+void Renderer::UploadSmokeDensity(ID3D12GraphicsCommandList* commandList)
+{
+	if (!m_SmokeDensityDirty)
+		return;
+
+	ID3D12Resource* uploadBuffer =
+		m_SmokeUploadBuffers[m_CurrentFrameResourceIndex].Get();
+	std::byte* mappedData = nullptr;
+	const D3D12_RANGE noCpuReads = { 0, 0 };
+	ThrowIfFailed(uploadBuffer->Map(
+		0,
+		&noCpuReads,
+		reinterpret_cast<void**>(&mappedData)));
+
+	std::memset(
+		mappedData,
+		0,
+		static_cast<std::size_t>(m_SmokeUploadBufferSize));
+
+	const UINT rowPitch = m_SmokeUploadFootprint.Footprint.RowPitch;
+	const UINT64 slicePitch =
+		static_cast<UINT64>(rowPitch) *
+		m_SmokeUploadFootprint.Footprint.Height;
+
+	for (int k = 0; k < m_Fluid3D.Depth(); ++k)
+	{
+		for (int j = 0; j < m_Fluid3D.Height(); ++j)
+		{
+			float* destinationRow = reinterpret_cast<float*>(
+				mappedData +
+				static_cast<UINT64>(k) * slicePitch +
+				static_cast<UINT64>(j) * rowPitch);
+
+			for (int i = 0; i < m_Fluid3D.Width(); ++i)
+			{
+				const float density = m_Fluid3D.DensityAt(i + 1, j + 1, k + 1);
+				destinationRow[i] =
+					std::isfinite(density) ? std::max(density, 0.0f) : 0.0f;
+			}
+		}
+	}
+
+	const D3D12_RANGE cpuWrites = {
+		0,
+		static_cast<SIZE_T>(m_SmokeUploadBufferSize)
+	};
+	uploadBuffer->Unmap(0, &cpuWrites);
+
+	const auto toCopyDestination = CD3DX12_RESOURCE_BARRIER::Transition(
+		m_SmokeDensityTexture.Get(),
+		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+		D3D12_RESOURCE_STATE_COPY_DEST);
+	commandList->ResourceBarrier(1, &toCopyDestination);
+
+	D3D12_TEXTURE_COPY_LOCATION destination = {};
+	destination.pResource = m_SmokeDensityTexture.Get();
+	destination.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+	destination.SubresourceIndex = 0;
+
+	D3D12_TEXTURE_COPY_LOCATION source = {};
+	source.pResource = uploadBuffer;
+	source.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+	source.PlacedFootprint = m_SmokeUploadFootprint;
+	commandList->CopyTextureRegion(
+		&destination, 0, 0, 0, &source, nullptr);
+
+	const auto toShaderResource = CD3DX12_RESOURCE_BARRIER::Transition(
+		m_SmokeDensityTexture.Get(),
+		D3D12_RESOURCE_STATE_COPY_DEST,
+		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	commandList->ResourceBarrier(1, &toShaderResource);
+	m_SmokeDensityDirty = false;
+}
+
+void Renderer::DrawSmokeVolume(ID3D12GraphicsCommandList* commandList)
+{
+	UploadSmokeDensity(commandList);
+
+	struct SmokeConstants
+	{
+		XMFLOAT4X4 World;
+		XMFLOAT4X4 ViewProjection;
+		XMFLOAT3 CameraPositionLocal;
+		float DensityScale;
+		XMFLOAT3 SmokeColour;
+		float Absorption;
+		XMFLOAT3 LightDirectionTexture;
+		float StepScale;
+	};
+
+	static_assert(sizeof(SmokeConstants) == 44 * sizeof(float));
+
+	const XMMATRIX world =
+		XMMatrixScaling(
+			m_SmokeSize[0] / 1.5f,
+			m_SmokeSize[1] / 0.5f,
+			m_SmokeSize[2] / 1.5f) *
+		XMMatrixTranslation(
+			m_SmokePosition[0],
+			m_SmokePosition[1],
+			m_SmokePosition[2]);
+	const XMMATRIX viewProjection =
+		XMLoadFloat4x4(&m_View) * XMLoadFloat4x4(&m_Proj);
+	const XMMATRIX inverseWorld =
+		XMMatrixInverse(nullptr, world);
+
+	SmokeConstants constants = {};
+	XMStoreFloat4x4(&constants.World, XMMatrixTranspose(world));
+	XMStoreFloat4x4(
+		&constants.ViewProjection,
+		XMMatrixTranspose(viewProjection));
+	XMStoreFloat3(
+		&constants.CameraPositionLocal,
+		XMVector3TransformCoord(XMLoadFloat3(&m_EyePos), inverseWorld));
+	constants.DensityScale = m_SmokeDensityScale;
+	constants.SmokeColour = XMFLOAT3(
+		m_SmokeColour[0], m_SmokeColour[1], m_SmokeColour[2]);
+	constants.Absorption = m_SmokeAbsorption;
+
+	const XMFLOAT3 lightDirection = m_MainPassCB.Lights[0].Direction;
+	const XMVECTOR lightTexture = XMVector3Normalize(XMVectorSet(
+		lightDirection.x / std::max(m_SmokeSize[0], 0.001f),
+		lightDirection.y / std::max(m_SmokeSize[1], 0.001f),
+		lightDirection.z / std::max(m_SmokeSize[2], 0.001f),
+		0.0f));
+	XMStoreFloat3(&constants.LightDirectionTexture, lightTexture);
+	constants.StepScale = m_SmokeStepScale;
+
+	commandList->SetPipelineState(m_PipelineStateObjects["smoke"].Get());
+	commandList->SetGraphicsRootSignature(m_SmokeRootSignature.Get());
+	ID3D12DescriptorHeap* descriptorHeaps[] = { m_SmokeSrvHeap.Get() };
+	commandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
+	commandList->SetGraphicsRoot32BitConstants(
+		0,
+		static_cast<UINT>(sizeof(SmokeConstants) / sizeof(float)),
+		&constants,
+		0);
+	commandList->SetGraphicsRootDescriptorTable(
+		1,
+		m_SmokeSrvHeap->GetGPUDescriptorHandleForHeapStart());
+
+	MeshGeometry* geometry = m_Geometries["shapeGeo"].get();
+	const SubmeshGeometry& box = geometry->DrawArgs["box"];
+	const D3D12_VERTEX_BUFFER_VIEW vertexBuffer = geometry->VertexBufferView();
+	const D3D12_INDEX_BUFFER_VIEW indexBuffer = geometry->IndexBufferView();
+	commandList->IASetVertexBuffers(0, 1, &vertexBuffer);
+	commandList->IASetIndexBuffer(&indexBuffer);
+	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	commandList->DrawIndexedInstanced(
+		box.IndexCount,
+		1,
+		box.StartIndexLocation,
+		box.BaseVertexLocation,
+		0);
+}
+
 void Renderer::BuildPSOs()
 {
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC opaquePsoDesc;
@@ -1903,6 +2268,30 @@ void Renderer::BuildPSOs()
 	waterPsoDesc.BlendState.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
 
 	ThrowIfFailed(m_Device->CreateGraphicsPipelineState(&waterPsoDesc, IID_PPV_ARGS(&m_PipelineStateObjects["water"])));
+
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC smokePsoDesc = opaquePsoDesc;
+	smokePsoDesc.pRootSignature = m_SmokeRootSignature.Get();
+	smokePsoDesc.VS = {
+		reinterpret_cast<BYTE*>(m_VsByteCodeSmoke->GetBufferPointer()),
+		m_VsByteCodeSmoke->GetBufferSize()
+	};
+	smokePsoDesc.PS = {
+		reinterpret_cast<BYTE*>(m_PsByteCodeSmoke->GetBufferPointer()),
+		m_PsByteCodeSmoke->GetBufferSize()
+	};
+	smokePsoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_BACK;
+	smokePsoDesc.BlendState.RenderTarget[0].BlendEnable = TRUE;
+	smokePsoDesc.BlendState.RenderTarget[0].SrcBlend = D3D12_BLEND_ONE;
+	smokePsoDesc.BlendState.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
+	smokePsoDesc.BlendState.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
+	smokePsoDesc.BlendState.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ONE;
+	smokePsoDesc.BlendState.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_INV_SRC_ALPHA;
+	smokePsoDesc.BlendState.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
+	smokePsoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+	smokePsoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+	ThrowIfFailed(m_Device->CreateGraphicsPipelineState(
+		&smokePsoDesc,
+		IID_PPV_ARGS(&m_PipelineStateObjects["smoke"])));
 
     D3D12_COMPUTE_PIPELINE_STATE_DESC waveUpdatePsoDesc = {};
 	waveUpdatePsoDesc.pRootSignature = m_ComputeRootSignature.Get();
@@ -2352,6 +2741,76 @@ void Renderer::UpdateHeightMapSrv()
 	m_Device->CreateShaderResourceView(m_HeightMapTex.Get(), &srvDesc, h);
 }
 
+void Renderer::DrawFluidDemoSelector()
+{
+	ImGui::SetNextWindowSize(ImVec2(430.0f, 0.0f), ImGuiCond_FirstUseEver);
+
+	if (!ImGui::Begin("Fluid Simulation Mode"))
+	{
+		ImGui::End();
+		return;
+	}
+
+	constexpr const char* modeNames[] =
+	{
+		"Off",
+		"2D ImGui Stable Fluids",
+		"3D DX12 Smoke"
+	};
+	int selectedMode = static_cast<int>(m_FluidDemoMode);
+
+	if (ImGui::Combo(
+		"Active simulation",
+		&selectedMode,
+		modeNames,
+		IM_ARRAYSIZE(modeNames)))
+	{
+		m_FluidDemoMode = static_cast<FluidDemoMode>(selectedMode);
+		m_FluidAccumulator = 0.0f;
+		m_Fluid3DAccumulator = 0.0f;
+		m_FluidSingleStepRequested = false;
+		m_Fluid3DSingleStepRequested = false;
+
+		if (m_FluidDemoMode == FluidDemoMode::Fluid3D)
+			m_SmokeDensityDirty = true;
+	}
+
+	if (m_FluidDemoMode == FluidDemoMode::Off)
+	{
+		ImGui::TextUnformatted("Both fluid solvers and their visualisations are stopped.");
+	}
+	else if (m_FluidDemoMode == FluidDemoMode::Fluid2D)
+	{
+		ImGui::TextUnformatted("Only the 2D solver and ImGui panel are active.");
+	}
+	else
+	{
+		ImGui::TextUnformatted("Only the 3D solver and selected 3D views are active.");
+		ImGui::Checkbox("Render smoke in world", &m_ShowSmokeVolume);
+		ImGui::Checkbox("Show ImGui slice viewer", &m_ShowFluid3DSliceViewer);
+
+		if (m_ShowSmokeVolume)
+		{
+			ImGui::SeparatorText("DX12 smoke volume");
+			ImGui::DragFloat3(
+				"World position", m_SmokePosition, 0.5f, -1000.0f, 1000.0f);
+			ImGui::DragFloat3(
+				"World size", m_SmokeSize, 0.5f, 4.0f, 400.0f);
+			ImGui::ColorEdit3("Smoke colour", m_SmokeColour);
+			ImGui::SliderFloat(
+				"Density scale", &m_SmokeDensityScale, 0.01f, 1.0f);
+			ImGui::SliderFloat(
+				"Absorption", &m_SmokeAbsorption, 0.1f, 12.0f);
+			ImGui::SliderFloat(
+				"Ray step", &m_SmokeStepScale, 0.25f, 2.0f);
+			ImGui::TextUnformatted(
+				"Smaller ray steps are smoother but cost more GPU time.");
+		}
+	}
+
+	ImGui::End();
+}
+
 void Renderer::DrawFluidDebug(StableFluids& fluid)
 {
 	ImGui::SetNextWindowSize(
@@ -2611,6 +3070,261 @@ void Renderer::DrawFluidDebug(StableFluids& fluid)
 	ImGui::Text(
 		"Maximum speed: %.6f",
 		diagnostics.maximumSpeed);
+
+	ImGui::End();
+}
+
+void Renderer::DrawFluid3DDebug(StableFluids3D& fluid)
+{
+	ImGui::SetNextWindowSize(ImVec2(580.0f, 760.0f), ImGuiCond_FirstUseEver);
+
+	if (!ImGui::Begin("Stable Fluids 3D Slices"))
+	{
+		ImGui::End();
+		return;
+	}
+
+	if (ImGui::Button(m_Fluid3DPaused ? "Resume" : "Pause"))
+		m_Fluid3DPaused = !m_Fluid3DPaused;
+
+	ImGui::SameLine();
+	ImGui::BeginDisabled(!m_Fluid3DPaused);
+
+	if (ImGui::Button("Single step"))
+		m_Fluid3DSingleStepRequested = true;
+
+	ImGui::EndDisabled();
+	ImGui::SameLine();
+
+	if (ImGui::Button("Reset"))
+	{
+		fluid.Reset();
+		m_Fluid3DAccumulator = 0.0f;
+		m_Fluid3DSingleStepRequested = false;
+		m_Fluid3DPaused = true;
+		m_SmokeDensityDirty = true;
+	}
+
+	ImGui::SameLine();
+	ImGui::Checkbox("Emitter", &m_Fluid3DEmitterEnabled);
+
+	static int plane = 0;
+	static int slice = StableFluids3D::GridSize / 2;
+	constexpr const char* planeNames[] =
+	{
+		"XY (fixed Z)",
+		"XZ (fixed Y)",
+		"ZY (fixed X)"
+	};
+
+	if (ImGui::Combo("Plane", &plane, planeNames, IM_ARRAYSIZE(planeNames)))
+		slice = StableFluids3D::GridSize / 2;
+
+	const int maximumSlice =
+		plane == 0 ? fluid.Depth() :
+		plane == 1 ? fluid.Height() : fluid.Width();
+
+	slice = std::clamp(slice, 1, maximumSlice);
+	ImGui::SliderInt("Slice", &slice, 1, maximumSlice);
+
+	static float exposure = 0.1f;
+	static bool showVelocity = true;
+	static int arrowStride = 4;
+	static float arrowGain = 3.0f;
+	static float minimumArrowSpeed = 0.001f;
+
+	ImGui::SliderFloat("Density exposure", &exposure, 0.01f, 2.0f);
+	ImGui::Checkbox("Projected velocity arrows", &showVelocity);
+
+	if (showVelocity)
+	{
+		ImGui::SliderInt("Arrow spacing", &arrowStride, 2, 16);
+		ImGui::SliderFloat("Arrow gain", &arrowGain, 0.01f, 5.0f);
+		ImGui::SliderFloat(
+			"Minimum speed", &minimumArrowSpeed, 0.0f, 0.05f, "%.4f");
+	}
+
+	ImGui::TextUnformatted(
+		"Velocity arrows are projected into the selected plane. Hover to inspect.");
+
+	const int horizontalCells =
+		plane == 2 ? fluid.Depth() : fluid.Width();
+	const int verticalCells =
+		plane == 1 ? fluid.Depth() : fluid.Height();
+
+	constexpr float maximumCanvasSide = 512.0f;
+	const float cellSize = std::min(
+		maximumCanvasSide / static_cast<float>(horizontalCells),
+		maximumCanvasSide / static_cast<float>(verticalCells));
+
+	const ImVec2 canvasSize(
+		cellSize * static_cast<float>(horizontalCells),
+		cellSize * static_cast<float>(verticalCells));
+	const ImVec2 origin = ImGui::GetCursorScreenPos();
+	const ImVec2 end(origin.x + canvasSize.x, origin.y + canvasSize.y);
+
+	ImGui::InvisibleButton("Fluid3DCanvas", canvasSize);
+	const bool hovered = ImGui::IsItemHovered();
+	ImDrawList* draw = ImGui::GetWindowDrawList();
+	draw->PushClipRect(origin, end, true);
+
+	// Screen rows run downwards. Simulation Y and Z are displayed upwards,
+	// so the vertical cell coordinate is reversed when sampling those axes.
+	auto sampleCell = [&](int column, int row,
+		int& i, int& j, int& k, float& projectedX, float& projectedY)
+	{
+		if (plane == 0)
+		{
+			i = column + 1;
+			j = fluid.Height() - row;
+			k = slice;
+			projectedX = fluid.VelocityXAt(i, j, k);
+			projectedY = -fluid.VelocityYAt(i, j, k);
+		}
+		else if (plane == 1)
+		{
+			i = column + 1;
+			j = slice;
+			k = fluid.Depth() - row;
+			projectedX = fluid.VelocityXAt(i, j, k);
+			projectedY = -fluid.VelocityZAt(i, j, k);
+		}
+		else
+		{
+			i = slice;
+			j = fluid.Height() - row;
+			k = column + 1;
+			projectedX = fluid.VelocityZAt(i, j, k);
+			projectedY = -fluid.VelocityYAt(i, j, k);
+		}
+	};
+
+	for (int row = 0; row < verticalCells; ++row)
+	{
+		for (int column = 0; column < horizontalCells; ++column)
+		{
+			int i = 0;
+			int j = 0;
+			int k = 0;
+			float projectedX = 0.0f;
+			float projectedY = 0.0f;
+			sampleCell(column, row, i, j, k, projectedX, projectedY);
+
+			const float density = fluid.DensityAt(i, j, k);
+			ImU32 colour = IM_COL32(255, 0, 255, 255);
+
+			if (std::isfinite(density) && density >= 0.0f)
+			{
+				const float brightness =
+					1.0f - std::exp(-exposure * density);
+				const int grey = static_cast<int>(255.0f * brightness);
+				colour = IM_COL32(grey, grey, grey, 255);
+			}
+
+			const ImVec2 p0(
+				origin.x + static_cast<float>(column) * cellSize,
+				origin.y + static_cast<float>(row) * cellSize);
+			const ImVec2 p1(p0.x + cellSize, p0.y + cellSize);
+			draw->AddRectFilled(p0, p1, colour);
+		}
+	}
+
+	if (showVelocity)
+	{
+		const float maximumLength =
+			cellSize * static_cast<float>(arrowStride) * 0.65f;
+		constexpr ImU32 arrowColour = IM_COL32(40, 210, 255, 240);
+		constexpr ImU32 arrowShadow = IM_COL32(0, 0, 0, 190);
+
+		for (int row = arrowStride / 2;
+			row < verticalCells; row += arrowStride)
+		{
+			for (int column = arrowStride / 2;
+				column < horizontalCells; column += arrowStride)
+			{
+				int i = 0;
+				int j = 0;
+				int k = 0;
+				float projectedX = 0.0f;
+				float projectedY = 0.0f;
+				sampleCell(
+					column, row, i, j, k, projectedX, projectedY);
+
+				if (!std::isfinite(projectedX) ||
+					!std::isfinite(projectedY))
+					continue;
+
+				const float speed = std::sqrt(
+					projectedX * projectedX + projectedY * projectedY);
+
+				if (speed < minimumArrowSpeed)
+					continue;
+
+				const float directionX = projectedX / speed;
+				const float directionY = projectedY / speed;
+				const float length = maximumLength *
+					(1.0f - std::exp(-arrowGain * speed));
+
+				const ImVec2 tail(
+					origin.x + (static_cast<float>(column) + 0.5f) * cellSize,
+					origin.y + (static_cast<float>(row) + 0.5f) * cellSize);
+				const ImVec2 head(
+					tail.x + directionX * length,
+					tail.y + directionY * length);
+
+				draw->AddLine(tail, head, arrowShadow, 3.5f);
+				draw->AddLine(tail, head, arrowColour, 1.75f);
+
+				const float perpendicularX = -directionY;
+				const float perpendicularY = directionX;
+				const float headLength =
+					std::clamp(length * 0.30f, 2.0f, 6.0f);
+				const float headWidth = headLength * 0.55f;
+				const ImVec2 arrowLeft(
+					head.x - directionX * headLength +
+						perpendicularX * headWidth,
+					head.y - directionY * headLength +
+						perpendicularY * headWidth);
+				const ImVec2 arrowRight(
+					head.x - directionX * headLength -
+						perpendicularX * headWidth,
+					head.y - directionY * headLength -
+						perpendicularY * headWidth);
+
+				draw->AddTriangleFilled(
+					head, arrowLeft, arrowRight, arrowColour);
+			}
+		}
+	}
+
+	draw->PopClipRect();
+	draw->AddRect(origin, end, IM_COL32(150, 150, 150, 255));
+
+	if (hovered)
+	{
+		const ImVec2 mouse = ImGui::GetMousePos();
+		const int column = std::clamp(
+			static_cast<int>((mouse.x - origin.x) / cellSize),
+			0, horizontalCells - 1);
+		const int row = std::clamp(
+			static_cast<int>((mouse.y - origin.y) / cellSize),
+			0, verticalCells - 1);
+
+		int i = 0;
+		int j = 0;
+		int k = 0;
+		float projectedX = 0.0f;
+		float projectedY = 0.0f;
+		sampleCell(column, row, i, j, k, projectedX, projectedY);
+
+		ImGui::SetTooltip(
+			"Cell (%d, %d, %d)\nDensity: %.6f\nVelocity: (%.6f, %.6f, %.6f)",
+			i, j, k,
+			fluid.DensityAt(i, j, k),
+			fluid.VelocityXAt(i, j, k),
+			fluid.VelocityYAt(i, j, k),
+			fluid.VelocityZAt(i, j, k));
+	}
 
 	ImGui::End();
 }
