@@ -185,24 +185,55 @@ void Renderer::Update(GameTimer& gt, Camera& cam)
 
 	constexpr float step = 1.0f / 60.0f;
 
-	// Limit catch-up after a breakpoint or long frame.
-	m_FluidAccumulator += std::clamp(gt.DeltaTime(), 0.0f, 0.1f);
-
-	while (m_FluidAccumulator >= step)
-	{
-		constexpr int n = StableFluids::GridSize;
-
-		// Small upward jet near the bottom of the canvas.
-		// These are rates; add_source() already multiplies by step.
-		if (m_FluidEmitterEnabled)
+	auto advanceFluidOneStep = [&]()
 		{
-			for (int j = 3 * n / 4 - 1; j <= 3 * n / 4 + 1; ++j)
-				for (int i = n / 2 - 1; i <= n / 2 + 1; ++i)
-					m_Fluid.AddSourceRates(i, j, 50.0f, 0.0f, -5.0f);
-		}
+			constexpr int n = StableFluids::GridSize;
 
-		m_Fluid.Step(step);
-		m_FluidAccumulator -= step;
+			if (m_FluidEmitterEnabled)
+			{
+				for (int j = 3 * n / 4 - 1;
+					j <= 3 * n / 4 + 1;
+					++j)
+				{
+					for (int i = n / 2 - 1;
+						i <= n / 2 + 1;
+						++i)
+					{
+						m_Fluid.AddSourceRates(
+							i, j,
+							50.0f,  // Dye source rate
+							0.0f,   // Horizontal force
+							-5.0f); // Upward force
+					}
+				}
+			}
+
+			m_Fluid.Step(step);
+		};
+
+	if (m_FluidPaused)
+	{
+		// Prevent elapsed paused time from accumulating.
+		m_FluidAccumulator = 0.0f;
+
+		if (m_FluidSingleStepRequested)
+		{
+			advanceFluidOneStep();
+			m_FluidSingleStepRequested = false;
+		}
+	}
+	else
+	{
+		m_FluidSingleStepRequested = false;
+
+		m_FluidAccumulator +=
+			std::clamp(gt.DeltaTime(), 0.0f, 0.1f);
+
+		while (m_FluidAccumulator >= step)
+		{
+			advanceFluidOneStep();
+			m_FluidAccumulator -= step;
+		}
 	}
 }
 
@@ -2321,7 +2352,7 @@ void Renderer::UpdateHeightMapSrv()
 	m_Device->CreateShaderResourceView(m_HeightMapTex.Get(), &srvDesc, h);
 }
 
-void Renderer::DrawFluidDebug(const StableFluids& fluid)
+void Renderer::DrawFluidDebug(StableFluids& fluid)
 {
 	ImGui::SetNextWindowSize(
 		ImVec2(550.0f, 600.0f), ImGuiCond_FirstUseEver);
@@ -2332,10 +2363,34 @@ void Renderer::DrawFluidDebug(const StableFluids& fluid)
 		return;
 	}
 
-	if (ImGui::Button("Reset simulation"))
+	if (ImGui::Button(m_FluidPaused ? "Resume" : "Pause"))
 	{
-		m_Fluid.Reset();
+		m_FluidPaused = !m_FluidPaused;
+
+		if (m_FluidPaused)
+			m_FluidAccumulator = 0.0f;
+	}
+
+	ImGui::SameLine();
+
+	ImGui::BeginDisabled(!m_FluidPaused);
+
+	if (ImGui::Button("Single step"))
+		m_FluidSingleStepRequested = true;
+
+	ImGui::EndDisabled();
+
+	ImGui::SameLine();
+
+	if (ImGui::Button("Reset"))
+	{
+		fluid.Reset();
+
 		m_FluidAccumulator = 0.0f;
+		m_FluidSingleStepRequested = false;
+
+		// Leave the simulation paused so the reset state remains visible.
+		m_FluidPaused = true;
 	}
 
 	ImGui::SameLine();
@@ -2344,6 +2399,20 @@ void Renderer::DrawFluidDebug(const StableFluids& fluid)
 	static float exposure = 0.1f;
 	ImGui::SliderFloat("Exposure", &exposure, 0.01f, 2.0f);
 	ImGui::TextUnformatted("Hover to inspect. Magenta = invalid density.");
+
+	static bool showVelocity = true;
+	static int arrowStride = 4;
+	static float arrowGain = 3.0f;
+	static float minimumArrowSpeed = 0.001f;
+
+	ImGui::Checkbox("Velocity arrows", &showVelocity);
+
+	if (showVelocity)
+	{
+		ImGui::SliderInt("Arrow spacing", &arrowStride, 2, 16);
+		ImGui::SliderFloat("Arrow gain", &arrowGain, 0.01f, 3.0f);
+		ImGui::SliderFloat("Minimum speed", &minimumArrowSpeed, 0.0f, 0.05f, "%.4f");
+	}
 
 	constexpr int n = StableFluids::GridSize;
 	constexpr float side = 512.0f;
@@ -2360,6 +2429,8 @@ void Renderer::DrawFluidDebug(const StableFluids& fluid)
 	draw->PushClipRect(origin, end, true);
 
 	const float* density = fluid.Density();
+	const float* velocityX = fluid.VelocityX();
+	const float* velocityY = fluid.VelocityY();
 
 	// Draw interior cells only; skip the boundary/ghost cells.
 	for (int j = 1; j <= n; ++j)
@@ -2393,6 +2464,94 @@ void Renderer::DrawFluidDebug(const StableFluids& fluid)
 		}
 	}
 
+	if (showVelocity)
+	{
+		// Starting halfway into the first stride makes each arrow represent
+		// approximately the centre of a sampled block.
+		const int firstCell = 1 + arrowStride / 2;
+
+		// Maximum length is relative to the distance between arrows.
+		const float maximumLength =
+			cellSize * static_cast<float>(arrowStride) * 0.65f;
+
+		constexpr ImU32 arrowColour =
+			IM_COL32(255, 170, 35, 235);
+
+		constexpr ImU32 arrowShadow =
+			IM_COL32(0, 0, 0, 180);
+
+		for (int j = firstCell; j <= n; j += arrowStride)
+		{
+			for (int i = firstCell; i <= n; i += arrowStride)
+			{
+				const int index = i + (n + 2) * j;
+
+				const float vx = velocityX[index];
+				const float vy = velocityY[index];
+
+				if (!std::isfinite(vx) || !std::isfinite(vy))
+					continue;
+
+				const float speed = std::sqrt(vx * vx + vy * vy);
+
+				if (speed < minimumArrowSpeed)
+					continue;
+
+				// Unit vector in the velocity direction.
+				const float directionX = vx / speed;
+				const float directionY = vy / speed;
+
+				/*
+				 * Saturating display mapping:
+				 *
+				 * Small velocities remain visible, while very large velocities
+				 * approach maximumLength instead of producing enormous arrows.
+				 *
+				 * This affects only the display.
+				 */
+				const float length =
+					maximumLength *
+					(1.0f - std::exp(-arrowGain * speed));
+
+				const ImVec2 tail(
+					origin.x + (static_cast<float>(i) - 0.5f) * cellSize,
+					origin.y + (static_cast<float>(j) - 0.5f) * cellSize);
+
+				const ImVec2 head(
+					tail.x + directionX * length,
+					tail.y + directionY * length);
+
+				// Draw a dark line underneath to retain contrast over bright dye.
+				draw->AddLine(tail, head, arrowShadow, 3.5f);
+				draw->AddLine(tail, head, arrowColour, 1.75f);
+
+				// Perpendicular vector used to construct the arrowhead.
+				const float perpendicularX = -directionY;
+				const float perpendicularY = directionX;
+
+				const float headLength =
+					std::clamp(length * 0.30f, 2.0f, 6.0f);
+
+				const float headWidth = headLength * 0.55f;
+
+				const ImVec2 arrowLeft(
+					head.x - directionX * headLength
+					+ perpendicularX * headWidth,
+					head.y - directionY * headLength
+					+ perpendicularY * headWidth);
+
+				const ImVec2 arrowRight(
+					head.x - directionX * headLength
+					- perpendicularX * headWidth,
+					head.y - directionY * headLength
+					- perpendicularY * headWidth);
+
+				draw->AddTriangleFilled(
+					head, arrowLeft, arrowRight, arrowColour);
+			}
+		}
+	}
+
 	draw->PopClipRect();
 	draw->AddRect(origin, end, IM_COL32(150, 150, 150, 255));
 
@@ -2412,6 +2571,46 @@ void Renderer::DrawFluidDebug(const StableFluids& fluid)
 			i, j, density[index],
 			fluid.VelocityX()[index], fluid.VelocityY()[index]);
 	}
+
+	const FluidDiagnostics diagnostics = fluid.GetDiagnostics();
+
+	ImGui::SeparatorText("Numerical diagnostics");
+
+	ImGui::Text(
+		"RMS divergence before projection: %.6e",
+		diagnostics.rmsDivergenceBeforeProjection);
+
+	ImGui::Text(
+		"RMS divergence after projection:  %.6e",
+		diagnostics.rmsDivergenceAfterProjection);
+
+	const float reduction =
+		diagnostics.rmsDivergenceBeforeProjection > 0.0f
+		? 100.0f *
+		(
+			1.0f -
+			diagnostics.rmsDivergenceAfterProjection /
+			diagnostics.rmsDivergenceBeforeProjection
+			)
+		: 0.0f;
+
+	ImGui::Text("Projection reduction: %.2f%%", reduction);
+
+	ImGui::Text(
+		"Maximum absolute divergence: %.6e",
+		diagnostics.maximumAbsoluteDivergence);
+
+	ImGui::Text(
+		"Kinetic energy: %.6f",
+		diagnostics.kineticEnergy);
+
+	ImGui::Text(
+		"Integrated dye: %.6f",
+		diagnostics.totalDye);
+
+	ImGui::Text(
+		"Maximum speed: %.6f",
+		diagnostics.maximumSpeed);
 
 	ImGui::End();
 }

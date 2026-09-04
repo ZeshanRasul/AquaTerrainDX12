@@ -105,7 +105,6 @@ private:
 	void ShowImGUILightControl();
 	void ShowImGUITerrainControl();
 	void UpdateHeightMapSrv();
-	void DrawFluidDebug(const StableFluids& fluid);
 
 	Microsoft::WRL::ComPtr<ID3D12Device> m_Device;
 	Microsoft::WRL::ComPtr<IDXGIAdapter> m_WarpAdapter;
@@ -315,9 +314,13 @@ private:
 
 	void CreateWaterSimTextures();
 
+	void DrawFluidDebug(StableFluids& fluid);
+
 	StableFluids m_Fluid{};
 	float m_FluidAccumulator = 0.0f;
 	bool m_FluidEmitterEnabled = true;
+	bool m_FluidPaused = false;
+	bool m_FluidSingleStepRequested = false;
 };
 
 

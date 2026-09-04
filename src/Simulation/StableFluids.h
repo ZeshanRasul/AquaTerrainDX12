@@ -5,6 +5,21 @@ static constexpr int CellCount = (N + 2) * (N + 2);
 #define IX(i, j) ((i) + (N+2) * (j))
 #define SWAP(x0, x) {float *tmp = x0; x0 = x; x = tmp;}
 
+struct FluidDiagnostics
+{
+	// Measured immediately before and after the final projection.
+	float rmsDivergenceBeforeProjection = 0.0f;
+	float rmsDivergenceAfterProjection = 0.0f;
+
+	// Measured from the final velocity field.
+	float maximumAbsoluteDivergence = 0.0f;
+	float maximumSpeed = 0.0f;
+
+	// Integrals over the unit-square simulation domain.
+	float kineticEnergy = 0.0f;
+	float totalDye = 0.0f;
+};
+
 class StableFluids
 {
 public:
@@ -36,7 +51,12 @@ public:
 
 	void Reset();
 
+	FluidDiagnostics GetDiagnostics() const;
+
 private:
+	float CalculateRmsDivergence(const float* velocityX, const float* velocityY) const;
+
+
 	float u[CellCount];
 	float u_prev[CellCount];
 	float v[CellCount];
@@ -46,4 +66,7 @@ private:
 
 	float h = 1.0f / N;
 	float dt = 1.0f / 60.0f;
+
+	float m_RmsDivergenceBeforeProjection = 0.0f;
+	float m_RmsDivergenceAfterProjection = 0.0f;
 };

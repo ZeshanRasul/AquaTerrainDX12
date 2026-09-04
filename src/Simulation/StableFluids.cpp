@@ -1,5 +1,6 @@
 #include "StableFluids.h"
 #include <algorithm>
+#include <cmath>
 
 void StableFluids::add_source(int N, float* x, float* s, float dt)
 {
@@ -88,7 +89,9 @@ void StableFluids::velocity_step(int N, float* u, float* v, float* u0, float* v0
 	SWAP(v0, v);
 	advect(N, 1, u, u0, u0, v0, dt);
 	advect(N, 2, v, v0, u0, v0, dt);
+	m_RmsDivergenceBeforeProjection = CalculateRmsDivergence(u, v);
 	project(N, u, v, u0, v0);
+	m_RmsDivergenceAfterProjection = CalculateRmsDivergence(u, v);
 }
 
 void StableFluids::project(int N, float* u, float* v, float* p, float* div)
@@ -186,4 +189,107 @@ void StableFluids::Reset()
 	std::fill_n(u_prev, CellCount, 0.0f);
 	std::fill_n(v_prev, CellCount, 0.0f);
 	std::fill_n(dens_prev, CellCount, 0.0f);
+
+	m_RmsDivergenceBeforeProjection = 0.0f;
+	m_RmsDivergenceAfterProjection = 0.0f;
+}
+
+float StableFluids::CalculateRmsDivergence(const float* velocityX, const float* velocityY) const
+{
+	const double inverseTwoH = 0.5 / static_cast<double>(h);
+
+	double squaredSum = 0.0;
+
+	for (int j = 1; j <= N; ++j)
+	{
+		for (int i = 1; i <= N; ++i)
+		{
+			const double divergence =
+				inverseTwoH *
+				(
+					velocityX[IX(i + 1, j)] -
+					velocityX[IX(i - 1, j)] +
+					velocityY[IX(i, j + 1)] -
+					velocityY[IX(i, j - 1)]
+					);
+
+			squaredSum += divergence * divergence;
+		}
+	}
+
+	return static_cast<float>(std::sqrt(squaredSum / static_cast<double>(N * N)));
+}
+
+FluidDiagnostics StableFluids::GetDiagnostics() const
+{
+	FluidDiagnostics result;
+
+	result.rmsDivergenceBeforeProjection =
+		m_RmsDivergenceBeforeProjection;
+
+	result.rmsDivergenceAfterProjection =
+		m_RmsDivergenceAfterProjection;
+
+	const double cellArea =
+		static_cast<double>(h) * static_cast<double>(h);
+
+	const double inverseTwoH =
+		0.5 / static_cast<double>(h);
+
+	double kineticEnergyIntegral = 0.0;
+	double dyeIntegral = 0.0;
+	double maximumSpeed = 0.0;
+	double maximumDivergence = 0.0;
+
+	for (int j = 1; j <= N; ++j)
+	{
+		for (int i = 1; i <= N; ++i)
+		{
+			const int index = IX(i, j);
+
+			const double velocityXSquared =
+				static_cast<double>(u[index]) * u[index];
+
+			const double velocityYSquared =
+				static_cast<double>(v[index]) * v[index];
+
+			const double speedSquared =
+				velocityXSquared + velocityYSquared;
+
+			const double speed = std::sqrt(speedSquared);
+
+			const double divergence =
+				inverseTwoH *
+				(
+					u[IX(i + 1, j)] -
+					u[IX(i - 1, j)] +
+					v[IX(i, j + 1)] -
+					v[IX(i, j - 1)]
+					);
+
+			kineticEnergyIntegral +=
+				0.5 * speedSquared * cellArea;
+
+			dyeIntegral +=
+				static_cast<double>(dens[index]) * cellArea;
+
+			maximumSpeed = std::max(maximumSpeed, speed);
+			maximumDivergence =
+				std::max(maximumDivergence, std::abs(divergence));
+		}
+	}
+
+	result.kineticEnergy =
+		static_cast<float>(kineticEnergyIntegral);
+
+	result.totalDye =
+		static_cast<float>(dyeIntegral);
+
+	result.maximumSpeed =
+		static_cast<float>(maximumSpeed);
+
+	result.maximumAbsoluteDivergence =
+		static_cast<float>(maximumDivergence);
+
+	return result;
 }
