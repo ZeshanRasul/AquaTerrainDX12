@@ -1,4 +1,7 @@
 #pragma once
+#include <algorithm>
+#include <cmath>
+
 #include "../Utils/d3dUtil.h"
 #include "../Utils/GeometryGenerator.h"
 #include "../Utils/Waves.h"
@@ -6,7 +9,7 @@
 #include "FrameResource.h"
 #include "../Camera.h"
 #include "../Utils/GameTimer.h"
-
+#include "../Simulation/StableFluids.h"
 
 
 using namespace DirectX;
@@ -60,6 +63,7 @@ private:
 	void CreateTextureSrvDescriptors();
 	void CreateOpaqueRootSignature();
 	void CreateTransparentRootSignature();
+	void CreateWaterComputeRootSignature();
 
 	void BuildShadersAndInputLayout();
 	
@@ -101,6 +105,7 @@ private:
 	void ShowImGUILightControl();
 	void ShowImGUITerrainControl();
 	void UpdateHeightMapSrv();
+	void DrawFluidDebug(const StableFluids& fluid);
 
 	Microsoft::WRL::ComPtr<ID3D12Device> m_Device;
 	Microsoft::WRL::ComPtr<IDXGIAdapter> m_WarpAdapter;
@@ -168,6 +173,9 @@ private:
 	Microsoft::WRL::ComPtr<ID3DBlob> m_PsByteCodeWater;
 	Microsoft::WRL::ComPtr<ID3DBlob> m_VsByteCodeSky;
 	Microsoft::WRL::ComPtr<ID3DBlob> m_PsByteCodeSky;
+	Microsoft::WRL::ComPtr<ID3DBlob> m_CsByteCodeWaveUpdate;
+	Microsoft::WRL::ComPtr<ID3DBlob> m_CsByteCodeWaveDisturb;
+	Microsoft::WRL::ComPtr<ID3DBlob> m_CsByteCodeWaveNormals;
 	std::vector<D3D12_INPUT_ELEMENT_DESC> m_InputLayoutDescs;
 
 	XMFLOAT4X4 m_World = MathHelper::Identity4x4();
@@ -176,6 +184,7 @@ private:
 
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_OpaqueRootSignature;
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_TransparentRootSignature;
+	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_ComputeRootSignature;
 	std::unordered_map<std::string, Microsoft::WRL::ComPtr<ID3D12PipelineState>> m_PipelineStateObjects;
 
 	float m_Theta = 1.5f * DirectX::XM_PI;
@@ -291,6 +300,24 @@ private:
 		ThrowIfFailed(m_Device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(m_ImGuiSrvHeap.GetAddressOf())));
 
 	}
+
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_WaterHeightPrev = nullptr;
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_WaterHeightPrevUav = nullptr;
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_WaterHeightCurrent = nullptr;
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_WaterHeightCurrentUav = nullptr;
+	bool m_UsePrevAsWaterHeightSrv = false;
+	bool m_PendingDisturb = false;
+	float m_DisturbX = 0.0f;
+	float m_DisturbY = 0.0f;
+	float m_DisturbRadius = 8.0f;
+	float m_DisturbStrength = 0.15f;
+	float m_DisturbAccumTime = 0.0f;
+
+	void CreateWaterSimTextures();
+
+	StableFluids m_Fluid{};
+	float m_FluidAccumulator = 0.0f;
+	bool m_FluidEmitterEnabled = true;
 };
 
 

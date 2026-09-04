@@ -73,7 +73,7 @@ bool Renderer::InitializeD3D12(HWND& windowHandle)
 	ThrowIfFailed(CreateDXGIFactory1(IID_PPV_ARGS(&m_DxgiFactory)));
 
 	m_Camera.SetPosition(-161.0f, 245.0f, -101.0f);
-	XMFLOAT3 target = { -147.0f, 183.0f, 38.3f};
+	XMFLOAT3 target = { -147.0f, 183.0f, 38.3f };
 	XMFLOAT3 up = { 0.0f, 1.0f, 0.0f };
 	m_Camera.LookAt(m_Camera.GetPosition3f(), target, up);
 	m_Camera.UpdateViewMatrix();
@@ -100,23 +100,17 @@ bool Renderer::InitializeD3D12(HWND& windowHandle)
 
 	CreateDepthStencilView();
 
-	//m_Camera.SetLens(0.25f * MathHelper::Pi, static_cast<float>(m_ClientWidth) / m_ClientHeight, 1.0f, 1000.0f);
-	//m_Camera.UpdateViewMatrix();
-	//XMStoreFloat4x4(&m_Proj, m_Camera.GetProj());
-	//XMStoreFloat4x4(&m_View, m_Camera.GetView());
-
-	m_CbvSrvDescriptorSize = m_Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	m_Waves = std::make_unique<Waves>(128, 128, 1.0f, 0.03f, 4.0f, 0.2f);
+	CreateWaterSimTextures();
 
 	HeightMap hm = GeneratePerlinHeightmap(m_HeightMapWidth, m_HeightMapHeight, m_TerrainHeightScale, m_TerrainNoiseOctaves, m_TerrainNoisePersistance, m_TerrainNoiseSeed);
 	CreateHeightMapTexture(hm);
 
-	//	CreateCbvDescriptorHeaps();
 	LoadTextures();
 	createSrvDescriptorHeaps();
 	CreateTextureSrvDescriptors();
 	CreateOpaqueRootSignature();
 	CreateTransparentRootSignature();
+	CreateWaterComputeRootSignature();
 
 	BuildShadersAndInputLayout();
 	BuildShapeGeometry();
@@ -188,6 +182,28 @@ void Renderer::Update(GameTimer& gt, Camera& cam)
 	UpdateMaterialCBs();
 	UpdateWaves(gt);
 	UpdateWaterCB(gt);
+
+	constexpr float step = 1.0f / 60.0f;
+
+	// Limit catch-up after a breakpoint or long frame.
+	m_FluidAccumulator += std::clamp(gt.DeltaTime(), 0.0f, 0.1f);
+
+	while (m_FluidAccumulator >= step)
+	{
+		constexpr int n = StableFluids::GridSize;
+
+		// Small upward jet near the bottom of the canvas.
+		// These are rates; add_source() already multiplies by step.
+		if (m_FluidEmitterEnabled)
+		{
+			for (int j = 3 * n / 4 - 1; j <= 3 * n / 4 + 1; ++j)
+				for (int i = n / 2 - 1; i <= n / 2 + 1; ++i)
+					m_Fluid.AddSourceRates(i, j, 50.0f, 0.0f, -5.0f);
+		}
+
+		m_Fluid.Step(step);
+		m_FluidAccumulator -= step;
+	}
 }
 
 void Renderer::Draw()
@@ -196,6 +212,9 @@ void Renderer::Draw()
 	ImGui_ImplWin32_NewFrame();
 	ImGui::NewFrame();
 	ShowImGUIEnvironmentControl();
+
+	ShowImGUIEnvironmentControl();
+	DrawFluidDebug(m_Fluid);
 
 	showImgui = true;
 	ImGui::Render();
@@ -239,6 +258,114 @@ void Renderer::Draw()
 	m_CommandList->ClearDepthStencilView(DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
 	m_CommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
+
+	
+	m_CommandList->SetPipelineState(m_PipelineStateObjects["waveUpdate"].Get());
+	m_CommandList->SetComputeRootSignature(m_ComputeRootSignature.Get());
+	ID3D12DescriptorHeap* computeDescriptorHeaps[] = { m_TexSrvHeap.Get() };
+	m_CommandList->SetDescriptorHeaps(_countof(computeDescriptorHeaps), computeDescriptorHeaps);
+
+	constexpr INT kWaterCurrUavIndex = 11;
+	CD3DX12_GPU_DESCRIPTOR_HANDLE waterUavTable(m_TexSrvHeap->GetGPUDescriptorHandleForHeapStart());
+	waterUavTable.Offset(kWaterCurrUavIndex, m_CbvSrvUavDescriptorSize);
+
+   if (m_PendingDisturb)
+	{
+		m_CommandList->SetPipelineState(m_PipelineStateObjects["waveDisturb"].Get());
+
+		struct WaterDisturbConstantsCPU
+		{
+			UINT GridWidth;
+			UINT GridHeight;
+			float CenterX;
+			float CenterY;
+			float Radius;
+			float Strength;
+			float Pad0;
+			float Pad1;
+		};
+
+		const WaterDisturbConstantsCPU disturbConstants = {
+			static_cast<UINT>(m_Waves->ColumnCount()),
+			static_cast<UINT>(m_Waves->RowCount()),
+          m_DisturbX,
+			m_DisturbY,
+			m_DisturbRadius,
+			m_DisturbStrength,
+			0.0f,
+			0.0f
+		};
+
+		m_CommandList->SetComputeRoot32BitConstants(0, 8, &disturbConstants, 0);
+		m_CommandList->SetComputeRootDescriptorTable(2, waterUavTable);
+		m_CommandList->Dispatch((m_Waves->ColumnCount() + 15) / 16, (m_Waves->RowCount() + 15) / 16, 1);
+		m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::UAV(m_WaterHeightCurrentUav.Get()));
+
+		m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_WaterHeightCurrent.Get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_COPY_DEST));
+		m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_WaterHeightCurrentUav.Get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_SOURCE));
+		m_CommandList->CopyResource(m_WaterHeightCurrent.Get(), m_WaterHeightCurrentUav.Get());
+		m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_WaterHeightCurrent.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
+		m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_WaterHeightCurrentUav.Get(), D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
+       m_PendingDisturb = false;
+	}
+
+	m_CommandList->SetPipelineState(m_PipelineStateObjects["waveUpdate"].Get());
+
+	const float dt = 0.03f;
+	const float speed = 4.0f;
+	const float damping = 0.02f;
+	const float dx = 1.0f;
+	const float d = damping * dt + 2.0f;
+	const float e = (speed * speed) * (dt * dt) / (dx * dx);
+
+	struct WaterSimConstantsCPU
+	{
+		UINT GridWidth;
+		UINT GridHeight;
+		float K1;
+		float K2;
+		float K3;
+		float Pad0;
+		float Pad1;
+		float Pad2;
+	};
+
+	const WaterSimConstantsCPU simConstants = {
+		static_cast<UINT>(m_Waves->ColumnCount()),
+		static_cast<UINT>(m_Waves->RowCount()),
+		(damping * dt - 2.0f) / d,
+		(4.0f - 8.0f * e) / d,
+		(2.0f * e) / d,
+		0.0f,
+		0.0f,
+		0.0f
+	};
+
+   constexpr INT kWaterPrevSrvIndex = 8;
+	constexpr INT kWaterCurrentSrvIndex = 9;
+
+	CD3DX12_GPU_DESCRIPTOR_HANDLE waterSrvTable(m_TexSrvHeap->GetGPUDescriptorHandleForHeapStart());
+	waterSrvTable.Offset(kWaterPrevSrvIndex, m_CbvSrvUavDescriptorSize);
+
+	m_CommandList->SetComputeRoot32BitConstants(0, 8, &simConstants, 0);
+	m_CommandList->SetComputeRootDescriptorTable(1, waterSrvTable);
+	m_CommandList->SetComputeRootDescriptorTable(2, waterUavTable);
+
+	m_CommandList->Dispatch((m_Waves->ColumnCount() + 15) / 16, (m_Waves->RowCount() + 15) / 16, 1);
+	m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::UAV(m_WaterHeightCurrentUav.Get()));
+
+	m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_WaterHeightCurrent.Get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_COPY_SOURCE));
+	m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_WaterHeightPrev.Get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_COPY_DEST));
+	m_CommandList->CopyResource(m_WaterHeightPrev.Get(), m_WaterHeightCurrent.Get());
+
+	m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_WaterHeightCurrent.Get(), D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_COPY_DEST));
+	m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_WaterHeightCurrentUav.Get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_SOURCE));
+	m_CommandList->CopyResource(m_WaterHeightCurrent.Get(), m_WaterHeightCurrentUav.Get());
+
+	m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_WaterHeightPrev.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
+	m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_WaterHeightCurrent.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
+	m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_WaterHeightCurrentUav.Get(), D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
+	m_UsePrevAsWaterHeightSrv = false;
 
 	if (m_WireframeMode)
 	{
@@ -287,7 +414,11 @@ void Renderer::Draw()
 	m_CommandList->SetGraphicsRootConstantBufferView(3, passCB->GetGPUVirtualAddress());
 	auto waterCB = m_CurrentFrameResource->WaterCB->Resource();
 	m_CommandList->SetGraphicsRootConstantBufferView(4, waterCB->GetGPUVirtualAddress());
-	tex = m_SrvHeap->GetGPUDescriptorHandleForHeapStart();
+  tex = m_SrvHeap->GetGPUDescriptorHandleForHeapStart();
+	if (m_UsePrevAsWaterHeightSrv)
+	{
+		tex.ptr += static_cast<SIZE_T>(2) * static_cast<SIZE_T>(m_CbvSrvUavDescriptorSize);
+	}
 	m_CommandList->SetGraphicsRootDescriptorTable(0, tex);
 
 	DrawRenderItems(m_CommandList.Get(), m_TransparentRenderItems);
@@ -638,10 +769,61 @@ void Renderer::LoadTextures()
 	m_Textures[rockNorm->Name] = std::move(rockNorm);
 }
 
+void Renderer::CreateWaterSimTextures()
+{
+	m_CbvSrvDescriptorSize = m_Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	m_Waves = std::make_unique<Waves>(128, 128, 1.0f, 0.03f, 4.0f, 0.2f);
+
+	D3D12_RESOURCE_DESC waterSimDesc = {};
+	waterSimDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+	waterSimDesc.Alignment = 0;
+	waterSimDesc.Width = static_cast<UINT64>(m_Waves->ColumnCount());
+	waterSimDesc.Height = static_cast<UINT>(m_Waves->RowCount());
+	waterSimDesc.DepthOrArraySize = 1;
+	waterSimDesc.MipLevels = 1;
+	waterSimDesc.Format = DXGI_FORMAT_R32_FLOAT;
+	waterSimDesc.SampleDesc.Count = 1;
+	waterSimDesc.SampleDesc.Quality = 0;
+	waterSimDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+	waterSimDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+
+	ThrowIfFailed(m_Device->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		D3D12_HEAP_FLAG_NONE,
+		&waterSimDesc,
+		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+		nullptr,
+		IID_PPV_ARGS(&m_WaterHeightPrev)));
+
+	ThrowIfFailed(m_Device->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		D3D12_HEAP_FLAG_NONE,
+		&waterSimDesc,
+		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+		nullptr,
+		IID_PPV_ARGS(&m_WaterHeightCurrent)));
+
+	ThrowIfFailed(m_Device->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		D3D12_HEAP_FLAG_NONE,
+		&waterSimDesc,
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+		nullptr,
+		IID_PPV_ARGS(&m_WaterHeightPrevUav)));
+
+	ThrowIfFailed(m_Device->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		D3D12_HEAP_FLAG_NONE,
+		&waterSimDesc,
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+		nullptr,
+		IID_PPV_ARGS(&m_WaterHeightCurrentUav)));
+}
+
 void Renderer::createSrvDescriptorHeaps()
 {
 	D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
-	srvHeapDesc.NumDescriptors = 1;
+    srvHeapDesc.NumDescriptors = 4;
 	srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 	ThrowIfFailed(m_Device->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_SrvHeap)));
@@ -661,12 +843,45 @@ void Renderer::createSrvDescriptorHeaps()
 	srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
 	m_Device->CreateShaderResourceView(m_DepthStencilBuffer.Get(), &srvDesc, hDescriptor);
 
+	hDescriptor.Offset(1, m_CbvSrvUavDescriptorSize);
+
+	srvDesc = {};
+	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
+	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.Texture2D.MostDetailedMip = 0;
+	srvDesc.Texture2D.MipLevels = 1;
+	srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
+	m_Device->CreateShaderResourceView(m_WaterHeightCurrent.Get(), &srvDesc, hDescriptor);
+
+	hDescriptor.Offset(1, m_CbvSrvUavDescriptorSize);
+
+	srvDesc = {};
+	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	srvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.Texture2D.MostDetailedMip = 0;
+	srvDesc.Texture2D.MipLevels = 1;
+	srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
+	m_Device->CreateShaderResourceView(m_DepthStencilBuffer.Get(), &srvDesc, hDescriptor);
+
+	hDescriptor.Offset(1, m_CbvSrvUavDescriptorSize);
+
+	srvDesc = {};
+	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
+	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.Texture2D.MostDetailedMip = 0;
+	srvDesc.Texture2D.MipLevels = 1;
+	srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
+	m_Device->CreateShaderResourceView(m_WaterHeightPrev.Get(), &srvDesc, hDescriptor);
+
 }
 
 void Renderer::CreateTextureSrvDescriptors()
 {
 	D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
-	srvHeapDesc.NumDescriptors = 8;
+	srvHeapDesc.NumDescriptors = 12;
 	srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 	ThrowIfFailed(m_Device->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_TexSrvHeap)));
@@ -769,7 +984,42 @@ void Renderer::CreateTextureSrvDescriptors()
 
 	hDescriptor.Offset(1, m_CbvSrvUavDescriptorSize);
 
+	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.TextureCube.MostDetailedMip = 0;
+	srvDesc.TextureCube.MipLevels = m_WaterHeightPrev->GetDesc().MipLevels;
+	srvDesc.TextureCube.ResourceMinLODClamp = 0.0f;
+	srvDesc.Format = m_WaterHeightPrev->GetDesc().Format;
 
+
+
+	m_Device->CreateShaderResourceView(m_WaterHeightPrev.Get(), &srvDesc, hDescriptor);
+
+	hDescriptor.Offset(1, m_CbvSrvUavDescriptorSize);
+	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.TextureCube.MostDetailedMip = 0;
+	srvDesc.TextureCube.MipLevels = m_WaterHeightCurrent->GetDesc().MipLevels;
+	srvDesc.TextureCube.ResourceMinLODClamp = 0.0f;
+	srvDesc.Format = m_WaterHeightCurrent->GetDesc().Format;
+
+
+
+	m_Device->CreateShaderResourceView(m_WaterHeightCurrent.Get(), &srvDesc, hDescriptor);
+	hDescriptor.Offset(1, m_CbvSrvUavDescriptorSize);
+
+	D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
+	uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
+	uavDesc.Texture2D.MipSlice = 0;
+	uavDesc.Texture2D.PlaneSlice = 0;
+	uavDesc.Format = m_WaterHeightPrevUav->GetDesc().Format;
+	uavDesc.Buffer.NumElements = 0;
+	m_Device->CreateUnorderedAccessView(m_WaterHeightPrevUav.Get(), nullptr, &uavDesc, hDescriptor);
+
+	hDescriptor.Offset(1, m_CbvSrvUavDescriptorSize);
+
+	uavDesc.Format = m_WaterHeightCurrentUav->GetDesc().Format;
+	m_Device->CreateUnorderedAccessView(m_WaterHeightCurrentUav.Get(), nullptr, &uavDesc, hDescriptor);
+
+	hDescriptor.Offset(1, m_CbvSrvUavDescriptorSize);
 }
 
 std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> Renderer::GetStaticSamplers()
@@ -867,7 +1117,7 @@ void Renderer::CreateOpaqueRootSignature()
 void Renderer::CreateTransparentRootSignature()
 {
 	CD3DX12_DESCRIPTOR_RANGE srvTable;
-	srvTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, 0);
+	srvTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2, 0, 0, 0);
 
 
 	CD3DX12_ROOT_PARAMETER slotRootParameter[5];
@@ -898,6 +1148,35 @@ void Renderer::CreateTransparentRootSignature()
 	ThrowIfFailed(m_Device->CreateRootSignature(0, serializedRootSig->GetBufferPointer(), serializedRootSig->GetBufferSize(), IID_PPV_ARGS(m_TransparentRootSignature.GetAddressOf())));
 }
 
+void Renderer::CreateWaterComputeRootSignature()
+{
+	CD3DX12_DESCRIPTOR_RANGE srvTable;
+ srvTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND);
+	CD3DX12_ROOT_PARAMETER slotRootParameter[3];
+	CD3DX12_DESCRIPTOR_RANGE uavTable;
+ uavTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND);
+
+   slotRootParameter[0].InitAsConstants(8, 0);
+	slotRootParameter[1].InitAsDescriptorTable(1, &srvTable, D3D12_SHADER_VISIBILITY_ALL);
+	slotRootParameter[2].InitAsDescriptorTable(1, &uavTable, D3D12_SHADER_VISIBILITY_ALL);
+
+    CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(3, slotRootParameter, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_NONE);
+	Microsoft::WRL::ComPtr<ID3DBlob> serializedRootSig = nullptr;
+	Microsoft::WRL::ComPtr<ID3DBlob> errorBlob = nullptr;
+
+	HRESULT hr = D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1, serializedRootSig.GetAddressOf(), errorBlob.GetAddressOf());
+
+	if (errorBlob != nullptr)
+	{
+		::OutputDebugStringA((char*)errorBlob->GetBufferPointer());
+	}
+
+	ThrowIfFailed(hr);
+
+	ThrowIfFailed(m_Device->CreateRootSignature(0, serializedRootSig->GetBufferPointer(), serializedRootSig->GetBufferSize(), IID_PPV_ARGS(m_ComputeRootSignature.GetAddressOf())));
+
+}
+
 void Renderer::BuildShadersAndInputLayout()
 {
 	const D3D_SHADER_MACRO alphaTestDefines[] =
@@ -914,7 +1193,9 @@ void Renderer::BuildShadersAndInputLayout()
 	m_PsByteCodeWater = d3dUtil::CompileShader(L"Shaders\\pixel_water.hlsl", nullptr, "PS", "ps_5_0");
 	m_VsByteCodeSky = d3dUtil::CompileShader(L"Shaders\\vertex_sky.hlsl", nullptr, "VS", "vs_5_0");
 	m_PsByteCodeSky = d3dUtil::CompileShader(L"Shaders\\pixel_sky.hlsl", nullptr, "PS", "ps_5_0");
-
+	m_CsByteCodeWaveUpdate = d3dUtil::CompileShader(L"Shaders\\compute_water_update.hlsl", nullptr, "CS", "cs_5_0");
+	m_CsByteCodeWaveDisturb = d3dUtil::CompileShader(L"Shaders\\compute_water_disturb.hlsl", nullptr, "CS", "cs_5_0");
+//	m_CsByteCodeWaveNormals = d3dUtil::CompileShader(L"Shaders\\compute_water_normals.hlsl", nullptr, "CS", "cs_5_0");
 
 
 	m_InputLayoutDescs =
@@ -1289,6 +1570,16 @@ void Renderer::BuildWavesGeometry()
 {
 	std::vector<std::uint16_t> indices(3 * m_Waves->TriangleCount());
 	assert(m_Waves->VertexCount() < 0x0000ffff);
+	std::vector<Vertex> vertices(m_Waves->VertexCount());
+	for (int i = 0; i < m_Waves->VertexCount(); ++i)
+	{
+		Vertex v;
+		v.Pos = m_Waves->Position(i);
+		v.Normal = XMFLOAT3(0.0f, 1.0f, 0.0f);
+		v.TexCoord.x = 0.5f + v.Pos.x / m_Waves->Width();
+		v.TexCoord.y = 0.5f - v.Pos.z / m_Waves->Depth();
+		vertices[i] = v;
+	}
 
 	int m = m_Waves->RowCount();
 	int n = m_Waves->ColumnCount();
@@ -1309,14 +1600,17 @@ void Renderer::BuildWavesGeometry()
 		}
 	}
 
-	UINT vbByteSize = m_Waves->VertexCount() * sizeof(Vertex);
+  UINT vbByteSize = (UINT)vertices.size() * sizeof(Vertex);
 	UINT ibByteSize = (UINT)indices.size() * sizeof(std::uint16_t);
 
 	auto geo = std::make_unique<MeshGeometry>();
 	geo->Name = "waterGeo";
 
-	geo->VertexBufferCPU = nullptr;
-	geo->VertexBufferGPU = nullptr;
+ ThrowIfFailed(D3DCreateBlob(vbByteSize, &geo->VertexBufferCPU));
+	CopyMemory(geo->VertexBufferCPU->GetBufferPointer(), vertices.data(), vbByteSize);
+
+	geo->VertexBufferGPU = d3dUtil::CreateDefaultBuffer(m_Device.Get(),
+		m_CommandList.Get(), vertices.data(), vbByteSize, geo->VertexBufferUploader);
 
 	ThrowIfFailed(D3DCreateBlob(ibByteSize, &geo->IndexBufferCPU));
 	CopyMemory(geo->IndexBufferCPU->GetBufferPointer(), indices.data(), ibByteSize);
@@ -1579,6 +1873,45 @@ void Renderer::BuildPSOs()
 
 	ThrowIfFailed(m_Device->CreateGraphicsPipelineState(&waterPsoDesc, IID_PPV_ARGS(&m_PipelineStateObjects["water"])));
 
+    D3D12_COMPUTE_PIPELINE_STATE_DESC waveUpdatePsoDesc = {};
+	waveUpdatePsoDesc.pRootSignature = m_ComputeRootSignature.Get();
+    waveUpdatePsoDesc.NodeMask = 0;
+	waveUpdatePsoDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+	waveUpdatePsoDesc.CS = {
+		reinterpret_cast<BYTE*>(m_CsByteCodeWaveUpdate->GetBufferPointer()),
+		m_CsByteCodeWaveUpdate->GetBufferSize(),
+	};
+
+	ThrowIfFailed(m_Device->CreateComputePipelineState(&waveUpdatePsoDesc, IID_PPV_ARGS(&m_PipelineStateObjects["waveUpdate"])));
+
+	D3D12_COMPUTE_PIPELINE_STATE_DESC waveDisturbPsoDesc = {};
+	waveDisturbPsoDesc.pRootSignature = m_ComputeRootSignature.Get();
+	waveDisturbPsoDesc.NodeMask = 0;
+	waveDisturbPsoDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+	waveDisturbPsoDesc.CS = {
+		reinterpret_cast<BYTE*>(m_CsByteCodeWaveDisturb->GetBufferPointer()),
+		m_CsByteCodeWaveDisturb->GetBufferSize(),
+	};
+
+	ThrowIfFailed(m_Device->CreateComputePipelineState(&waveDisturbPsoDesc, IID_PPV_ARGS(&m_PipelineStateObjects["waveDisturb"])));
+
+	//D3D12_COMPUTE_PIPELINE_STATE_DESC waveNormalsPsoDesc;
+	//waveNormalsPsoDesc.pRootSignature = m_ComputeRootSignature.Get();
+	//waveNormalsPsoDesc.CS = {
+	//	reinterpret_cast<BYTE*>(m_CsByteCodeWaveNormals->GetBufferPointer()),
+	//	m_CsByteCodeWaveNormals->GetBufferSize(),
+	//};
+
+	//ThrowIfFailed(m_Device->CreateComputePipelineState(&waveNormalsPsoDesc, IID_PPV_ARGS(&m_PipelineStateObjects["waveNormals"])));
+
+	//D3D12_COMPUTE_PIPELINE_STATE_DESC waveUpdatePsoDesc;
+	//waveUpdatePsoDesc.pRootSignature = m_ComputeRootSignature.Get();
+	//waveUpdatePsoDesc.CS = {
+	//	reinterpret_cast<BYTE*>(m_CsByteCodeWaveUpdate->GetBufferPointer()),
+	//	m_CsByteCodeWaveUpdate->GetBufferSize(),
+	//};
+
+	//ThrowIfFailed(m_Device->CreateComputePipelineState(&waveUpdatePsoDesc, IID_PPV_ARGS(&m_PipelineStateObjects["waveUpdate"])));
 }
 
 void Renderer::BuildFrameResources()
@@ -1722,41 +2055,16 @@ void Renderer::UpdateWaterCB(GameTimer& dt)
 
 void Renderer::UpdateWaves(GameTimer& gt)
 {
-	static float t_base = 0.0f;
-	if ((gt.TotalTime() - t_base) >= 0.25f)
+   m_DisturbAccumTime += gt.DeltaTime();
+    if (m_DisturbAccumTime >= 0.12f)
 	{
-		t_base += 0.25f;
-
-		int i = MathHelper::Rand(4, m_Waves->RowCount() - 5);
-		int j = MathHelper::Rand(4, m_Waves->ColumnCount() - 5);
-
-		float r = MathHelper::RandF(0.2f, 0.5f);
-
-		m_Waves->Disturb(i, j, r);
+		m_DisturbAccumTime = 0.0f;
+		m_DisturbX = static_cast<float>(MathHelper::Rand(4, m_Waves->ColumnCount() - 5));
+		m_DisturbY = static_cast<float>(MathHelper::Rand(4, m_Waves->RowCount() - 5));
+        m_DisturbRadius = MathHelper::RandF(4.0f, 9.0f);
+		m_DisturbStrength = MathHelper::RandF(-0.35f, 0.35f);
+		m_PendingDisturb = true;
 	}
-
-	// Update the wave simulation.
-	m_Waves->Update(gt.DeltaTime());
-
-	// Update the wave vertex buffer with the new solution.
-	auto currWavesVB = m_CurrentFrameResource->WavesVB.get();
-	for (int i = 0; i < m_Waves->VertexCount(); ++i)
-	{
-		Vertex v;
-
-		v.Pos = m_Waves->Position(i);
-		v.Normal = m_Waves->Normal(i);
-
-		// Derive tex-coords from position by 
-		// mapping [-w/2,w/2] --> [0,1]
-		v.TexCoord.x = 0.5f + v.Pos.x / m_Waves->Width();
-		v.TexCoord.y = 0.5f - v.Pos.z / m_Waves->Depth();
-
-		currWavesVB->CopyData(i, v);
-	}
-
-	// Set the dynamic VB of the wave renderitem to the current frame VB.
-	m_WavesRitem->Geo->VertexBufferGPU = currWavesVB->Resource();
 }
 
 void Renderer::CreateVertexBufferView()
@@ -1892,7 +2200,7 @@ HeightMap Renderer::GeneratePerlinHeightmap(UINT width, UINT height, float scale
 	}
 
 	float invRange = (maxH - minH) > 1e-6f ? 1.0f / (maxH - minH) : 1.0f;
-	
+
 	for (UINT j = 0; j < width * height; ++j)
 	{
 		float normalizedHeight = (noiseValues[j] - minH) * invRange;
@@ -2011,4 +2319,99 @@ void Renderer::UpdateHeightMapSrv()
 	srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
 
 	m_Device->CreateShaderResourceView(m_HeightMapTex.Get(), &srvDesc, h);
+}
+
+void Renderer::DrawFluidDebug(const StableFluids& fluid)
+{
+	ImGui::SetNextWindowSize(
+		ImVec2(550.0f, 600.0f), ImGuiCond_FirstUseEver);
+
+	if (!ImGui::Begin("Stable Fluids"))
+	{
+		ImGui::End();
+		return;
+	}
+
+	if (ImGui::Button("Reset simulation"))
+	{
+		m_Fluid.Reset();
+		m_FluidAccumulator = 0.0f;
+	}
+
+	ImGui::SameLine();
+	ImGui::Checkbox("Emitter", &m_FluidEmitterEnabled);
+
+	static float exposure = 0.1f;
+	ImGui::SliderFloat("Exposure", &exposure, 0.01f, 2.0f);
+	ImGui::TextUnformatted("Hover to inspect. Magenta = invalid density.");
+
+	constexpr int n = StableFluids::GridSize;
+	constexpr float side = 512.0f;
+	constexpr float cellSize = side / n;
+
+	const ImVec2 origin = ImGui::GetCursorScreenPos();
+	const ImVec2 end(origin.x + side, origin.y + side);
+
+	// Reserve the canvas area and provide hover detection.
+	ImGui::InvisibleButton("FluidCanvas", ImVec2(side, side));
+	const bool hovered = ImGui::IsItemHovered();
+
+	ImDrawList* draw = ImGui::GetWindowDrawList();
+	draw->PushClipRect(origin, end, true);
+
+	const float* density = fluid.Density();
+
+	// Draw interior cells only; skip the boundary/ghost cells.
+	for (int j = 1; j <= n; ++j)
+	{
+		for (int i = 1; i <= n; ++i)
+		{
+			const int index = i + (n + 2) * j;
+			const float value = density[index];
+
+			ImU32 colour = IM_COL32(255, 0, 255, 255);
+
+			if (std::isfinite(value) && value >= 0.0f)
+			{
+				// Display mapping only: does not modify the simulation.
+				const float brightness =
+					1.0f - std::exp(-exposure * value);
+
+				const int grey = static_cast<int>(255.0f * brightness);
+				colour = IM_COL32(grey, grey, grey, 255);
+			}
+
+			const ImVec2 p0(
+				origin.x + (i - 1) * cellSize,
+				origin.y + (j - 1) * cellSize);
+
+			const ImVec2 p1(
+				origin.x + i * cellSize,
+				origin.y + j * cellSize);
+
+			draw->AddRectFilled(p0, p1, colour);
+		}
+	}
+
+	draw->PopClipRect();
+	draw->AddRect(origin, end, IM_COL32(150, 150, 150, 255));
+
+	if (hovered)
+	{
+		const ImVec2 mouse = ImGui::GetMousePos();
+
+		const int i = std::clamp(
+			1 + static_cast<int>((mouse.x - origin.x) / cellSize), 1, n);
+		const int j = std::clamp(
+			1 + static_cast<int>((mouse.y - origin.y) / cellSize), 1, n);
+
+		const int index = i + (n + 2) * j;
+
+		ImGui::SetTooltip(
+			"Cell (%d, %d)\nDensity: %.6f\nVelocity: (%.6f, %.6f)",
+			i, j, density[index],
+			fluid.VelocityX()[index], fluid.VelocityY()[index]);
+	}
+
+	ImGui::End();
 }
