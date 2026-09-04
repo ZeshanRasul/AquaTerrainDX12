@@ -1,5 +1,8 @@
 #include "LightingUtil.hlsl"
 
+Texture2D<float> gHeightMap : register(t1);
+SamplerState gsamLinearWrap : register(s2);
+
 cbuffer cbPerObject : register(b0)
 {
     float4x4 gWorld;
@@ -59,6 +62,7 @@ VertexOut VS(VertexIn vIn)
     VertexOut vOut;
     
     float4 posW = mul(float4(vIn.PosL, 1.0f), gWorld);
+    posW.y = posW.y + gHeightMap.SampleLevel(gsamLinearWrap, vIn.TexC, 0.0f) * 4.0f;
     vOut.PosW = posW.xyz;
     
     vOut.NormalW = mul(vIn.NormalL, (float3x3) gWorld);
