@@ -287,6 +287,64 @@ void Renderer::Update(GameTimer& gt, Camera& cam)
 		m_Fluid3DAccumulator = 0.0f;
 		m_Fluid3DSingleStepRequested = false;
 	}
+
+	if (m_FluidDemoMode == FluidDemoMode::Smoke3D)
+	{
+		auto advanceSmokeOneStep = [&]()
+			{
+				if (m_Smoke3DEmitterEnabled)
+				{
+					const Size3 resolution =
+						m_SmokeSolver.Density().Resolution();
+
+					const std::size_t centreX = resolution.x / 2;
+					const std::size_t centreY = resolution.y / 4;
+					const std::size_t centreZ = resolution.z / 2;
+
+					m_SmokeSolver.AddSourceRates(
+						centreX,
+						centreY,
+						centreZ,
+						30.0,               // Density per second
+						10.0,               // Temperature per second
+						{ 0.0, 4.0, 0.0 }, // Upward acceleration
+						step);
+				}
+
+				m_SmokeSolver.Step(step);
+				m_SmokeDensityDirty = true;
+			};
+
+		if (m_FluidDemoMode == FluidDemoMode::Smoke3D &&
+			m_Smoke3DPaused)
+		{
+			m_Smoke3DAccumulator = 0.0f;
+
+			if (m_Smoke3DSingleStepRequested)
+			{
+				advanceSmokeOneStep();
+				m_Smoke3DSingleStepRequested = false;
+			}
+		}
+		else if (m_FluidDemoMode == FluidDemoMode::Smoke3D)
+		{
+			m_Smoke3DSingleStepRequested = false;
+
+			m_Smoke3DAccumulator +=
+				std::clamp(gt.DeltaTime(), 0.0f, 0.1f);
+
+			while (m_Smoke3DAccumulator >= step)
+			{
+				advanceSmokeOneStep();
+				m_Smoke3DAccumulator -= step;
+			}
+		}
+		else
+		{
+			m_Smoke3DAccumulator = 0.0f;
+			m_Smoke3DSingleStepRequested = false;
+		}
+	}
 }
 
 void Renderer::Draw()
@@ -302,6 +360,8 @@ void Renderer::Draw()
 	else if (m_FluidDemoMode == FluidDemoMode::Fluid3D &&
 		m_ShowFluid3DSliceViewer)
 		DrawFluid3DDebug(m_Fluid3D);
+	else if (m_FluidDemoMode == FluidDemoMode::Smoke3D)
+		DrawSmoke3DDebug(m_SmokeSolver);
 
 	showImgui = true;
 	ImGui::Render();
@@ -515,6 +575,9 @@ void Renderer::Draw()
 	DrawRenderItems(m_CommandList.Get(), m_TransparentRenderItems);
 
 	if (m_FluidDemoMode == FluidDemoMode::Fluid3D && m_ShowSmokeVolume)
+		DrawSmokeVolume(m_CommandList.Get());
+
+	if (m_FluidDemoMode == FluidDemoMode::Smoke3D && m_ShowSmokeVolume)
 		DrawSmokeVolume(m_CommandList.Get());
 
 	m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_DepthStencilBuffer.Get(), D3D12_RESOURCE_STATE_DEPTH_READ | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE));
@@ -2039,78 +2102,162 @@ void Renderer::DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::ve
 	}
 }
 
-void Renderer::UploadSmokeDensity(ID3D12GraphicsCommandList* commandList)
+void Renderer::UploadSmokeDensity(
+	ID3D12GraphicsCommandList* commandList)
 {
 	if (!m_SmokeDensityDirty)
 		return;
 
-	ID3D12Resource* uploadBuffer =
-		m_SmokeUploadBuffers[m_CurrentFrameResourceIndex].Get();
-	std::byte* mappedData = nullptr;
-	const D3D12_RANGE noCpuReads = { 0, 0 };
-	ThrowIfFailed(uploadBuffer->Map(
-		0,
-		&noCpuReads,
-		reinterpret_cast<void**>(&mappedData)));
+	UINT width = 0;
+	UINT height = 0;
+	UINT depth = 0;
 
-	std::memset(
-		mappedData,
-		0,
-		static_cast<std::size_t>(m_SmokeUploadBufferSize));
+	const ScalarGrid3* smokeDensity = nullptr;
 
-	const UINT rowPitch = m_SmokeUploadFootprint.Footprint.RowPitch;
-	const UINT64 slicePitch =
-		static_cast<UINT64>(rowPitch) *
-		m_SmokeUploadFootprint.Footprint.Height;
-
-	for (int k = 0; k < m_Fluid3D.Depth(); ++k)
+	if (m_FluidDemoMode == FluidDemoMode::Fluid3D)
 	{
-		for (int j = 0; j < m_Fluid3D.Height(); ++j)
-		{
-			float* destinationRow = reinterpret_cast<float*>(
-				mappedData +
-				static_cast<UINT64>(k) * slicePitch +
-				static_cast<UINT64>(j) * rowPitch);
+		width = static_cast<UINT>(m_Fluid3D.Width());
+		height = static_cast<UINT>(m_Fluid3D.Height());
+		depth = static_cast<UINT>(m_Fluid3D.Depth());
+	}
+	else if (m_FluidDemoMode == FluidDemoMode::Smoke3D)
+	{
+		smokeDensity = &m_SmokeSolver.Density();
 
-			for (int i = 0; i < m_Fluid3D.Width(); ++i)
-			{
-				const float density = m_Fluid3D.DensityAt(i + 1, j + 1, k + 1);
-				destinationRow[i] =
-					std::isfinite(density) ? std::max(density, 0.0f) : 0.0f;
-			}
-		}
+		const Size3 resolution =
+			smokeDensity->Resolution();
+
+		width = static_cast<UINT>(resolution.x);
+		height = static_cast<UINT>(resolution.y);
+		depth = static_cast<UINT>(resolution.z);
+	}
+	else
+	{
+		return;
 	}
 
-	const D3D12_RANGE cpuWrites = {
-		0,
-		static_cast<SIZE_T>(m_SmokeUploadBufferSize)
-	};
-	uploadBuffer->Unmap(0, &cpuWrites);
+	// Prevent writing beyond a texture created for another resolution.
+	assert(
+		width ==
+		m_SmokeUploadFootprint.Footprint.Width);
 
-	const auto toCopyDestination = CD3DX12_RESOURCE_BARRIER::Transition(
-		m_SmokeDensityTexture.Get(),
-		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
-		D3D12_RESOURCE_STATE_COPY_DEST);
-	commandList->ResourceBarrier(1, &toCopyDestination);
+	assert(
+		height ==
+		m_SmokeUploadFootprint.Footprint.Height);
 
-	D3D12_TEXTURE_COPY_LOCATION destination = {};
-	destination.pResource = m_SmokeDensityTexture.Get();
-	destination.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-	destination.SubresourceIndex = 0;
+	assert(
+		depth ==
+		m_SmokeUploadFootprint.Footprint.Depth);
 
-	D3D12_TEXTURE_COPY_LOCATION source = {};
-	source.pResource = uploadBuffer;
-	source.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-	source.PlacedFootprint = m_SmokeUploadFootprint;
-	commandList->CopyTextureRegion(
-		&destination, 0, 0, 0, &source, nullptr);
+	ID3D12Resource* uploadBuffer =
+		m_SmokeUploadBuffers[
+			m_CurrentFrameResourceIndex].Get();
 
-	const auto toShaderResource = CD3DX12_RESOURCE_BARRIER::Transition(
-		m_SmokeDensityTexture.Get(),
-		D3D12_RESOURCE_STATE_COPY_DEST,
-		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-	commandList->ResourceBarrier(1, &toShaderResource);
-	m_SmokeDensityDirty = false;
+			std::byte* mappedData = nullptr;
+			const D3D12_RANGE noCpuReads = { 0, 0 };
+
+			ThrowIfFailed(uploadBuffer->Map(
+				0,
+				&noCpuReads,
+				reinterpret_cast<void**>(&mappedData)));
+
+			std::memset(
+				mappedData,
+				0,
+				static_cast<std::size_t>(
+					m_SmokeUploadBufferSize));
+
+			const UINT rowPitch =
+				m_SmokeUploadFootprint.Footprint.RowPitch;
+
+			const UINT64 slicePitch =
+				static_cast<UINT64>(rowPitch) *
+				m_SmokeUploadFootprint.Footprint.Height;
+
+			for (UINT k = 0; k < depth; ++k)
+			{
+				for (UINT j = 0; j < height; ++j)
+				{
+					float* destinationRow =
+						reinterpret_cast<float*>(
+							mappedData +
+							static_cast<UINT64>(k) * slicePitch +
+							static_cast<UINT64>(j) * rowPitch);
+
+					for (UINT i = 0; i < width; ++i)
+					{
+						float density = 0.0f;
+
+						if (smokeDensity)
+						{
+							density = static_cast<float>(
+								(*smokeDensity)(i, j, k));
+						}
+						else
+						{
+							density = m_Fluid3D.DensityAt(
+								static_cast<int>(i) + 1,
+								static_cast<int>(j) + 1,
+								static_cast<int>(k) + 1);
+						}
+
+						destinationRow[i] =
+							std::isfinite(density)
+							? std::max(density, 0.0f)
+							: 0.0f;
+					}
+				}
+			}
+
+			const D3D12_RANGE cpuWrites = {
+				0,
+				static_cast<SIZE_T>(
+					m_SmokeUploadBufferSize)
+			};
+
+			uploadBuffer->Unmap(0, &cpuWrites);
+
+			const auto toCopyDestination =
+				CD3DX12_RESOURCE_BARRIER::Transition(
+					m_SmokeDensityTexture.Get(),
+					D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+					D3D12_RESOURCE_STATE_COPY_DEST);
+
+			commandList->ResourceBarrier(
+				1,
+				&toCopyDestination);
+
+			D3D12_TEXTURE_COPY_LOCATION destination = {};
+			destination.pResource =
+				m_SmokeDensityTexture.Get();
+			destination.Type =
+				D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+			destination.SubresourceIndex = 0;
+
+			D3D12_TEXTURE_COPY_LOCATION source = {};
+			source.pResource = uploadBuffer;
+			source.Type =
+				D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+			source.PlacedFootprint =
+				m_SmokeUploadFootprint;
+
+			commandList->CopyTextureRegion(
+				&destination,
+				0, 0, 0,
+				&source,
+				nullptr);
+
+			const auto toShaderResource =
+				CD3DX12_RESOURCE_BARRIER::Transition(
+					m_SmokeDensityTexture.Get(),
+					D3D12_RESOURCE_STATE_COPY_DEST,
+					D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+
+			commandList->ResourceBarrier(
+				1,
+				&toShaderResource);
+
+			m_SmokeDensityDirty = false;
 }
 
 void Renderer::DrawSmokeVolume(ID3D12GraphicsCommandList* commandList)
@@ -2755,7 +2902,8 @@ void Renderer::DrawFluidDemoSelector()
 	{
 		"Off",
 		"2D ImGui Stable Fluids",
-		"3D DX12 Smoke"
+		"3D DX12 Stable Fluids Smoke",
+		"3D Smoke Solver"
 	};
 	int selectedMode = static_cast<int>(m_FluidDemoMode);
 
@@ -2771,8 +2919,11 @@ void Renderer::DrawFluidDemoSelector()
 		m_FluidSingleStepRequested = false;
 		m_Fluid3DSingleStepRequested = false;
 
-		if (m_FluidDemoMode == FluidDemoMode::Fluid3D)
+		if (m_FluidDemoMode == FluidDemoMode::Fluid3D ||
+			m_FluidDemoMode == FluidDemoMode::Smoke3D)
+		{
 			m_SmokeDensityDirty = true;
+		}
 	}
 
 	if (m_FluidDemoMode == FluidDemoMode::Off)
@@ -3325,6 +3476,51 @@ void Renderer::DrawFluid3DDebug(StableFluids3D& fluid)
 			fluid.VelocityYAt(i, j, k),
 			fluid.VelocityZAt(i, j, k));
 	}
+
+	ImGui::End();
+}
+
+void Renderer::DrawSmoke3DDebug(SmokeSolver3& smokeSolver)
+{
+	ImGui::Begin("Smoke 3D Debug");
+	ImGui::Text("Smoke 3D Debug Info");
+	ImGui::Text(
+		"RMS divergence: %.3e -> %.3e",
+		static_cast<double>(smokeSolver.RmsDivergenceBeforeProjection()),
+		static_cast<double>(smokeSolver.RmsDivergenceAfterProjection()));
+
+	const double before =
+		static_cast<double>(
+			smokeSolver.RmsDivergenceBeforeProjection());
+
+	if (before <= 1e-12)
+	{
+		ImGui::TextUnformatted(
+			"Remaining divergence: n/a (zero input velocity)");
+	}
+	else
+	{
+		ImGui::Text(
+			"Remaining divergence: %.2f%%",
+			100.0 * static_cast<double>(
+				smokeSolver.DivergenceReductionFactor()));
+	}
+
+	Real maximumDensity = 0.0;
+	Real totalDensity = 0.0;
+
+	for (const Real density : smokeSolver.Density().Data())
+	{
+		maximumDensity =
+			std::max(maximumDensity, density);
+
+		totalDensity += density;
+	}
+
+	ImGui::Text(
+		"Density: max %.4f, total %.4f",
+		static_cast<double>(maximumDensity),
+		static_cast<double>(totalDensity));
 
 	ImGui::End();
 }

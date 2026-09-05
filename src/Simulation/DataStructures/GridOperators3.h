@@ -26,4 +26,7 @@ namespace GridOperators3
         const FaceCenteredVelocityGrid3& source,
         Real dt,
         FaceCenteredVelocityGrid3& destination);
+
+    [[nodiscard]] Real CalculateRmsDivergence(
+        const FaceCenteredVelocityGrid3& velocity);
 }

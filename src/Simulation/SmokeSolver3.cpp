@@ -74,6 +74,32 @@ void SmokeSolver3::Step(Real dt)
 	AdvectScalars(dt);
 }
 
+void SmokeSolver3::AddSourceRates(std::size_t i, std::size_t j, std::size_t k, Real densityRate, Real temperatureRate, Vector3 acceleration, Real dt)
+{
+	const Size3 resolution = m_Density.Resolution();
+
+	if (i >= resolution.x ||
+		j >= resolution.y ||
+		k >= resolution.z)
+	{
+		return;
+	}
+
+	m_Density(i, j, k) += densityRate * dt;
+	m_Temperature(i, j, k) += temperatureRate * dt;
+
+	// Give both faces surrounding the cell the same acceleration.
+	m_Velocity.U(i, j, k) += acceleration.x * dt;
+	m_Velocity.U(i + 1, j, k) += acceleration.x * dt;
+
+	m_Velocity.V(i, j, k) += acceleration.y * dt;
+	m_Velocity.V(i, j + 1, k) += acceleration.y * dt;
+
+	m_Velocity.W(i, j, k) += acceleration.z * dt;
+	m_Velocity.W(i, j, k + 1) += acceleration.z * dt;
+
+}
+
 void SmokeSolver3::ApplyExternalForces(Real dt)
 {
 }
@@ -92,6 +118,8 @@ void SmokeSolver3::Project(Real dt)
 {
 	GridOperators3::SetClosedDomainBoundary(m_Velocity);
 
+	const Real divergenceBefore = GridOperators3::CalculateRmsDivergence(m_Velocity);
+
 	GridOperators3::ComputeDivergence(
 		m_Velocity,
 		m_Divergence);
@@ -108,6 +136,13 @@ void SmokeSolver3::Project(Real dt)
 		dt / m_FluidDensity);
 
 	GridOperators3::SetClosedDomainBoundary(m_Velocity);
+
+	const Real divergenceAfter =
+		GridOperators3::CalculateRmsDivergence(m_Velocity);
+
+	m_LastRmsDivergenceBeforeProjection = divergenceBefore;
+	m_LastRmsDivergenceAfterProjection = divergenceAfter;
+
 
 }
 
@@ -218,35 +253,4 @@ void SmokeSolver3::SolvePressurePoisson(const ScalarGrid3& divergence, ScalarGri
 		std::swap(pressure, m_PressureScratch);
 	}
 
-}
-
-float SmokeSolver3::CalculateRmsDivergence(const float* velocityX, const float* velocityY, const float* velocityZ, int N, float h) const
-{
-	const double inverseTwoH = 0.5 / static_cast<double>(h);
-
-	double squaredSum = 0.0;
-
-	for (int k = 1; k <= N; ++k)
-	{
-		for (int j = 1; j <= N; ++j)
-		{
-			for (int i = 1; i <= N; ++i)
-			{
-				const double divergence =
-					inverseTwoH *
-					(
-						m_Velocity.SampleU(Vector3(i + 1, j, k)) -
-						m_Velocity.SampleU(Vector3(i - 1, j, k)) +
-						m_Velocity.SampleV(Vector3(i, j + 1, k)) -
-						m_Velocity.SampleV(Vector3(i, j - 1, k)) +
-						m_Velocity.SampleW(Vector3(i, j, k + 1)) -
-						m_Velocity.SampleW(Vector3(i, j, k - 1))
-						);
-
-				squaredSum += divergence * divergence;
-			}
-		}
-	}
-
-	return static_cast<float>(std::sqrt(squaredSum / static_cast<double>(N * N * N)));
 }

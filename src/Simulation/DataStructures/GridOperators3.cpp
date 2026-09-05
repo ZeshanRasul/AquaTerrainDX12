@@ -1,4 +1,5 @@
 #include "GridOperators3.h"
+#include <cmath>
 
 namespace
 {
@@ -209,3 +210,35 @@ void GridOperators3::Advect(
 	}
 }
 
+Real GridOperators3::CalculateRmsDivergence(
+	const FaceCenteredVelocityGrid3& velocity)
+{
+	const Size3 resolution = velocity.Resolution();
+
+	const std::size_t cellCount =
+		resolution.x * resolution.y * resolution.z;
+
+	if (cellCount == 0)
+		return 0.0;
+
+	Real sumSquaredDivergence = 0.0;
+
+	for (std::size_t k = 0; k < resolution.z; ++k)
+	{
+		for (std::size_t j = 0; j < resolution.y; ++j)
+		{
+			for (std::size_t i = 0; i < resolution.x; ++i)
+			{
+				const Real divergence =
+					velocity.DivergenceAtCellCenter(i, j, k);
+
+				sumSquaredDivergence +=
+					divergence * divergence;
+			}
+		}
+	}
+
+	return std::sqrt(
+		sumSquaredDivergence /
+		static_cast<Real>(cellCount));
+}

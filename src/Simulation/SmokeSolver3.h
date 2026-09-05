@@ -24,6 +24,37 @@ public:
         return m_Velocity;
     }
 
+	Real RmsDivergenceBeforeProjection() const noexcept
+	{
+		return m_LastRmsDivergenceBeforeProjection;
+	}
+
+	Real RmsDivergenceAfterProjection() const noexcept
+	{
+		return m_LastRmsDivergenceAfterProjection;
+	}
+
+    [[nodiscard]] Real DivergenceReductionFactor() const noexcept
+    {
+        constexpr Real epsilon = 1e-12;
+
+        if (m_LastRmsDivergenceBeforeProjection <= epsilon)
+            return 0.0;
+
+        return
+            m_LastRmsDivergenceAfterProjection /
+            m_LastRmsDivergenceBeforeProjection;
+    }
+
+    void AddSourceRates(
+        std::size_t i,
+        std::size_t j,
+        std::size_t k,
+        Real densityRate,
+        Real temperatureRate,
+        Vector3 acceleration,
+        Real dt);
+
 private:
     void ApplyExternalForces(Real dt);
     void AdvectVelocity(Real dt);
@@ -35,8 +66,6 @@ private:
         ScalarGrid3& pressure,
         Real dt,
         Real fluidDensity);
-
-    float CalculateRmsDivergence(const float* velocityX, const float* velocityY, const float* velocityZ, int N, float h) const;
 
     FaceCenteredVelocityGrid3 m_Velocity;
 
@@ -53,5 +82,8 @@ private:
     ScalarGrid3 m_PressureScratch;
 
     Real m_FluidDensity = 1.0;
+
+	Real m_LastRmsDivergenceBeforeProjection = 0.0f;
+	Real m_LastRmsDivergenceAfterProjection = 0.0f;
 
 };

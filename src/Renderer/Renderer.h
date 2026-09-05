@@ -11,7 +11,7 @@
 #include "../Utils/GameTimer.h"
 #include "../Simulation/StableFluids.h"
 #include "../Simulation/StableFluids3D.h"
-
+#include "../Simulation/SmokeSolver3.h"
 
 using namespace DirectX;
 
@@ -25,7 +25,8 @@ enum class FluidDemoMode : int
 {
 	Off = 0,
 	Fluid2D,
-	Fluid3D
+	Fluid3D,
+	Smoke3D
 };
 
 struct HeightMap
@@ -333,6 +334,7 @@ private:
 	void DrawFluidDemoSelector();
 	void DrawFluidDebug(StableFluids& fluid);
 	void DrawFluid3DDebug(StableFluids3D& fluid);
+	void DrawSmoke3DDebug(SmokeSolver3& smokeSolver);
 
 	FluidDemoMode m_FluidDemoMode = FluidDemoMode::Fluid2D;
 	bool m_ShowFluid3DSliceViewer = true;
@@ -350,6 +352,12 @@ private:
 	bool m_Fluid3DEmitterEnabled = true;
 	bool m_Fluid3DPaused = false;
 	bool m_Fluid3DSingleStepRequested = false;
+
+	SmokeSolver3 m_SmokeSolver{ { 32, 32, 32 }, { 1.0f, 1.0f, 1.0f },  { -16.0, -16.0, -16.0 } };
+	float m_Smoke3DAccumulator = 0.0f;
+	bool m_Smoke3DEmitterEnabled = true;
+	bool m_Smoke3DPaused = false;
+	bool m_Smoke3DSingleStepRequested = false;	
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_SmokeDensityTexture;
 	std::array<Microsoft::WRL::ComPtr<ID3D12Resource>, NumFrameResources>
