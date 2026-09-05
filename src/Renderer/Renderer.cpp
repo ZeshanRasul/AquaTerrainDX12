@@ -179,6 +179,7 @@ void Renderer::Update(GameTimer& gt, Camera& cam)
 	XMStoreFloat4x4(&m_Proj, cam.GetProj());
 	m_EyePos = cam.GetPosition3f();
 
+	deltaTime = gt.DeltaTime();
 
 	UpdateObjectCBs();
 	UpdateMainPassCB();
@@ -333,10 +334,22 @@ void Renderer::Update(GameTimer& gt, Camera& cam)
 			m_Smoke3DAccumulator +=
 				std::clamp(gt.DeltaTime(), 0.0f, 0.1f);
 
-			while (m_Smoke3DAccumulator >= step)
+			constexpr int maximumSubsteps = 2;
+			int substeps = 0;
+
+			while (m_Smoke3DAccumulator >= step &&
+				substeps < maximumSubsteps)
 			{
 				advanceSmokeOneStep();
 				m_Smoke3DAccumulator -= step;
+				++substeps;
+			}
+
+			if (m_Smoke3DAccumulator >= step)
+			{
+				// Drop excess accumulated time when simulation cannot keep up.
+				m_Smoke3DAccumulator =
+					std::fmod(m_Smoke3DAccumulator, step);
 			}
 		}
 		else
@@ -3488,6 +3501,11 @@ void Renderer::DrawSmoke3DDebug(SmokeSolver3& smokeSolver)
 		"RMS divergence: %.3e -> %.3e",
 		static_cast<double>(smokeSolver.RmsDivergenceBeforeProjection()),
 		static_cast<double>(smokeSolver.RmsDivergenceAfterProjection()));
+
+	ImGui::Text(
+		"Predicted post-projection divergence: %.3e",
+		static_cast<double>(
+			smokeSolver.ScaledPressureResidual()));
 
 	const double before =
 		static_cast<double>(

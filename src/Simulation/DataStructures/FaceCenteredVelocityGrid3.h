@@ -1,5 +1,4 @@
 #pragma once
-#include "Helpers/Utils.h"
 #include "ScalarGrid.h"
 
 class FaceCenteredVelocityGrid3

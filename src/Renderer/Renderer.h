@@ -358,6 +358,7 @@ private:
 	bool m_Smoke3DEmitterEnabled = true;
 	bool m_Smoke3DPaused = false;
 	bool m_Smoke3DSingleStepRequested = false;	
+	float deltaTime = 0.0f;
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_SmokeDensityTexture;
 	std::array<Microsoft::WRL::ComPtr<ID3D12Resource>, NumFrameResources>

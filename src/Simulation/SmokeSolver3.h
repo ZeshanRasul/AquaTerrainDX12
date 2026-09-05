@@ -1,6 +1,7 @@
 #pragma once
 
 #include "DataStructures/FaceCenteredVelocityGrid3.h"
+#include <cassert>
 
 class SmokeSolver3
 {
@@ -34,6 +35,8 @@ public:
 		return m_LastRmsDivergenceAfterProjection;
 	}
 
+    Real PressureResidualRms(Real dt) const;
+
     [[nodiscard]] Real DivergenceReductionFactor() const noexcept
     {
         constexpr Real epsilon = 1e-12;
@@ -54,6 +57,92 @@ public:
         Real temperatureRate,
         Vector3 acceleration,
         Real dt);
+
+	Real FluidDensity() const noexcept
+	{
+		return m_FluidDensity;
+	}
+
+    [[nodiscard]] Real ScaledPressureResidual() const noexcept
+    {
+        return m_LastScaledPressureResidual;
+    }
+
+    void ApplyPressureMatrix(
+        const ScalarGrid3& input,
+        ScalarGrid3& output);
+
+    void ApplyJacobiPreconditioner(
+        const ScalarGrid3& residual,
+        ScalarGrid3& result);
+
+    Real Dot(
+        const ScalarGrid3& a,
+        const ScalarGrid3& b)
+    {
+        const auto aData = a.Data();
+        const auto bData = b.Data();
+
+        assert(aData.size() == bData.size());
+
+        Real result = 0.0;
+
+        for (std::size_t i = 0; i < aData.size(); ++i)
+            result += aData[i] * bData[i];
+
+        return result;
+    }
+
+    Real Rms(const ScalarGrid3& grid)
+    {
+        const auto data = grid.Data();
+
+        if (data.empty())
+            return 0.0;
+
+        return std::sqrt(
+            Dot(grid, grid) /
+            static_cast<Real>(data.size()));
+    }
+
+    Real Mean(const ScalarGrid3& grid)
+    {
+        const auto data = grid.Data();
+
+        if (data.empty())
+            return 0.0;
+
+        Real sum = 0.0;
+
+        for (const Real value : data)
+            sum += value;
+
+        return sum / static_cast<Real>(data.size());
+    }
+
+    void RemoveMean(ScalarGrid3& grid)
+    {
+        const Real mean = Mean(grid);
+
+        for (Real& value : grid.Data())
+            value -= mean;
+    }
+
+    void SmokeSolver3::SolvePressurePoissonPCG(
+        const ScalarGrid3& divergence,
+        ScalarGrid3& pressure,
+        Real dt,
+        Real fluidDensity);
+
+    [[nodiscard]] std::size_t PressureIterations() const noexcept
+    {
+        return m_LastPressureIterations;
+    }
+
+    [[nodiscard]] Real MeanDivergence() const noexcept
+    {
+        return m_LastMeanDivergence;
+    }
 
 private:
     void ApplyExternalForces(Real dt);
@@ -85,5 +174,13 @@ private:
 
 	Real m_LastRmsDivergenceBeforeProjection = 0.0f;
 	Real m_LastRmsDivergenceAfterProjection = 0.0f;
+	Real m_LastScaledPressureResidual = 0.0f;
 
+    ScalarGrid3 m_PcgResidual;       // r
+    ScalarGrid3 m_PcgPreconditioned; // z
+    ScalarGrid3 m_PcgDirection;      // d
+    ScalarGrid3 m_PcgMatrixDirection;// q = A*d
+
+    std::size_t m_LastPressureIterations = 0;
+    Real m_LastMeanDivergence = 0.0;
 };
