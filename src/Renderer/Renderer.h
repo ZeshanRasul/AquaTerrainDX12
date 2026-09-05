@@ -1,6 +1,7 @@
 #pragma once
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 
 #include "../Utils/d3dUtil.h"
 #include "../Utils/GeometryGenerator.h"
@@ -408,8 +409,35 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_SmokeGpuDescriptorHeap;
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_SmokeCpuDescriptorHeap;
 
-	void CreateSmokeResources();
 	void CreateSmokeGpuResources();
 	void CreateSmokeGpuDescriptorHeap();
-	void CreateSmokeGpuDescriptors();
+
+	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_SmokeBindingRootSignature;
+
+	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SmokePatternPSO;
+
+	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SmokeCopyPSO;
+
+	void CreateSmokeBindingRootSignature();
+	void CreateSmokeBindingPSOs();
+
+	void DispatchSmokeBindingTest(ID3D12GraphicsCommandList* commandList);
+};
+
+struct SmokeBindingConstants
+{
+	std::uint32_t width;
+	std::uint32_t height;
+	std::uint32_t depth;
+	float patternScale;
+};
+
+static_assert(sizeof(SmokeBindingConstants) == 16);
+
+enum SmokeBindingRootParameter : UINT
+{
+	SmokeBindingConstantsRoot = 0,
+	SmokeBindingInputRoot,
+	SmokeBindingOutputRoot,
+	SmokeBindingRootCount
 };

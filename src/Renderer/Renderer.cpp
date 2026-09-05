@@ -116,6 +116,20 @@ bool Renderer::InitializeD3D12(HWND& windowHandle)
 	CreateWaterComputeRootSignature();
 	CreateSmokeRootSignature();
 
+	CreateSmokeGpuResources();
+	CreateSmokeGpuDescriptorHeap();
+	CreateSmokeBindingRootSignature();
+	CreateSmokeBindingPSOs();
+
+	ThrowIfFailed(m_GpuDensity[0].resource->SetName(
+		L"Smoke.BindingTest.Density"));
+
+	ThrowIfFailed(m_GpuTemperature[0].resource->SetName(
+		L"Smoke.BindingTest.Temperature"));
+
+	ThrowIfFailed(m_SmokeGpuDescriptorHeap->SetName(
+		L"Smoke.BindingTest.DescriptorHeap"));
+
 	BuildShadersAndInputLayout();
 	BuildShapeGeometry();
 	BuildLandGeometry(static_cast<float>(m_TerrainWorldWidth), static_cast<float>(m_TerrainWorldHeight));
@@ -426,7 +440,13 @@ void Renderer::Draw()
 
 	ThrowIfFailed(cmdListAlloc->Reset());
 
-	ThrowIfFailed(m_CommandList->Reset(cmdListAlloc.Get(), m_PipelineStateObjects["opaque"].Get()));
+//	ThrowIfFailed(m_CommandList->Reset(cmdListAlloc.Get(), m_PipelineStateObjects["opaque"].Get()));
+
+	ThrowIfFailed(m_CommandList->Reset(
+		cmdListAlloc.Get(),
+		nullptr));
+
+	DispatchSmokeBindingTest(m_CommandList.Get());
 
 	if (m_NeedRegen)
 	{
@@ -462,7 +482,7 @@ void Renderer::Draw()
 
 	m_CommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
 
-	
+
 	m_CommandList->SetPipelineState(m_PipelineStateObjects["waveUpdate"].Get());
 	m_CommandList->SetComputeRootSignature(m_ComputeRootSignature.Get());
 	ID3D12DescriptorHeap* computeDescriptorHeaps[] = { m_TexSrvHeap.Get() };
@@ -472,7 +492,7 @@ void Renderer::Draw()
 	CD3DX12_GPU_DESCRIPTOR_HANDLE waterUavTable(m_TexSrvHeap->GetGPUDescriptorHandleForHeapStart());
 	waterUavTable.Offset(kWaterCurrUavIndex, m_CbvSrvUavDescriptorSize);
 
-   if (m_PendingDisturb)
+	if (m_PendingDisturb)
 	{
 		m_CommandList->SetPipelineState(m_PipelineStateObjects["waveDisturb"].Get());
 
@@ -491,7 +511,7 @@ void Renderer::Draw()
 		const WaterDisturbConstantsCPU disturbConstants = {
 			static_cast<UINT>(m_Waves->ColumnCount()),
 			static_cast<UINT>(m_Waves->RowCount()),
-          m_DisturbX,
+		  m_DisturbX,
 			m_DisturbY,
 			m_DisturbRadius,
 			m_DisturbStrength,
@@ -509,7 +529,7 @@ void Renderer::Draw()
 		m_CommandList->CopyResource(m_WaterHeightCurrent.Get(), m_WaterHeightCurrentUav.Get());
 		m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_WaterHeightCurrent.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
 		m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_WaterHeightCurrentUav.Get(), D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
-       m_PendingDisturb = false;
+		m_PendingDisturb = false;
 	}
 
 	m_CommandList->SetPipelineState(m_PipelineStateObjects["waveUpdate"].Get());
@@ -544,7 +564,7 @@ void Renderer::Draw()
 		0.0f
 	};
 
-   constexpr INT kWaterPrevSrvIndex = 8;
+	constexpr INT kWaterPrevSrvIndex = 8;
 	constexpr INT kWaterCurrentSrvIndex = 9;
 
 	CD3DX12_GPU_DESCRIPTOR_HANDLE waterSrvTable(m_TexSrvHeap->GetGPUDescriptorHandleForHeapStart());
@@ -621,7 +641,7 @@ void Renderer::Draw()
 	m_CommandList->SetGraphicsRootConstantBufferView(3, passCB->GetGPUVirtualAddress());
 	auto waterCB = m_CurrentFrameResource->WaterCB->Resource();
 	m_CommandList->SetGraphicsRootConstantBufferView(4, waterCB->GetGPUVirtualAddress());
-  tex = m_SrvHeap->GetGPUDescriptorHandleForHeapStart();
+	tex = m_SrvHeap->GetGPUDescriptorHandleForHeapStart();
 	if (m_UsePrevAsWaterHeightSrv)
 	{
 		tex.ptr += static_cast<SIZE_T>(2) * static_cast<SIZE_T>(m_CbvSrvUavDescriptorSize);
@@ -1150,8 +1170,8 @@ void Renderer::CreateSmokeGpuResources()
 		m_GpuDensity[0].state,
 		nullptr,
 		IID_PPV_ARGS(&m_GpuDensity[0].resource)));
-	
-	
+
+
 	textureDesc = {};
 	textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE3D;
 	textureDesc.Width = static_cast<UINT64>(m_SmokeSolver.Temperature().Resolution().x);
@@ -1267,7 +1287,7 @@ void Renderer::CreateSmokeGpuResources()
 		IID_PPV_ARGS(&m_GpuDivergence.resource)));
 }
 
-void Renderer::CreateSmokeGpuDescriptors()
+void Renderer::CreateSmokeGpuDescriptorHeap()
 {
 	constexpr UINT fieldCount = 7;
 
@@ -1315,7 +1335,7 @@ void Renderer::CreateSmokeGpuDescriptors()
 	};
 
 	const auto cpuStart =
-		m_SmokeCpuDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+		m_SmokeGpuDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 
 	const auto gpuStart =
 		m_SmokeGpuDescriptorHeap->GetGPUDescriptorHandleForHeapStart();
@@ -1363,7 +1383,7 @@ void Renderer::CreateSmokeGpuDescriptors()
 void Renderer::createSrvDescriptorHeaps()
 {
 	D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
-    srvHeapDesc.NumDescriptors = 4;
+	srvHeapDesc.NumDescriptors = 4;
 	srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 	ThrowIfFailed(m_Device->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_SrvHeap)));
@@ -1688,16 +1708,16 @@ void Renderer::CreateTransparentRootSignature()
 void Renderer::CreateWaterComputeRootSignature()
 {
 	CD3DX12_DESCRIPTOR_RANGE srvTable;
- srvTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND);
+	srvTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND);
 	CD3DX12_ROOT_PARAMETER slotRootParameter[3];
 	CD3DX12_DESCRIPTOR_RANGE uavTable;
- uavTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND);
+	uavTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND);
 
-   slotRootParameter[0].InitAsConstants(8, 0);
+	slotRootParameter[0].InitAsConstants(8, 0);
 	slotRootParameter[1].InitAsDescriptorTable(1, &srvTable, D3D12_SHADER_VISIBILITY_ALL);
 	slotRootParameter[2].InitAsDescriptorTable(1, &uavTable, D3D12_SHADER_VISIBILITY_ALL);
 
-    CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(3, slotRootParameter, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_NONE);
+	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(3, slotRootParameter, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_NONE);
 	Microsoft::WRL::ComPtr<ID3DBlob> serializedRootSig = nullptr;
 	Microsoft::WRL::ComPtr<ID3DBlob> errorBlob = nullptr;
 
@@ -1781,7 +1801,7 @@ void Renderer::BuildShadersAndInputLayout()
 	m_CsByteCodeWaveDisturb = d3dUtil::CompileShader(L"Shaders\\compute_water_disturb.hlsl", nullptr, "CS", "cs_5_0");
 	m_VsByteCodeSmoke = d3dUtil::CompileShader(L"Shaders\\vertex_smoke.hlsl", nullptr, "VS", "vs_5_0");
 	m_PsByteCodeSmoke = d3dUtil::CompileShader(L"Shaders\\pixel_smoke.hlsl", nullptr, "PS", "ps_5_0");
-//	m_CsByteCodeWaveNormals = d3dUtil::CompileShader(L"Shaders\\compute_water_normals.hlsl", nullptr, "CS", "cs_5_0");
+	//	m_CsByteCodeWaveNormals = d3dUtil::CompileShader(L"Shaders\\compute_water_normals.hlsl", nullptr, "CS", "cs_5_0");
 
 
 	m_InputLayoutDescs =
@@ -2186,13 +2206,13 @@ void Renderer::BuildWavesGeometry()
 		}
 	}
 
-  UINT vbByteSize = (UINT)vertices.size() * sizeof(Vertex);
+	UINT vbByteSize = (UINT)vertices.size() * sizeof(Vertex);
 	UINT ibByteSize = (UINT)indices.size() * sizeof(std::uint16_t);
 
 	auto geo = std::make_unique<MeshGeometry>();
 	geo->Name = "waterGeo";
 
- ThrowIfFailed(D3DCreateBlob(vbByteSize, &geo->VertexBufferCPU));
+	ThrowIfFailed(D3DCreateBlob(vbByteSize, &geo->VertexBufferCPU));
 	CopyMemory(geo->VertexBufferCPU->GetBufferPointer(), vertices.data(), vbByteSize);
 
 	geo->VertexBufferGPU = d3dUtil::CreateDefaultBuffer(m_Device.Get(),
@@ -2723,9 +2743,9 @@ void Renderer::BuildPSOs()
 		&smokePsoDesc,
 		IID_PPV_ARGS(&m_PipelineStateObjects["smoke"])));
 
-    D3D12_COMPUTE_PIPELINE_STATE_DESC waveUpdatePsoDesc = {};
+	D3D12_COMPUTE_PIPELINE_STATE_DESC waveUpdatePsoDesc = {};
 	waveUpdatePsoDesc.pRootSignature = m_ComputeRootSignature.Get();
-    waveUpdatePsoDesc.NodeMask = 0;
+	waveUpdatePsoDesc.NodeMask = 0;
 	waveUpdatePsoDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
 	waveUpdatePsoDesc.CS = {
 		reinterpret_cast<BYTE*>(m_CsByteCodeWaveUpdate->GetBufferPointer()),
@@ -2905,13 +2925,13 @@ void Renderer::UpdateWaterCB(GameTimer& dt)
 
 void Renderer::UpdateWaves(GameTimer& gt)
 {
-   m_DisturbAccumTime += gt.DeltaTime();
-    if (m_DisturbAccumTime >= 0.12f)
+	m_DisturbAccumTime += gt.DeltaTime();
+	if (m_DisturbAccumTime >= 0.12f)
 	{
 		m_DisturbAccumTime = 0.0f;
 		m_DisturbX = static_cast<float>(MathHelper::Rand(4, m_Waves->ColumnCount() - 5));
 		m_DisturbY = static_cast<float>(MathHelper::Rand(4, m_Waves->RowCount() - 5));
-        m_DisturbRadius = MathHelper::RandF(4.0f, 9.0f);
+		m_DisturbRadius = MathHelper::RandF(4.0f, 9.0f);
 		m_DisturbStrength = MathHelper::RandF(-0.35f, 0.35f);
 		m_PendingDisturb = true;
 	}
@@ -3613,32 +3633,32 @@ void Renderer::DrawFluid3DDebug(StableFluids3D& fluid)
 	// so the vertical cell coordinate is reversed when sampling those axes.
 	auto sampleCell = [&](int column, int row,
 		int& i, int& j, int& k, float& projectedX, float& projectedY)
-	{
-		if (plane == 0)
 		{
-			i = column + 1;
-			j = fluid.Height() - row;
-			k = slice;
-			projectedX = fluid.VelocityXAt(i, j, k);
-			projectedY = -fluid.VelocityYAt(i, j, k);
-		}
-		else if (plane == 1)
-		{
-			i = column + 1;
-			j = slice;
-			k = fluid.Depth() - row;
-			projectedX = fluid.VelocityXAt(i, j, k);
-			projectedY = -fluid.VelocityZAt(i, j, k);
-		}
-		else
-		{
-			i = slice;
-			j = fluid.Height() - row;
-			k = column + 1;
-			projectedX = fluid.VelocityZAt(i, j, k);
-			projectedY = -fluid.VelocityYAt(i, j, k);
-		}
-	};
+			if (plane == 0)
+			{
+				i = column + 1;
+				j = fluid.Height() - row;
+				k = slice;
+				projectedX = fluid.VelocityXAt(i, j, k);
+				projectedY = -fluid.VelocityYAt(i, j, k);
+			}
+			else if (plane == 1)
+			{
+				i = column + 1;
+				j = slice;
+				k = fluid.Depth() - row;
+				projectedX = fluid.VelocityXAt(i, j, k);
+				projectedY = -fluid.VelocityZAt(i, j, k);
+			}
+			else
+			{
+				i = slice;
+				j = fluid.Height() - row;
+				k = column + 1;
+				projectedX = fluid.VelocityZAt(i, j, k);
+				projectedY = -fluid.VelocityYAt(i, j, k);
+			}
+		};
 
 	for (int row = 0; row < verticalCells; ++row)
 	{
@@ -3723,14 +3743,14 @@ void Renderer::DrawFluid3DDebug(StableFluids3D& fluid)
 				const float headWidth = headLength * 0.55f;
 				const ImVec2 arrowLeft(
 					head.x - directionX * headLength +
-						perpendicularX * headWidth,
+					perpendicularX * headWidth,
 					head.y - directionY * headLength +
-						perpendicularY * headWidth);
+					perpendicularY * headWidth);
 				const ImVec2 arrowRight(
 					head.x - directionX * headLength -
-						perpendicularX * headWidth,
+					perpendicularX * headWidth,
 					head.y - directionY * headLength -
-						perpendicularY * headWidth);
+					perpendicularY * headWidth);
 
 				draw->AddTriangleFilled(
 					head, arrowLeft, arrowRight, arrowColour);
@@ -3938,4 +3958,234 @@ void Renderer::DrawSmoke3DDebug(SmokeSolver3& smokeSolver)
 	}
 
 	ImGui::End();
+}
+
+void Renderer::CreateSmokeBindingRootSignature()
+{
+	CD3DX12_DESCRIPTOR_RANGE inputRange;
+	inputRange.Init(
+		D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
+		1,  // Descriptor count
+		0); // t0
+
+	CD3DX12_DESCRIPTOR_RANGE outputRange;
+	outputRange.Init(
+		D3D12_DESCRIPTOR_RANGE_TYPE_UAV,
+		1,  // Descriptor count
+		0); // u0
+
+	CD3DX12_ROOT_PARAMETER parameters[SmokeBindingRootCount];
+
+	parameters[SmokeBindingConstantsRoot].InitAsConstants(
+		4,  // Four 32-bit values
+		0); // b0
+
+	parameters[SmokeBindingInputRoot].InitAsDescriptorTable(
+		1,
+		&inputRange);
+
+	parameters[SmokeBindingOutputRoot].InitAsDescriptorTable(
+		1,
+		&outputRange);
+
+	CD3DX12_ROOT_SIGNATURE_DESC description;
+	description.Init(
+		SmokeBindingRootCount,
+		parameters,
+		0,
+		nullptr,
+		D3D12_ROOT_SIGNATURE_FLAG_NONE);
+
+	Microsoft::WRL::ComPtr<ID3DBlob> serialized;
+	Microsoft::WRL::ComPtr<ID3DBlob> errors;
+
+	const HRESULT result = D3D12SerializeRootSignature(
+		&description,
+		D3D_ROOT_SIGNATURE_VERSION_1,
+		serialized.GetAddressOf(),
+		errors.GetAddressOf());
+
+	if (errors)
+	{
+		OutputDebugStringA(
+			static_cast<const char*>(errors->GetBufferPointer()));
+	}
+
+	ThrowIfFailed(result);
+
+	ThrowIfFailed(m_Device->CreateRootSignature(
+		0,
+		serialized->GetBufferPointer(),
+		serialized->GetBufferSize(),
+		IID_PPV_ARGS(m_SmokeBindingRootSignature.GetAddressOf())));
+
+	ThrowIfFailed(m_SmokeBindingRootSignature->SetName(
+		L"Smoke.BindingTest.RootSignature"));
+}
+
+void Renderer::CreateSmokeBindingPSOs()
+{
+	// Adjust this path to your shader folder.
+	const wchar_t* shaderPath =
+		L"Shaders/smoke_binding_test.hlsl";
+
+	auto createPSO = [&]
+	(
+
+		const char* entryPoint,
+		const wchar_t* debugName,
+		Microsoft::WRL::ComPtr<ID3D12PipelineState>& destination)
+		{
+			Microsoft::WRL::ComPtr<ID3DBlob> shader;
+			Microsoft::WRL::ComPtr<ID3DBlob> errors;
+
+			// Useful for initial inspection; use optimised shaders
+			// when measuring performance later.
+			const UINT flags =
+				D3DCOMPILE_ENABLE_STRICTNESS |
+				D3DCOMPILE_DEBUG |
+				D3DCOMPILE_SKIP_OPTIMIZATION;
+
+			const HRESULT result = D3DCompileFromFile(
+				shaderPath,
+				nullptr,
+				D3D_COMPILE_STANDARD_FILE_INCLUDE,
+				entryPoint,
+				"cs_5_1",
+				flags,
+				0,
+				shader.GetAddressOf(),
+				errors.GetAddressOf());
+
+			if (errors)
+			{
+				OutputDebugStringA(
+					static_cast <
+					const char*> (errors->GetBufferPointer()));
+			}
+
+			ThrowIfFailed(result);
+
+			D3D12_COMPUTE_PIPELINE_STATE_DESC description = { };
+			description.pRootSignature =
+				m_SmokeBindingRootSignature.Get();
+
+			description.CS.pShaderBytecode =
+				shader->GetBufferPointer();
+
+			description.CS.BytecodeLength =
+				shader->GetBufferSize();
+
+			ThrowIfFailed(m_Device->CreateComputePipelineState(
+				&description,
+				IID_PPV_ARGS(destination.GetAddressOf())));
+
+			ThrowIfFailed(destination->SetName(debugName));
+		};
+
+	createPSO(
+		"WritePatternCS",
+		L"Smoke.BindingTest.WritePattern",
+		m_SmokePatternPSO);
+
+	createPSO(
+		"CopyFieldCS",
+		L"Smoke.BindingTest.CopyField",
+		m_SmokeCopyPSO);
+}
+
+void Renderer::DispatchSmokeBindingTest(
+	ID3D12GraphicsCommandList* commandList)
+{
+	auto transition = [&](
+		ID3D12Resource* resource,
+		D3D12_RESOURCE_STATES& currentState,
+		D3D12_RESOURCE_STATES nextState)
+		{
+			if (currentState == nextState)
+				return;
+
+			const auto barrier =
+				CD3DX12_RESOURCE_BARRIER::Transition(
+					resource,
+					currentState,
+					nextState);
+
+			commandList->ResourceBarrier(1, &barrier);
+			currentState = nextState;
+		};
+
+	const D3D12_RESOURCE_DESC densityDescription =
+		m_GpuDensity[0].resource->GetDesc();
+
+	const SmokeBindingConstants constants = {
+		static_cast<std::uint32_t>(densityDescription.Width),
+		densityDescription.Height,
+		densityDescription.DepthOrArraySize,
+		1.0f
+	};
+
+	const UINT groupsX = (constants.width + 7) / 8;
+	const UINT groupsY = (constants.height + 7) / 8;
+	const UINT groupsZ = (constants.depth + 3) / 4;
+
+	ID3D12DescriptorHeap* heaps[] = {
+		m_SmokeGpuDescriptorHeap.Get()
+	};
+
+	commandList->SetDescriptorHeaps(1, heaps);
+
+	commandList->SetComputeRootSignature(
+		m_SmokeBindingRootSignature.Get());
+
+	commandList->SetComputeRoot32BitConstants(
+		SmokeBindingConstantsRoot,
+		4,
+		&constants,
+		0);
+
+	// Pass 1: write the entire density texture.
+	transition(
+		m_GpuDensity[0].resource.Get(),
+		m_GpuDensity[0].state,
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
+	commandList->SetPipelineState(m_SmokePatternPSO.Get());
+
+	commandList->SetComputeRootDescriptorTable(
+		SmokeBindingOutputRoot,
+		m_GpuDensity[0].uav);
+
+	// Input root table is unused by WritePatternCS.
+	commandList->Dispatch(groupsX, groupsY, groupsZ);
+
+	// Pass 2: read density and write temperature.
+	// This transition establishes the write-to-read dependency.
+	transition(
+		m_GpuDensity[0].resource.Get(),
+		m_GpuDensity[0].state,
+		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+
+	transition(
+		m_GpuTemperature[0].resource.Get(),
+		m_GpuTemperature[0].state,
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
+	commandList->SetPipelineState(m_SmokeCopyPSO.Get());
+
+	commandList->SetComputeRootDescriptorTable(
+		SmokeBindingInputRoot,
+		m_GpuDensity[0].srv);
+
+	commandList->SetComputeRootDescriptorTable(
+		SmokeBindingOutputRoot,
+		m_GpuTemperature[0].uav);
+
+	commandList->Dispatch(groupsX, groupsY, groupsZ);
+
+	// Establish a completed write-to-read dependency for temperature.
+	transition(
+		m_GpuTemperature[0].resource.Get(),
+		m_GpuTemperature[0].state,
+		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 }
