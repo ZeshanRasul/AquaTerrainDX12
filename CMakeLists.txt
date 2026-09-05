@@ -40,7 +40,7 @@ file(GLOB APP_SOURCES
 
 # Executable type: WIN32 removes the console window on Windows
 if(BUILD_WIN32_SUBSYSTEM)
-    add_executable(${PROJECT_NAME} WIN32 ${APP_SOURCES} "src/Simulation/StableFluids.h" "src/Simulation/StableFluids.cpp" "src/Simulation/StableFluids3D.h" "src/Simulation/StableFluids3D.cpp")
+    add_executable(${PROJECT_NAME} WIN32 ${APP_SOURCES} "src/Simulation/StableFluids.h" "src/Simulation/StableFluids.cpp" "src/Simulation/StableFluids3D.h" "src/Simulation/StableFluids3D.cpp" "src/Simulation/DataStructures/ScalarGrid.cpp" "src/Simulation/DataStructures/FaceCenteredVelocityGrid3.h" "src/Simulation/DataStructures/FaceCenteredVelocityGrid3.cpp" "src/Simulation/DataStructures/Helpers/Utils.h" "src/Simulation/DataStructures/Helpers/Utils.cpp" "src/Simulation/SmokeSolver3.cpp" "src/Simulation/SmokeSolver3.h" "src/Simulation/DataStructures/GridOperators3.h" "src/Simulation/DataStructures/GridOperators3.cpp")
 else()
     add_executable(${PROJECT_NAME} ${APP_SOURCES})
 endif()
