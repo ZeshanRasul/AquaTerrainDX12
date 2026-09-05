@@ -81,7 +81,7 @@ private:
 	void DrawSmokeVolume(ID3D12GraphicsCommandList* commandList);
 
 	void BuildShadersAndInputLayout();
-	
+
 	void BuildPSOs();
 
 	void BuildMaterials();
@@ -223,7 +223,7 @@ private:
 	std::unordered_map<std::string, std::unique_ptr<MeshGeometry>> m_Geometries;
 	std::unordered_map<std::string, std::unique_ptr<Material>> m_Materials;
 	std::unordered_map<std::string, std::unique_ptr<Texture>> m_Textures;
-	
+
 	std::unique_ptr<Waves> m_Waves;
 	RenderItem* m_WavesRitem = nullptr;
 	bool m_WireframeMode = false;
@@ -242,8 +242,8 @@ private:
 	float m_TerrainNoiseAmplitude = 0.25f;
 	float m_TerrainNoiseValue = 0.0f;
 	int m_TerrainNoiseSeed = 1442;
-	float m_WaterHeight[3] = {0.0f, 150.0f, 0.0f};
-	float m_WaterScale[3] = {10.0f, 25.0f, 10.0f};
+	float m_WaterHeight[3] = { 0.0f, 150.0f, 0.0f };
+	float m_WaterScale[3] = { 10.0f, 25.0f, 10.0f };
 	float m_WaterWaveSpeed = 0.15f;
 	float m_WaterWaveAmplitude = 0.1f;
 	float m_WaterWaveFrequency = 0.25f;
@@ -358,7 +358,7 @@ private:
 	float m_Smoke3DAccumulator = 0.0f;
 	bool m_Smoke3DEmitterEnabled = true;
 	bool m_Smoke3DPaused = false;
-	bool m_Smoke3DSingleStepRequested = false;	
+	bool m_Smoke3DSingleStepRequested = false;
 	SmokeBenchmarkRecorder m_SmokeBenchmark;
 	int m_SmokeBenchmarkTotalSteps = 480;
 	int m_SmokeBenchmarkEmitterSteps = 240;
@@ -385,6 +385,31 @@ private:
 	float m_SmokeDensityScale = 0.12f;
 	float m_SmokeAbsorption = 3.0f;
 	float m_SmokeStepScale = 0.75f;
+
+	struct SmokeGpuTexture
+	{
+		Microsoft::WRL::ComPtr<ID3D12Resource> resource;
+
+		D3D12_GPU_DESCRIPTOR_HANDLE srv = {};
+		D3D12_GPU_DESCRIPTOR_HANDLE uav = {};
+
+		D3D12_RESOURCE_STATES state =
+			D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+	};
+
+	std::array<SmokeGpuTexture, 2> m_GpuDensity;
+	std::array<SmokeGpuTexture, 2> m_GpuTemperature;
+	std::array<SmokeGpuTexture, 2> m_GpuU;
+	std::array<SmokeGpuTexture, 2> m_GpuV;
+	std::array<SmokeGpuTexture, 2> m_GpuW;
+	std::array<SmokeGpuTexture, 2> m_GpuPressure;
+
+	SmokeGpuTexture m_GpuDivergence;
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_SmokeGpuDescriptorHeap;
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_SmokeCpuDescriptorHeap;
+
+	void CreateSmokeResources();
+	void CreateSmokeGpuResources();
+	void CreateSmokeGpuDescriptorHeap();
+	void CreateSmokeGpuDescriptors();
 };
-
-

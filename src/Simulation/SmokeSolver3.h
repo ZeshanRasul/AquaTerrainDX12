@@ -177,6 +177,50 @@ public:
         return m_PhysicsParameters;
     }
 
+	ScalarGrid3& PressureScratch() noexcept
+	{
+		return m_PressureScratch;
+	}
+
+	ScalarGrid3& DivergenceScratch() noexcept
+	{
+		return m_Divergence;
+	}
+
+	ScalarGrid3& ScalarScratch() noexcept
+	{
+		return m_ScalarScratch;
+	}
+	FaceCenteredVelocityGrid3& VelocityScratch() noexcept
+	{
+		return m_VelocityScratch;
+	}
+
+	FaceCenteredVelocityGrid3& Velocity() noexcept
+	{
+		return m_Velocity;
+	}
+
+	ScalarGrid3& Density() noexcept
+	{
+		return m_Density;
+	}
+
+	ScalarGrid3& Temperature() noexcept
+	{
+		return m_Temperature;
+	}
+
+	ScalarGrid3& Pressure() noexcept
+	{
+		return m_Pressure;
+	}
+
+	ScalarGrid3& Divergence() noexcept
+	{
+		return m_Divergence;
+	}
+
 private:
     void ApplyExternalForces(Real dt);
     void AdvectVelocity(Real dt);

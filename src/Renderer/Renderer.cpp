@@ -1130,6 +1130,236 @@ void Renderer::CreateSmokeResources()
 		m_DepthStencilBuffer.Get(), &depthSrvDesc, depthHandle);
 }
 
+void Renderer::CreateSmokeGpuResources()
+{
+	D3D12_RESOURCE_DESC textureDesc = {};
+	textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE3D;
+	textureDesc.Width = static_cast<UINT64>(m_SmokeSolver.Density().Resolution().x);
+	textureDesc.Height = static_cast<UINT>(m_SmokeSolver.Density().Resolution().y);
+	textureDesc.DepthOrArraySize = static_cast<UINT16>(m_SmokeSolver.Density().Resolution().z);
+	textureDesc.MipLevels = 1;
+	textureDesc.Format = DXGI_FORMAT_R32_FLOAT;
+	textureDesc.SampleDesc.Count = 1;
+	textureDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+	textureDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+
+	ThrowIfFailed(m_Device->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		D3D12_HEAP_FLAG_NONE,
+		&textureDesc,
+		m_GpuDensity[0].state,
+		nullptr,
+		IID_PPV_ARGS(&m_GpuDensity[0].resource)));
+	
+	
+	textureDesc = {};
+	textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE3D;
+	textureDesc.Width = static_cast<UINT64>(m_SmokeSolver.Temperature().Resolution().x);
+	textureDesc.Height = static_cast<UINT>(m_SmokeSolver.Temperature().Resolution().y);
+	textureDesc.DepthOrArraySize = static_cast<UINT16>(m_SmokeSolver.Temperature().Resolution().z);
+	textureDesc.MipLevels = 1;
+	textureDesc.Format = DXGI_FORMAT_R32_FLOAT;
+	textureDesc.SampleDesc.Count = 1;
+	textureDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+	textureDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+
+	ThrowIfFailed(m_Device->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		D3D12_HEAP_FLAG_NONE,
+		&textureDesc,
+		m_GpuTemperature[0].state,
+		nullptr,
+		IID_PPV_ARGS(&m_GpuTemperature[0].resource)));
+
+	textureDesc = {};
+	textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE3D;
+	textureDesc.Width = static_cast<UINT64>(m_SmokeSolver.Velocity().UResolution().x);
+	textureDesc.Height = static_cast<UINT>(m_SmokeSolver.Velocity().UResolution().y);
+	textureDesc.DepthOrArraySize = static_cast<UINT16>(m_SmokeSolver.Velocity().UResolution().z);
+	textureDesc.MipLevels = 1;
+	textureDesc.Format = DXGI_FORMAT_R32_FLOAT;
+	textureDesc.SampleDesc.Count = 1;
+	textureDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+	textureDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+
+	ThrowIfFailed(m_Device->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		D3D12_HEAP_FLAG_NONE,
+		&textureDesc,
+		m_GpuU[0].state,
+		nullptr,
+		IID_PPV_ARGS(&m_GpuU[0].resource)));
+
+	textureDesc = {};
+	textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE3D;
+	textureDesc.Width = static_cast<UINT64>(m_SmokeSolver.Velocity().VResolution().x);
+	textureDesc.Height = static_cast<UINT>(m_SmokeSolver.Velocity().VResolution().y);
+	textureDesc.DepthOrArraySize = static_cast<UINT16>(m_SmokeSolver.Velocity().VResolution().z);
+	textureDesc.MipLevels = 1;
+	textureDesc.Format = DXGI_FORMAT_R32_FLOAT;
+	textureDesc.SampleDesc.Count = 1;
+	textureDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+	textureDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+
+	ThrowIfFailed(m_Device->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		D3D12_HEAP_FLAG_NONE,
+		&textureDesc,
+		m_GpuV[0].state,
+		nullptr,
+		IID_PPV_ARGS(&m_GpuV[0].resource)));
+
+	textureDesc = {};
+	textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE3D;
+	textureDesc.Width = static_cast<UINT64>(m_SmokeSolver.Velocity().WResolution().x);
+	textureDesc.Height = static_cast<UINT>(m_SmokeSolver.Velocity().WResolution().y);
+	textureDesc.DepthOrArraySize = static_cast<UINT16>(m_SmokeSolver.Velocity().WResolution().z);
+	textureDesc.MipLevels = 1;
+	textureDesc.Format = DXGI_FORMAT_R32_FLOAT;
+	textureDesc.SampleDesc.Count = 1;
+	textureDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+	textureDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+
+	ThrowIfFailed(m_Device->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		D3D12_HEAP_FLAG_NONE,
+		&textureDesc,
+		m_GpuW[0].state,
+		nullptr,
+		IID_PPV_ARGS(&m_GpuW[0].resource)));
+
+	textureDesc = {};
+	textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE3D;
+	textureDesc.Width = static_cast<UINT64>(m_SmokeSolver.Pressure().Resolution().x);
+	textureDesc.Height = static_cast<UINT>(m_SmokeSolver.Pressure().Resolution().y);
+	textureDesc.DepthOrArraySize = static_cast<UINT16>(m_SmokeSolver.Pressure().Resolution().z);
+	textureDesc.MipLevels = 1;
+	textureDesc.Format = DXGI_FORMAT_R32_FLOAT;
+	textureDesc.SampleDesc.Count = 1;
+	textureDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+	textureDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+
+	ThrowIfFailed(m_Device->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		D3D12_HEAP_FLAG_NONE,
+		&textureDesc,
+		m_GpuPressure[0].state,
+		nullptr,
+		IID_PPV_ARGS(&m_GpuPressure[0].resource)));
+
+	textureDesc = {};
+	textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE3D;
+	textureDesc.Width = static_cast<UINT64>(m_SmokeSolver.Divergence().Resolution().x);
+	textureDesc.Height = static_cast<UINT>(m_SmokeSolver.Divergence().Resolution().y);
+	textureDesc.DepthOrArraySize = static_cast<UINT16>(m_SmokeSolver.Divergence().Resolution().z);
+	textureDesc.MipLevels = 1;
+	textureDesc.Format = DXGI_FORMAT_R32_FLOAT;
+	textureDesc.SampleDesc.Count = 1;
+	textureDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+	textureDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+
+	ThrowIfFailed(m_Device->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		D3D12_HEAP_FLAG_NONE,
+		&textureDesc,
+		m_GpuDivergence.state,
+		nullptr,
+		IID_PPV_ARGS(&m_GpuDivergence.resource)));
+}
+
+void Renderer::CreateSmokeGpuDescriptors()
+{
+	constexpr UINT fieldCount = 7;
+
+	D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
+	heapDesc.NumDescriptors = fieldCount * 2;
+	heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+
+	ThrowIfFailed(m_Device->CreateDescriptorHeap(
+		&heapDesc,
+		IID_PPV_ARGS(m_SmokeGpuDescriptorHeap.GetAddressOf())));
+
+	const UINT descriptorSize =
+		m_Device->GetDescriptorHandleIncrementSize(
+			D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+	ID3D12Resource* resources[fieldCount] = {
+		m_GpuDensity[0].resource.Get(),
+		m_GpuTemperature[0].resource.Get(),
+		m_GpuU[0].resource.Get(),
+		m_GpuV[0].resource.Get(),
+		m_GpuW[0].resource.Get(),
+		m_GpuPressure[0].resource.Get(),
+		m_GpuDivergence.resource.Get()
+	};
+
+	D3D12_GPU_DESCRIPTOR_HANDLE* srvHandles[fieldCount] = {
+		&m_GpuDensity[0].srv,
+		&m_GpuTemperature[0].srv,
+		&m_GpuU[0].srv,
+		&m_GpuV[0].srv,
+		&m_GpuW[0].srv,
+		&m_GpuPressure[0].srv,
+		&m_GpuDivergence.srv
+	};
+
+	D3D12_GPU_DESCRIPTOR_HANDLE* uavHandles[fieldCount] = {
+		&m_GpuDensity[0].uav,
+		&m_GpuTemperature[0].uav,
+		&m_GpuU[0].uav,
+		&m_GpuV[0].uav,
+		&m_GpuW[0].uav,
+		&m_GpuPressure[0].uav,
+		&m_GpuDivergence.uav
+	};
+
+	const auto cpuStart =
+		m_SmokeCpuDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+
+	const auto gpuStart =
+		m_SmokeGpuDescriptorHeap->GetGPUDescriptorHandleForHeapStart();
+
+	for (UINT index = 0; index < fieldCount; ++index)
+	{
+		ID3D12Resource* resource = resources[index];
+
+		const CD3DX12_CPU_DESCRIPTOR_HANDLE srvCpu(
+			cpuStart, index, descriptorSize);
+
+		const CD3DX12_CPU_DESCRIPTOR_HANDLE uavCpu(
+			cpuStart, fieldCount + index, descriptorSize);
+
+		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+		srvDesc.Format = resource->GetDesc().Format;
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE3D;
+		srvDesc.Shader4ComponentMapping =
+			D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		srvDesc.Texture3D.MostDetailedMip = 0;
+		srvDesc.Texture3D.MipLevels = 1;
+
+		m_Device->CreateShaderResourceView(
+			resource, &srvDesc, srvCpu);
+
+		D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
+		uavDesc.Format = resource->GetDesc().Format;
+		uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE3D;
+		uavDesc.Texture3D.MipSlice = 0;
+		uavDesc.Texture3D.FirstWSlice = 0;
+		uavDesc.Texture3D.WSize =
+			static_cast<UINT>(resource->GetDesc().DepthOrArraySize);
+
+		m_Device->CreateUnorderedAccessView(
+			resource, nullptr, &uavDesc, uavCpu);
+
+		*srvHandles[index] = CD3DX12_GPU_DESCRIPTOR_HANDLE(
+			gpuStart, index, descriptorSize);
+
+		*uavHandles[index] = CD3DX12_GPU_DESCRIPTOR_HANDLE(
+			gpuStart, fieldCount + index, descriptorSize);
+	}
+}
+
 void Renderer::createSrvDescriptorHeaps()
 {
 	D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
@@ -1141,8 +1371,6 @@ void Renderer::createSrvDescriptorHeaps()
 	CD3DX12_CPU_DESCRIPTOR_HANDLE hDescriptor(m_SrvHeap->GetCPUDescriptorHandleForHeapStart());
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-
-
 
 	srvDesc = {};
 	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
@@ -1185,7 +1413,6 @@ void Renderer::createSrvDescriptorHeaps()
 	srvDesc.Texture2D.MipLevels = 1;
 	srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
 	m_Device->CreateShaderResourceView(m_WaterHeightPrev.Get(), &srvDesc, hDescriptor);
-
 }
 
 void Renderer::CreateTextureSrvDescriptors()
