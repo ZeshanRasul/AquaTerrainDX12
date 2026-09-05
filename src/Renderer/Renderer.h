@@ -414,30 +414,34 @@ private:
 
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_SmokeBindingRootSignature;
 
-	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SmokePatternPSO;
+	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SmokeClearPSO;
 
-	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SmokeCopyPSO;
+	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SmokeInjectPSO;
 
 	void CreateSmokeBindingRootSignature();
 	void CreateSmokeBindingPSOs();
 
-	void DispatchSmokeBindingTest(ID3D12GraphicsCommandList* commandList);
+	bool m_SmokeGpuResetRequested = true;
+    bool m_SmokeGpuStepRequested = false;
+    unsigned int m_SmokeGpuInjectionCount = 0;
+    void DispatchSmokeSourceTest(ID3D12GraphicsCommandList* commandList);
 };
 
 struct SmokeBindingConstants
 {
-	std::uint32_t width;
-	std::uint32_t height;
-	std::uint32_t depth;
-	float patternScale;
+	std::uint32_t gridResolution[3];
+	float dt;
+	std::uint32_t sourceCell[3];
+	float densityRate;
+	float temperatureRate;
+	float padding[3];
 };
 
-static_assert(sizeof(SmokeBindingConstants) == 16);
+static_assert(sizeof(SmokeBindingConstants) == 48);
 
 enum SmokeBindingRootParameter : UINT
 {
 	SmokeBindingConstantsRoot = 0,
-	SmokeBindingInputRoot,
 	SmokeBindingOutputRoot,
 	SmokeBindingRootCount
 };

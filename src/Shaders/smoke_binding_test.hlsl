@@ -1,30 +1,37 @@
-cbuffer SmokeBindingConstants : register(b0)
+cbuffer SmokeSourceConstants : register(b0)
 {
     uint3 GridResolution;
-    float PatternScale;
+    float Dt;
+
+    uint3 SourceCell;
+    float DensityRate;
+
+    float TemperatureRate;
+    float3 Padding;
 };
 
-Texture3D<float> InputField : register(t0);
-RWTexture3D<float> OutputField : register(u0);
+RWTexture3D<float> Density : register(u0);
+RWTexture3D<float> Temperature : register(u1);
 
 [numthreads(8, 8, 4)]
-void WritePatternCS(uint3 id : SV_DispatchThreadID)
+void ClearSourceFieldsCS(uint3 id : SV_DispatchThreadID)
 {
     if (any(id >= GridResolution))
         return;
 
-    // Distinct weights make each axis recognisable.
-    // Integer-valued output also makes exact inspection easy.
-    OutputField[id] =
-        PatternScale *
-        (float(id.x) + 10.0f * float(id.y) + 100.0f * float(id.z));
+    Density[id] = 0.0f;
+    Temperature[id] = 0.0f;
 }
 
 [numthreads(8, 8, 4)]
-void CopyFieldCS(uint3 id : SV_DispatchThreadID)
+void InjectSourceCS(uint3 id : SV_DispatchThreadID)
 {
     if (any(id >= GridResolution))
         return;
 
-    OutputField[id] = InputField.Load(int4(id, 0));
+    if (all(id == SourceCell))
+    {
+        Density[id] += DensityRate * Dt;
+        Temperature[id] += TemperatureRate * Dt;
+    }
 }
