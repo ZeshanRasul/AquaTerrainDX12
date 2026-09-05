@@ -104,6 +104,28 @@ void SmokeSolver3::Step(Real dt)
 	ApplyScalarDissipation(dt);
 }
 
+void SmokeSolver3::Reset() noexcept
+{
+	m_Velocity.Fill({ 0.0, 0.0, 0.0 });
+	m_Density.Fill(0.0);
+	m_Temperature.Fill(0.0);
+	m_Pressure.Fill(0.0);
+	m_Divergence.Fill(0.0);
+	m_VelocityScratch.Fill({ 0.0, 0.0, 0.0 });
+	m_ScalarScratch.Fill(0.0);
+	m_PressureScratch.Fill(0.0);
+	m_PcgResidual.Fill(0.0);
+	m_PcgPreconditioned.Fill(0.0);
+	m_PcgDirection.Fill(0.0);
+	m_PcgMatrixDirection.Fill(0.0);
+
+	m_LastRmsDivergenceBeforeProjection = 0.0;
+	m_LastRmsDivergenceAfterProjection = 0.0;
+	m_LastScaledPressureResidual = 0.0;
+	m_LastPressureIterations = 0;
+	m_LastMeanDivergence = 0.0;
+}
+
 void SmokeSolver3::ApplyPressureMatrix(
 	const ScalarGrid3& input,
 	ScalarGrid3& output)

@@ -12,6 +12,7 @@
 #include "../Simulation/StableFluids.h"
 #include "../Simulation/StableFluids3D.h"
 #include "../Simulation/SmokeSolver3.h"
+#include "../Simulation/SmokeBenchmark.h"
 
 using namespace DirectX;
 
@@ -358,6 +359,14 @@ private:
 	bool m_Smoke3DEmitterEnabled = true;
 	bool m_Smoke3DPaused = false;
 	bool m_Smoke3DSingleStepRequested = false;	
+	SmokeBenchmarkRecorder m_SmokeBenchmark;
+	int m_SmokeBenchmarkTotalSteps = 480;
+	int m_SmokeBenchmarkEmitterSteps = 240;
+	int m_SmokeBenchmarkWarmupSteps = 10;
+	char m_SmokeBenchmarkRunLabel[64] = "baseline";
+	bool m_SmokeBenchmarkSimulationOnly = true;
+	bool m_SmokeBenchmarkRestoreSmokeVolume = true;
+	bool m_SmokeBenchmarkRestoreSliceViewer = true;
 	float deltaTime = 0.0f;
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_SmokeDensityTexture;

@@ -4,6 +4,7 @@
 #include "imgui/imgui.h"
 #include "imgui/backends/imgui_impl_win32.h"
 #include "imgui/backends/imgui_impl_dx12.h"
+#include <chrono>
 #include <cstring>
 
 const int gNumFrameResources = 3;
@@ -316,7 +317,49 @@ void Renderer::Update(GameTimer& gt, Camera& cam)
 				m_SmokeDensityDirty = true;
 			};
 
-		if (m_FluidDemoMode == FluidDemoMode::Smoke3D &&
+		if (m_SmokeBenchmark.IsRunning())
+		{
+			const SmokeBenchmarkConfig& config =
+				m_SmokeBenchmark.Config();
+			const bool emit = m_SmokeBenchmark.ShouldEmit();
+			const auto solverStart = std::chrono::steady_clock::now();
+
+			if (emit)
+			{
+				m_SmokeSolver.AddSourceRates(
+					config.emitterCell.x,
+					config.emitterCell.y,
+					config.emitterCell.z,
+					config.densityRate,
+					config.temperatureRate,
+					config.emitterAcceleration,
+					config.timeStep);
+			}
+
+			m_SmokeSolver.Step(config.timeStep);
+
+			const auto solverEnd = std::chrono::steady_clock::now();
+			const double solverMilliseconds =
+				std::chrono::duration<double, std::milli>(
+					solverEnd - solverStart).count();
+
+			m_SmokeBenchmark.RecordStep(
+				m_SmokeSolver,
+				solverMilliseconds);
+			m_SmokeDensityDirty = true;
+			m_Smoke3DAccumulator = 0.0f;
+			m_Smoke3DSingleStepRequested = false;
+
+			if (!m_SmokeBenchmark.IsRunning())
+			{
+				m_ShowSmokeVolume =
+					m_SmokeBenchmarkRestoreSmokeVolume;
+				m_ShowFluid3DSliceViewer =
+					m_SmokeBenchmarkRestoreSliceViewer;
+				m_Smoke3DPaused = true;
+			}
+		}
+		else if (m_FluidDemoMode == FluidDemoMode::Smoke3D &&
 			m_Smoke3DPaused)
 		{
 			m_Smoke3DAccumulator = 0.0f;
@@ -3547,6 +3590,125 @@ void Renderer::DrawSmoke3DDebug(SmokeSolver3& smokeSolver)
 		"Density: max %.4f, total %.4f",
 		static_cast<double>(maximumDensity),
 		static_cast<double>(totalDensity));
+
+	ImGui::SeparatorText("Deterministic comparison");
+
+	const bool benchmarkRunning = m_SmokeBenchmark.IsRunning();
+	ImGui::BeginDisabled(benchmarkRunning);
+	ImGui::InputText(
+		"Run label",
+		m_SmokeBenchmarkRunLabel,
+		IM_ARRAYSIZE(m_SmokeBenchmarkRunLabel));
+	ImGui::InputInt(
+		"Total fixed steps",
+		&m_SmokeBenchmarkTotalSteps);
+	ImGui::InputInt(
+		"Emitter steps",
+		&m_SmokeBenchmarkEmitterSteps);
+	ImGui::InputInt(
+		"Timing warmup steps",
+		&m_SmokeBenchmarkWarmupSteps);
+	ImGui::Checkbox(
+		"Simulation-only run",
+		&m_SmokeBenchmarkSimulationOnly);
+	if (ImGui::IsItemHovered())
+	{
+		ImGui::SetTooltip(
+			"Temporarily hides smoke visualisation while recording.\n"
+			"Solver timing always excludes diagnostics and file output.");
+	}
+
+	if (ImGui::Button("Start deterministic benchmark"))
+	{
+		m_SmokeBenchmarkTotalSteps =
+			std::max(m_SmokeBenchmarkTotalSteps, 1);
+		m_SmokeBenchmarkEmitterSteps = std::clamp(
+			m_SmokeBenchmarkEmitterSteps,
+			0,
+			m_SmokeBenchmarkTotalSteps);
+		m_SmokeBenchmarkWarmupSteps = std::clamp(
+			m_SmokeBenchmarkWarmupSteps,
+			0,
+			m_SmokeBenchmarkTotalSteps - 1);
+
+		const Size3 resolution = smokeSolver.Density().Resolution();
+		SmokeBenchmarkConfig config;
+		config.runLabel = m_SmokeBenchmarkRunLabel;
+		config.totalSteps = static_cast<std::size_t>(
+			m_SmokeBenchmarkTotalSteps);
+		config.emitterSteps = static_cast<std::size_t>(
+			m_SmokeBenchmarkEmitterSteps);
+		config.performanceWarmupSteps = static_cast<std::size_t>(
+			m_SmokeBenchmarkWarmupSteps);
+		config.emitterCell = {
+			resolution.x / 2,
+			resolution.y / 4,
+			resolution.z / 2
+		};
+		config.renderingEnabledDuringRun =
+			!m_SmokeBenchmarkSimulationOnly;
+
+		smokeSolver.Reset();
+		m_Smoke3DAccumulator = 0.0f;
+		m_Smoke3DSingleStepRequested = false;
+		m_Smoke3DPaused = true;
+		m_SmokeDensityDirty = true;
+
+		m_SmokeBenchmarkRestoreSmokeVolume = m_ShowSmokeVolume;
+		m_SmokeBenchmarkRestoreSliceViewer =
+			m_ShowFluid3DSliceViewer;
+
+		if (m_SmokeBenchmark.Begin(config, smokeSolver) &&
+			m_SmokeBenchmarkSimulationOnly)
+		{
+			m_ShowSmokeVolume = false;
+			m_ShowFluid3DSliceViewer = false;
+		}
+	}
+	ImGui::EndDisabled();
+
+	if (m_SmokeBenchmark.IsRunning())
+	{
+		const float progress =
+			static_cast<float>(m_SmokeBenchmark.RecordedSteps()) /
+			static_cast<float>(m_SmokeBenchmark.TotalSteps());
+		char progressText[64]{};
+		sprintf_s(
+			progressText,
+			"%zu / %zu steps",
+			m_SmokeBenchmark.RecordedSteps(),
+			m_SmokeBenchmark.TotalSteps());
+		ImGui::ProgressBar(progress, ImVec2(-1.0f, 0.0f), progressText);
+
+		if (ImGui::Button("Stop and save partial run"))
+		{
+			m_SmokeBenchmark.StopAndSave();
+			m_ShowSmokeVolume =
+				m_SmokeBenchmarkRestoreSmokeVolume;
+			m_ShowFluid3DSliceViewer =
+				m_SmokeBenchmarkRestoreSliceViewer;
+			m_Smoke3DPaused = true;
+		}
+	}
+
+	ImGui::TextWrapped(
+		"%s",
+		m_SmokeBenchmark.StatusMessage().c_str());
+
+	if (!m_SmokeBenchmark.LastOutputDirectory().empty())
+	{
+		ImGui::TextWrapped(
+			"Saved to: %s",
+			m_SmokeBenchmark.LastOutputDirectory().string().c_str());
+	}
+
+	if (!m_SmokeBenchmark.LastError().empty())
+	{
+		ImGui::TextColored(
+			ImVec4(1.0f, 0.35f, 0.35f, 1.0f),
+			"%s",
+			m_SmokeBenchmark.LastError().c_str());
+	}
 
 	ImGui::End();
 }

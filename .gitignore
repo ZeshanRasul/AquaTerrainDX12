@@ -101,6 +101,7 @@ $RECYCLE.BIN/
 /logs/
 /temp/
 /cache/
+/diagnostics/runs/
 /*.zip
 /*.7z
 

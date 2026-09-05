@@ -28,10 +28,18 @@ public:
 
     void Step(Real dt);
 
+    void Reset() noexcept;
+
     [[nodiscard]]
     const ScalarGrid3& Density() const noexcept
     {
         return m_Density;
+    }
+
+    [[nodiscard]]
+    const ScalarGrid3& Temperature() const noexcept
+    {
+        return m_Temperature;
     }
 
     [[nodiscard]]
@@ -143,7 +151,7 @@ public:
             value -= mean;
     }
 
-    void SmokeSolver3::SolvePressurePoissonPCG(
+    void SolvePressurePoissonPCG(
         const ScalarGrid3& divergence,
         ScalarGrid3& pressure,
         Real dt,
