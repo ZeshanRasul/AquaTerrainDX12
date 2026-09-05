@@ -3,6 +3,21 @@
 #include "DataStructures/FaceCenteredVelocityGrid3.h"
 #include <cassert>
 
+struct SmokePhysicsParameters
+{
+    Real ambientTemperature = 0.0;
+
+    // Upward acceleration generated per unit of excess temperature.
+    Real temperatureBuoyancy = 0.5;
+
+    // Downward acceleration generated per unit of smoke density.
+    Real smokeWeight = 0.05;
+
+    // Rates per second.
+    Real densityDissipation = 0.10;
+    Real temperatureCooling = 1.0;
+};
+
 class SmokeSolver3
 {
 public:
@@ -144,11 +159,22 @@ public:
         return m_LastMeanDivergence;
     }
 
+    SmokePhysicsParameters& PhysicsParameters() noexcept
+    {
+        return m_PhysicsParameters;
+    }
+
+    const SmokePhysicsParameters& PhysicsParameters() const noexcept
+    {
+        return m_PhysicsParameters;
+    }
+
 private:
     void ApplyExternalForces(Real dt);
     void AdvectVelocity(Real dt);
     void Project(Real dt);
     void AdvectScalars(Real dt);
+    void ApplyScalarDissipation(Real dt);
 
     void SolvePressurePoisson(
         const ScalarGrid3& divergence,
@@ -183,4 +209,6 @@ private:
 
     std::size_t m_LastPressureIterations = 0;
     Real m_LastMeanDivergence = 0.0;
+
+    SmokePhysicsParameters m_PhysicsParameters;
 };

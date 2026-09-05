@@ -76,7 +76,8 @@ SmokeSolver3::SmokeSolver3(
 		resolution,
 		gridSpacing,
 		origin,
-		0.0)
+		0.0),
+	m_PhysicsParameters(SmokePhysicsParameters())
 {
 	assert(resolution.x > 1);
 	assert(resolution.y > 1);
@@ -89,13 +90,18 @@ SmokeSolver3::SmokeSolver3(
 
 void SmokeSolver3::Step(Real dt)
 {
-	ApplyExternalForces(dt);
+	if (dt <= Real{ 0.0 })
+		return;
 
 	AdvectVelocity(dt);
+
+	ApplyExternalForces(dt);
 
 	Project(dt);
 
 	AdvectScalars(dt);
+
+	ApplyScalarDissipation(dt);
 }
 
 void SmokeSolver3::ApplyPressureMatrix(
@@ -321,6 +327,100 @@ void SmokeSolver3::AddSourceRates(std::size_t i, std::size_t j, std::size_t k, R
 
 void SmokeSolver3::ApplyExternalForces(Real dt)
 {
+	if (dt <= Real{ 0.0 })
+		return;
+
+	const Size3 resolution = m_Density.Resolution();
+
+	const Real ambient =
+		m_PhysicsParameters.ambientTemperature;
+
+	const Real temperatureBuoyancy =
+		m_PhysicsParameters.temperatureBuoyancy;
+
+	const Real smokeWeight =
+		m_PhysicsParameters.smokeWeight;
+
+	// j = 1 ... resolution.y - 1:
+	// V(i,j,k) lies between cells (i,j-1,k) and (i,j,k).
+	for (std::size_t k = 0; k < resolution.z; ++k)
+	{
+		for (std::size_t j = 1; j < resolution.y; ++j)
+		{
+			for (std::size_t i = 0; i < resolution.x; ++i)
+			{
+				const Real densityBelow =
+					std::max(m_Density(i, j - 1, k), Real{ 0.0 });
+
+				const Real densityAbove =
+					std::max(m_Density(i, j, k), Real{ 0.0 });
+
+				const Real temperatureBelow =
+					m_Temperature(i, j - 1, k);
+
+				const Real temperatureAbove =
+					m_Temperature(i, j, k);
+
+				const Real densityAtFace =
+					Real{ 0.5 } * (densityBelow + densityAbove);
+
+				const Real temperatureAtFace =
+					Real{ 0.5 } *
+					(temperatureBelow + temperatureAbove);
+
+				// This clamp gives intuitive game-smoke behaviour:
+				// cooled smoke does not acquire downward thermal buoyancy.
+				const Real excessTemperature =
+					std::max(
+						temperatureAtFace - ambient,
+						Real{ 0.0 });
+
+				const Real upwardAcceleration =
+					temperatureBuoyancy * excessTemperature -
+					smokeWeight * densityAtFace;
+
+				m_Velocity.V(i, j, k) +=
+					dt * upwardAcceleration;
+			}
+		}
+	}
+}
+
+void SmokeSolver3::ApplyScalarDissipation(Real dt)
+{
+	if (dt <= Real{ 0.0 })
+		return;
+
+	const Real densityDecay = std::exp(
+		-m_PhysicsParameters.densityDissipation * dt);
+
+	const Real temperatureDecay = std::exp(
+		-m_PhysicsParameters.temperatureCooling * dt);
+
+	const Real ambient =
+		m_PhysicsParameters.ambientTemperature;
+
+	const Size3 resolution = m_Density.Resolution();
+
+	for (std::size_t k = 0; k < resolution.z; ++k)
+	{
+		for (std::size_t j = 0; j < resolution.y; ++j)
+		{
+			for (std::size_t i = 0; i < resolution.x; ++i)
+			{
+				m_Density(i, j, k) = std::max(
+					m_Density(i, j, k) * densityDecay,
+					Real{ 0.0 });
+
+				const Real excessTemperature =
+					m_Temperature(i, j, k) - ambient;
+
+				m_Temperature(i, j, k) =
+					ambient +
+					excessTemperature * temperatureDecay;
+			}
+		}
+	}
 }
 
 void SmokeSolver3::AdvectVelocity(Real dt)

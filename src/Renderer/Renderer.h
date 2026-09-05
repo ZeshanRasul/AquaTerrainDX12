@@ -353,7 +353,7 @@ private:
 	bool m_Fluid3DPaused = false;
 	bool m_Fluid3DSingleStepRequested = false;
 
-	SmokeSolver3 m_SmokeSolver{ { 32, 32, 32 }, { 1.0f, 1.0f, 1.0f },  { -16.0, -16.0, -16.0 } };
+	SmokeSolver3 m_SmokeSolver{ { 32, 32, 32 }, { 1.0 / 32.0, 1.0 / 32.0, 1.0 / 32.0 },  { -0.5, -0.5, -0.5 } };
 	float m_Smoke3DAccumulator = 0.0f;
 	bool m_Smoke3DEmitterEnabled = true;
 	bool m_Smoke3DPaused = false;

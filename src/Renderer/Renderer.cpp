@@ -308,7 +308,7 @@ void Renderer::Update(GameTimer& gt, Camera& cam)
 						centreZ,
 						30.0,               // Density per second
 						10.0,               // Temperature per second
-						{ 0.0, 4.0, 0.0 }, // Upward acceleration
+						{ 0.0, 0.0, 0.0 }, // Upward acceleration
 						step);
 				}
 
@@ -2939,6 +2939,13 @@ void Renderer::DrawFluidDemoSelector()
 		}
 	}
 
+	ImGui::Text(
+		"Frame rate: %.1f FPS (%.2f ms/frame)",
+		static_cast<double>(ImGui::GetIO().Framerate),
+		ImGui::GetIO().Framerate > 0.0f
+		? 1000.0 / static_cast<double>(ImGui::GetIO().Framerate)
+		: 0.0);
+
 	if (m_FluidDemoMode == FluidDemoMode::Off)
 	{
 		ImGui::TextUnformatted("Both fluid solvers and their visualisations are stopped.");
@@ -3497,6 +3504,7 @@ void Renderer::DrawSmoke3DDebug(SmokeSolver3& smokeSolver)
 {
 	ImGui::Begin("Smoke 3D Debug");
 	ImGui::Text("Smoke 3D Debug Info");
+
 	ImGui::Text(
 		"RMS divergence: %.3e -> %.3e",
 		static_cast<double>(smokeSolver.RmsDivergenceBeforeProjection()),
