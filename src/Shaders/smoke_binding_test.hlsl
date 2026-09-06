@@ -226,3 +226,73 @@ void ApplyPressureCS(uint3 id : SV_DispatchThreadID)
         candidate,
         JacobiWeight);
 }
+
+[numthreads(8, 8, 4)]
+void SubtractPressureGradientCS(uint3 id : SV_DispatchThreadID)
+{
+    const float scale = Dt / FluidDensity;
+    const int3 cell = int3(id);
+
+    // U: (Nx + 1) × Ny × Nz
+    if (id.x <= GridResolution.x &&
+        id.y < GridResolution.y &&
+        id.z < GridResolution.z)
+    {
+        if (id.x == 0 || id.x == GridResolution.x)
+        {
+            VelocityU[id] = 0.0f;
+        }
+        else
+        {
+            const float right =
+                PressureRead.Load(int4(cell, 0));
+
+            const float left =
+                PressureRead.Load(int4(cell - int3(1, 0, 0), 0));
+
+            VelocityU[id] -= scale * (right - left) / hx;
+        }
+    }
+
+    // V: Nx × (Ny + 1) × Nz
+    if (id.x < GridResolution.x &&
+        id.y <= GridResolution.y &&
+        id.z < GridResolution.z)
+    {
+        if (id.y == 0 || id.y == GridResolution.y)
+        {
+            VelocityV[id] = 0.0f;
+        }
+        else
+        {
+            const float above =
+                PressureRead.Load(int4(cell, 0));
+
+            const float below =
+                PressureRead.Load(int4(cell - int3(0, 1, 0), 0));
+
+            VelocityV[id] -= scale * (above - below) / hy;
+        }
+    }
+
+    // W: Nx × Ny × (Nz + 1)
+    if (id.x < GridResolution.x &&
+        id.y < GridResolution.y &&
+        id.z <= GridResolution.z)
+    {
+        if (id.z == 0 || id.z == GridResolution.z)
+        {
+            VelocityW[id] = 0.0f;
+        }
+        else
+        {
+            const float front =
+                PressureRead.Load(int4(cell, 0));
+
+            const float back =
+                PressureRead.Load(int4(cell - int3(0, 0, 1), 0));
+
+            VelocityW[id] -= scale * (front - back) / hz;
+        }
+    }
+}

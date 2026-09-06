@@ -426,6 +426,8 @@ private:
 
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SmokeApplyPressurePSO;
 
+	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SmokeSubtractPressureGradientPSO;
+
 	void CreateSmokeBindingRootSignature();
 	void CreateSmokeBindingPSOs();
 
