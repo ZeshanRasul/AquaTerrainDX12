@@ -4185,7 +4185,7 @@ void Renderer::CreateSmokeBindingRootSignature()
 
 	CD3DX12_ROOT_PARAMETER parameters[SmokeBindingRootCount];
 
-	parameters[SmokeBindingConstantsRoot].InitAsConstants(24, 0);
+	parameters[SmokeBindingConstantsRoot].InitAsConstants(SmokeConstantCount, 0);
 
 	parameters[SmokeBindingOutputRoot].InitAsDescriptorTable(
 		1, &outputRange);
@@ -4416,7 +4416,7 @@ void Renderer::DispatchSmokeSourceTest(ID3D12GraphicsCommandList* commandList)
 	constants.densityRate = 30.0f;
 	constants.temperatureRate = 10.0f;
 	constants.ambientTemperature = 0.0f;
-	constants.temperatureBuoyancy = 0.5f;
+	constants.temperatureBuoyancy = 1.0f;
 	constants.smokeWeight = 0.05f;
 	constants.hx = 1.0f / static_cast<float>(constants.gridResolution[0]);
 	constants.hy = 1.0f / static_cast<float>(constants.gridResolution[1]);
@@ -4440,11 +4440,21 @@ void Renderer::DispatchSmokeSourceTest(ID3D12GraphicsCommandList* commandList)
 	constants.Padding[0] = static_cast<float>(physics.densityDissipation);
 	constants.Padding[1] = static_cast<float>(physics.temperatureCooling);
 	constants.Padding[2] = 0.0f;
+	constants.origin[0] = static_cast<float>(m_SmokeSolver.Density().Origin().x);
+	constants.origin[1] = static_cast<float>(m_SmokeSolver.Density().Origin().y);
+	constants.origin[2] = static_cast<float>(m_SmokeSolver.Density().Origin().z);
+	constants.pad2 = 0.0f;
+	constants.sphereObstacle.enabled = m_SmokeGpuSphereEnabled ? 1u : 0u;
+	constants.sphereObstacle.centre[0] = 0.0f;
+	constants.sphereObstacle.centre[1] = 0.1f;
+	constants.sphereObstacle.centre[2] = 0.0f;
+	constants.sphereObstacle.radius = m_SmokeGpuSphereRadius;
+
 
 		ID3D12DescriptorHeap* heaps[] = { m_SmokeGpuDescriptorHeap.Get() };
 	commandList->SetDescriptorHeaps(1, heaps);
 	commandList->SetComputeRootSignature(m_SmokeBindingRootSignature.Get());
-	commandList->SetComputeRoot32BitConstants(SmokeBindingConstantsRoot, 24, &constants, 0);
+	commandList->SetComputeRoot32BitConstants(SmokeBindingConstantsRoot, SmokeConstantCount, &constants, 0);
 	const UINT gx = (constants.gridResolution[0] + 7) / 8;
 	const UINT gy = (constants.gridResolution[1] + 7) / 8;
 	const UINT gz = (constants.gridResolution[2] + 3) / 4;

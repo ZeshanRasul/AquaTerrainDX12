@@ -8,14 +8,14 @@ struct SmokePhysicsParameters
     Real ambientTemperature = 0.0;
 
     // Upward acceleration generated per unit of excess temperature.
-    Real temperatureBuoyancy = 0.5;
+    Real temperatureBuoyancy = 1.0;
 
     // Downward acceleration generated per unit of smoke density.
     Real smokeWeight = 0.05;
 
     // Rates per second.
     Real densityDissipation = 0.10;
-    Real temperatureCooling = 1.0;
+    Real temperatureCooling = 0.5;
 };
 
 class SmokeSolver3

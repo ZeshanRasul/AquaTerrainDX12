@@ -384,9 +384,9 @@ private:
 	float m_SmokePosition[3] = { -120.0f, 210.0f, 35.0f };
 	float m_SmokeSize[3] = { 80.0f, 120.0f, 80.0f };
 	float m_SmokeColour[3] = { 0.72f, 0.78f, 0.86f };
-	float m_SmokeDensityScale = 0.12f;
-	float m_SmokeAbsorption = 3.0f;
-	float m_SmokeStepScale = 0.75f;
+	float m_SmokeDensityScale = 0.62f;
+	float m_SmokeAbsorption = 6.0f;
+	float m_SmokeStepScale = 0.25f;
 
 	struct SmokeGpuTexture
 	{
@@ -439,6 +439,8 @@ private:
 	bool m_SmokeGpuResetRequested = true;
     bool m_SmokeGpuPaused = false;
     bool m_SmokeGpuEmitterEnabled = true;
+    bool m_SmokeGpuSphereEnabled = true;
+    float m_SmokeGpuSphereRadius = 0.15f;
     float m_SmokeGpuAccumulator = 0.0f;
     unsigned m_SmokeGpuPendingSteps = 0;
     int m_SmokeGpuPressureIterations = 20;
@@ -487,6 +489,14 @@ private:
 	std::uint32_t m_GpuVelocityWriteIndex = 1;
 };
 
+struct SmokeSphereObstacle
+{
+	float centre[3];
+	float radius;
+	std::uint32_t enabled = 1;
+	std::uint32_t padding[3] = {};
+};
+
 struct SmokeBindingConstants
 {
 	std::uint32_t gridResolution[3];
@@ -507,9 +517,21 @@ struct SmokeBindingConstants
 
 	float JacobiWeight; // Start with 2.0 / 3.0.
 	float Padding[3];
+
+	float origin[3];
+	float pad2;
+
+	SmokeSphereObstacle sphereObstacle;
 };
 
-static_assert(sizeof(SmokeBindingConstants) == 96);
+
+static_assert(sizeof(SmokeSphereObstacle) == 32);
+static_assert(offsetof(SmokeBindingConstants, sphereObstacle) == 112);
+static_assert(sizeof(SmokeBindingConstants) == 144);
+
+constexpr UINT SmokeConstantCount =
+static_cast<UINT>(
+	sizeof(SmokeBindingConstants) / sizeof(std::uint32_t));
 
 enum SmokeBindingRootParameter : UINT
 {

@@ -1,3 +1,11 @@
+struct SmokeSphereObstacle
+{
+    float3 centre;
+    float radius;
+    uint enabled;
+    float3 padding;
+};
+
 cbuffer SmokeSourceConstants : register(b0)
 {
     uint3 GridResolution;
@@ -20,7 +28,12 @@ cbuffer SmokeSourceConstants : register(b0)
     float FluidDensity;
 
     float JacobiWeight; // Start with 2.0 / 3.0.
-    float3 Padding;
+    float3 Padding; // Damping for density and temperature.
+    
+    float3 origin;
+    float pad2;
+    
+    SmokeSphereObstacle sphereObstacle;
 };
 
 // Used by clear and source injection.
@@ -49,6 +62,28 @@ RWTexture3D<float> PressureWrite : register(u6);
 
 SamplerState LinearClamp : register(s0);
 
+
+
+float SphereSdf(float3 position, SmokeSphereObstacle sphere)
+{
+    return length(position - sphere.centre) - sphere.radius;
+}
+
+bool IsSolidCell(int3 cell)
+{
+    // Treat the existing outer box as solid too.
+    if (any(cell < 0) || any(cell >= int3(GridResolution)))
+        return true;
+
+    if (sphereObstacle.enabled == 0)
+        return false;
+    
+    float3 position =
+        origin + (float3(cell) + 0.5f) * GridSpacing;
+
+    return SphereSdf(position, sphereObstacle) <= 0.0f;
+}
+
 float SampleU(float3 q)
 {
     float3 uvw =
@@ -56,6 +91,23 @@ float SampleU(float3 q)
         float3(GridResolution + uint3(1, 0, 0));
 
     return VelocityUInput.SampleLevel(LinearClamp, uvw, 0);
+}
+
+bool IsBlockedU(int3 face)
+{
+    return IsSolidCell(face - int3(1, 0, 0)) ||
+           IsSolidCell(face);
+}
+
+bool IsBlockedV(int3 face)
+{
+    return IsSolidCell(face - int3(0, 1, 0)) ||
+           IsSolidCell(face);
+}
+bool IsBlockedW(int3 face)
+{
+    return IsSolidCell(face - int3(0, 0, 1)) ||
+           IsSolidCell(face);
 }
 
 float SampleV(float3 q)
@@ -147,6 +199,9 @@ void InjectSourceCS(uint3 id : SV_DispatchThreadID)
     if (any(id >= GridResolution))
         return;
 
+    if (IsSolidCell(int3(id)))
+        return;
+    
     if (all(id == SourceCell))
     {
         Density[id] += DensityRate * Dt;
@@ -170,6 +225,12 @@ void ApplyBuoyancyCS(uint3 id : SV_DispatchThreadID)
         return;
     }
 
+    if (IsBlockedV(int3(id)))
+    {
+        VelocityV[id] = 0.0f;
+        return;
+    }
+    
     const uint3 below = id - uint3(0, 1, 0);
     const uint3 above = id;
 
@@ -194,10 +255,40 @@ void ApplyBuoyancyCS(uint3 id : SV_DispatchThreadID)
 [numthreads(8, 8, 4)]
 void ApplyDivergenceCS(uint3 id : SV_DispatchThreadID)
 {
+    if (any(id >= GridResolution))
+        return;
+
+    int3 c = int3(id);
+
+    if (IsSolidCell(c))
+    {
+        Divergence[id] = 0.0f;
+        return;
+    }
+
+    int3 right = c + int3(1, 0, 0);
+    int3 above = c + int3(0, 1, 0);
+    int3 front = c + int3(0, 0, 1);
+
+    float u0 = IsBlockedU(c) ? 0.0f :
+        VelocityUInput.Load(int4(c, 0));
+    float u1 = IsBlockedU(right) ? 0.0f :
+        VelocityUInput.Load(int4(right, 0));
+
+    float v0 = IsBlockedV(c) ? 0.0f :
+        VelocityVInput.Load(int4(c, 0));
+    float v1 = IsBlockedV(above) ? 0.0f :
+        VelocityVInput.Load(int4(above, 0));
+
+    float w0 = IsBlockedW(c) ? 0.0f :
+        VelocityWInput.Load(int4(c, 0));
+    float w1 = IsBlockedW(front) ? 0.0f :
+        VelocityWInput.Load(int4(front, 0));
+
     Divergence[id] =
-    (VelocityUInput.Load(int4(id + uint3(1, 0, 0), 0)) - VelocityUInput.Load(int4(id, 0))) / hx +
-    (VelocityVInput.Load(int4(id + uint3(0, 1, 0), 0)) - VelocityVInput.Load(int4(id, 0))) / hy +
-    (VelocityWInput.Load(int4(id + uint3(0, 0, 1), 0)) - VelocityWInput.Load(int4(id, 0))) / hz;
+        (u1 - u0) / hx +
+        (v1 - v0) / hy +
+        (w1 - w0) / hz;
 }
 
 [numthreads(8, 8, 4)]
@@ -206,75 +297,62 @@ void ApplyPressureCS(uint3 id : SV_DispatchThreadID)
     if (any(id >= GridResolution))
         return;
 
-    const int3 cell = int3(id);
+    int3 cell = int3(id);
 
-    const float ax = 1.0f / (GridSpacing.x * GridSpacing.x);
-    const float ay = 1.0f / (GridSpacing.y * GridSpacing.y);
-    const float az = 1.0f / (GridSpacing.z * GridSpacing.z);
+    if (IsSolidCell(cell) || Dt <= 0.0f)
+    {
+        PressureWrite[id] = 0.0f;
+        return;
+    }
+
+    float3 weights = 1.0f / (GridSpacing * GridSpacing);
+
+    const int3 offsets[6] =
+    {
+        int3(-1, 0, 0), int3(1, 0, 0),
+        int3(0, -1, 0), int3(0, 1, 0),
+        int3(0, 0, -1), int3(0, 0, 1)
+    };
 
     float neighbourSum = 0.0f;
     float diagonal = 0.0f;
 
-    if (id.x > 0)
+    [unroll]
+    for (int direction = 0; direction < 6; ++direction)
     {
-        neighbourSum += ax *
-            PressureRead.Load(int4(cell + int3(-1, 0, 0), 0));
-        diagonal += ax;
+        int3 neighbour = cell + offsets[direction];
+
+        if (!IsSolidCell(neighbour))
+        {
+            float weight = weights[direction / 2];
+
+            neighbourSum += weight *
+                PressureRead.Load(int4(neighbour, 0));
+
+            diagonal += weight;
+        }
     }
 
-    if (id.x + 1 < GridResolution.x)
+    if (diagonal <= 0.0f)
     {
-        neighbourSum += ax *
-            PressureRead.Load(int4(cell + int3(1, 0, 0), 0));
-        diagonal += ax;
+        PressureWrite[id] = 0.0f;
+        return;
     }
 
-    if (id.y > 0)
-    {
-        neighbourSum += ay *
-            PressureRead.Load(int4(cell + int3(0, -1, 0), 0));
-        diagonal += ay;
-    }
+    float divergence = DivergenceRead.Load(int4(cell, 0));
+    float rhs = (FluidDensity / Dt) * divergence;
+    float candidate = (neighbourSum - rhs) / diagonal;
+    float oldPressure = PressureRead.Load(int4(cell, 0));
 
-    if (id.y + 1 < GridResolution.y)
-    {
-        neighbourSum += ay *
-            PressureRead.Load(int4(cell + int3(0, 1, 0), 0));
-        diagonal += ay;
-    }
-
-    if (id.z > 0)
-    {
-        neighbourSum += az *
-            PressureRead.Load(int4(cell + int3(0, 0, -1), 0));
-        diagonal += az;
-    }
-
-    if (id.z + 1 < GridResolution.z)
-    {
-        neighbourSum += az *
-            PressureRead.Load(int4(cell + int3(0, 0, 1), 0));
-        diagonal += az;
-    }
-
-    const float divergence =
-        DivergenceRead.Load(int4(cell, 0));
-
-    const float rhs = (FluidDensity / Dt) * divergence;
-
-    const float oldPressure =
-        PressureRead.Load(int4(cell, 0));
-
-    const float candidate = (neighbourSum - rhs) / diagonal;
-
-    PressureWrite[id] = lerp(
-        oldPressure,
-        candidate,
-        JacobiWeight);
+    PressureWrite[id] =
+        lerp(oldPressure, candidate, JacobiWeight);
 }
 
 [numthreads(8, 8, 4)]
-void SubtractPressureGradientCS(uint3 id : SV_DispatchThreadID)
+
+    void SubtractPressureGradientCS
+    (
+    uint3 id : SV_DispatchThreadID)
 {
     const float scale = Dt / FluidDensity;
     const int3 cell = int3(id);
@@ -284,7 +362,7 @@ void SubtractPressureGradientCS(uint3 id : SV_DispatchThreadID)
         id.y < GridResolution.y &&
         id.z < GridResolution.z)
     {
-        if (id.x == 0 || id.x == GridResolution.x)
+        if (id.x == 0 || id.x == GridResolution.x || IsBlockedU(cell))
         {
             VelocityU[id] = 0.0f;
         }
@@ -305,7 +383,7 @@ void SubtractPressureGradientCS(uint3 id : SV_DispatchThreadID)
         id.y <= GridResolution.y &&
         id.z < GridResolution.z)
     {
-        if (id.y == 0 || id.y == GridResolution.y)
+        if (id.y == 0 || id.y == GridResolution.y || IsBlockedV(cell))
         {
             VelocityV[id] = 0.0f;
         }
@@ -326,7 +404,7 @@ void SubtractPressureGradientCS(uint3 id : SV_DispatchThreadID)
         id.y < GridResolution.y &&
         id.z <= GridResolution.z)
     {
-        if (id.z == 0 || id.z == GridResolution.z)
+        if (id.z == 0 || id.z == GridResolution.z || IsBlockedW(cell))
         {
             VelocityW[id] = 0.0f;
         }
@@ -344,11 +422,21 @@ void SubtractPressureGradientCS(uint3 id : SV_DispatchThreadID)
 }
 
 [numthreads(8, 8, 4)]
-void AdvectScalarsCS(uint3 id : SV_DispatchThreadID)
+
+    void AdvectScalarsCS
+    (
+    uint3 id : SV_DispatchThreadID)
 {
     if (any(id >= GridResolution))
         return;
 
+    if (IsSolidCell(int3(id)))
+    {
+        Density[id] = 0.0f;
+        Temperature[id] = ambientTemperature;
+        return;
+    }
+    
     float3 q = float3(id) + 0.5f;
     float3 departure = BackTrace(q);
 
@@ -362,13 +450,16 @@ void AdvectScalarsCS(uint3 id : SV_DispatchThreadID)
 }
 
 [numthreads(8, 8, 4)]
-void AdvectVelocityCS(uint3 id : SV_DispatchThreadID)
+
+    void AdvectVelocityCS
+    (
+    uint3 id : SV_DispatchThreadID)
 {
     uint3 n = GridResolution;
 
     if (all(id < n + uint3(1, 0, 0)))
     {
-        if (id.x == 0 || id.x == n.x)
+        if (id.x == 0 || id.x == n.x || IsBlockedU(int3(id)))
         {
             VelocityU[id] = 0.0f;
         }
@@ -381,7 +472,7 @@ void AdvectVelocityCS(uint3 id : SV_DispatchThreadID)
 
     if (all(id < n + uint3(0, 1, 0)))
     {
-        if (id.y == 0 || id.y == n.y)
+        if (id.y == 0 || id.y == n.y || IsBlockedV(int3(id)))
         {
             VelocityV[id] = 0.0f;
         }
@@ -394,7 +485,7 @@ void AdvectVelocityCS(uint3 id : SV_DispatchThreadID)
 
     if (all(id < n + uint3(0, 0, 1)))
     {
-        if (id.z == 0 || id.z == n.z)
+        if (id.z == 0 || id.z == n.z || IsBlockedW(int3(id)))
         {
             VelocityW[id] = 0.0f;
         }

@@ -103,6 +103,14 @@ void Renderer::DrawSmokeGpuDebug()
         m_SmokeGpuAccumulator = 0;
     }
     ImGui::Checkbox("Emitter enabled", &m_SmokeGpuEmitterEnabled);
+    ImGui::Checkbox("Sphere obstacle enabled", &m_SmokeGpuSphereEnabled);
+    ImGui::BeginDisabled(!m_SmokeGpuSphereEnabled);
+    ImGui::SliderFloat("Sphere radius", &m_SmokeGpuSphereRadius,
+        0.02f, 0.30f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("Radius in simulation units. Changes apply on the next simulation step.\n"
+            "Use Reset for a clean comparison; resizing does not model a moving solid.");
+    ImGui::EndDisabled();
     if (ImGui::Button("Single step"))
     {
         m_SmokeGpuPaused = true;
@@ -129,6 +137,8 @@ void Renderer::DrawSmokeGpuDebug()
     {
         SmokeBenchmarkConfig config;
         config.implementation = "gpu_jacobi";
+        if (m_SmokeGpuSphereEnabled)
+            config.scenario = "buoyant_plume_closed_box_sphere_v1";
         config.runLabel = m_SmokeBenchmarkRunLabel;
         config.totalSteps = std::max(1, m_SmokeBenchmarkTotalSteps);
         config.emitterSteps = std::clamp(m_SmokeBenchmarkEmitterSteps, 0, static_cast<int>(config.totalSteps));
@@ -237,6 +247,9 @@ void Renderer::SaveSmokeGpuBenchmark()
             << ",\n  \"source_cell\": [" << config.emitterCell.x << ',' << config.emitterCell.y << ',' << config.emitterCell.z << ']'
             << ",\n  \"density_rate\": 30,\n  \"temperature_rate\": 10,\n  \"source_acceleration\": [0,0,0],"
             << "\n  \"pressure_iterations\": " << m_SmokeGpuBenchmarkIterations
+            << ",\n  \"sphere_enabled\": " << (m_SmokeGpuSphereEnabled ? "true" : "false")
+            << ",\n  \"sphere_centre\": [0,0.1,0]"
+            << ",\n  \"sphere_radius\": " << m_SmokeGpuSphereRadius
             << ",\n  \"jacobi_weight\": " << (2.0 / 3.0)
             << ",\n  \"fluid_density\": " << m_SmokeSolver.FluidDensity()
             << ",\n  \"ambient_temperature\": " << m_SmokeGpuBenchmarkPhysics.ambientTemperature
