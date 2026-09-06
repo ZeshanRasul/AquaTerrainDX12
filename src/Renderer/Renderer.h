@@ -422,6 +422,8 @@ private:
 
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SmokeApplyDivergencePSO;
 
+	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SmokeApplyPressurePSO;
+
 	void CreateSmokeBindingRootSignature();
 	void CreateSmokeBindingPSOs();
 
@@ -445,9 +447,15 @@ struct SmokeBindingConstants
 	float hy;
 	float hz;
 	float pad;
+
+	float GridSpacing[3];
+	float FluidDensity;
+
+	float JacobiWeight; // Start with 2.0 / 3.0.
+	float Padding[3];
 };
 
-static_assert(sizeof(SmokeBindingConstants) == 64);
+static_assert(sizeof(SmokeBindingConstants) == 96);
 
 enum SmokeBindingRootParameter : UINT
 {
@@ -456,6 +464,8 @@ enum SmokeBindingRootParameter : UINT
 	SmokeBindingInputRoot,     // t0, t1: density and temperature
 	SmokeBindingVelocityRoot,  // u2, u3, u4: U, V, W velocity
 	SmokeBindingDivergenceRoot, // u5: divergence
-	SmokeBindingPressureRoot,  // u6, u7: pressure
+	SmokeBindingPressureReadRoot,  // u6: pressure
+	SmokeBindingPressureWriteRoot, //u7: pressure
+	SmokeBindingPressureReadInputRoot,  // u7, u8: pressure
 	SmokeBindingRootCount
 };

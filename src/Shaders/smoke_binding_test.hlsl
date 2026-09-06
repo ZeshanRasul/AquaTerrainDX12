@@ -15,6 +15,12 @@ cbuffer SmokeSourceConstants : register(b0)
     float hy;
     float hz;
     float pad;
+    
+    float3 GridSpacing;
+    float FluidDensity;
+
+    float JacobiWeight; // Start with 2.0 / 3.0.
+    float3 Padding;
 };
 
 // Used by clear and source injection.
@@ -23,6 +29,8 @@ RWTexture3D<float> Temperature : register(u1);
 RWTexture3D<float> VelocityU : register(u2);
 RWTexture3D<float> VelocityV : register(u3);
 RWTexture3D<float> VelocityW : register(u4);
+RWTexture3D<float> PressureReadInput : register(u7);
+RWTexture3D<float> PressureWriteInput : register(u8);
 
 // Used by buoyancy.
 Texture3D<float> DensityInput : register(t0);
@@ -35,8 +43,9 @@ Texture3D<float> VelocityWInput : register(t4);
 RWTexture3D<float> Divergence : register(u5);
 
 // Used by pressure solve.
-RWTexture3D<float> Pressure_Old : register(u6);
-RWTexture3D<float> Pressure_New : register(u7);
+Texture3D<float> DivergenceRead : register(t5);
+Texture3D<float> PressureRead : register(t6);
+RWTexture3D<float> PressureWrite : register(u6);
 
 [numthreads(8, 8, 4)]
 void ClearSourceFieldsCS(uint3 id : SV_DispatchThreadID)
@@ -73,14 +82,14 @@ void ClearSourceFieldsCS(uint3 id : SV_DispatchThreadID)
     id.y < GridResolution.y &&
     id.z <= GridResolution.z)
     {
-        Pressure_Old[id] = 0.0f;
+        PressureReadInput[id] = 0.0f;
     }
     
     if (id.x < GridResolution.x &&
     id.y < GridResolution.y &&
     id.z <= GridResolution.z)
     {
-        Pressure_New[id] = 0.0f;
+        PressureWriteInput[id] = 0.0f;
     }
 }
 
@@ -141,4 +150,77 @@ void ApplyDivergenceCS(uint3 id : SV_DispatchThreadID)
     (VelocityUInput.Load(int4(id + uint3(1, 0, 0), 0)) - VelocityUInput.Load(int4(id, 0))) / hx +
     (VelocityVInput.Load(int4(id + uint3(0, 1, 0), 0)) - VelocityVInput.Load(int4(id, 0))) / hy +
     (VelocityWInput.Load(int4(id + uint3(0, 0, 1), 0)) - VelocityWInput.Load(int4(id, 0))) / hz;
+}
+
+[numthreads(8, 8, 4)]
+void ApplyPressureCS(uint3 id : SV_DispatchThreadID)
+{
+    if (any(id >= GridResolution))
+        return;
+
+    const int3 cell = int3(id);
+
+    const float ax = 1.0f / (GridSpacing.x * GridSpacing.x);
+    const float ay = 1.0f / (GridSpacing.y * GridSpacing.y);
+    const float az = 1.0f / (GridSpacing.z * GridSpacing.z);
+
+    float neighbourSum = 0.0f;
+    float diagonal = 0.0f;
+
+    if (id.x > 0)
+    {
+        neighbourSum += ax *
+            PressureRead.Load(int4(cell + int3(-1, 0, 0), 0));
+        diagonal += ax;
+    }
+
+    if (id.x + 1 < GridResolution.x)
+    {
+        neighbourSum += ax *
+            PressureRead.Load(int4(cell + int3(1, 0, 0), 0));
+        diagonal += ax;
+    }
+
+    if (id.y > 0)
+    {
+        neighbourSum += ay *
+            PressureRead.Load(int4(cell + int3(0, -1, 0), 0));
+        diagonal += ay;
+    }
+
+    if (id.y + 1 < GridResolution.y)
+    {
+        neighbourSum += ay *
+            PressureRead.Load(int4(cell + int3(0, 1, 0), 0));
+        diagonal += ay;
+    }
+
+    if (id.z > 0)
+    {
+        neighbourSum += az *
+            PressureRead.Load(int4(cell + int3(0, 0, -1), 0));
+        diagonal += az;
+    }
+
+    if (id.z + 1 < GridResolution.z)
+    {
+        neighbourSum += az *
+            PressureRead.Load(int4(cell + int3(0, 0, 1), 0));
+        diagonal += az;
+    }
+
+    const float divergence =
+        DivergenceRead.Load(int4(cell, 0));
+
+    const float rhs = (FluidDensity / Dt) * divergence;
+
+    const float oldPressure =
+        PressureRead.Load(int4(cell, 0));
+
+    const float candidate = (neighbourSum - rhs) / diagonal;
+
+    PressureWrite[id] = lerp(
+        oldPressure,
+        candidate,
+        JacobiWeight);
 }
