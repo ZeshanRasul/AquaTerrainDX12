@@ -440,7 +440,13 @@ private:
     bool m_SmokeGpuPaused = false;
     bool m_SmokeGpuEmitterEnabled = true;
     bool m_SmokeGpuSphereEnabled = true;
-    float m_SmokeGpuSphereRadius = 0.15f;
+    float m_SmokeGpuSphereRadius = 0.085f;
+    DirectX::XMFLOAT3 m_SmokeGpuSphereCentre = { 0.0f, 0.1f, 0.0f };
+    void CreateSmokeObstaclePipeline();
+    void DrawSmokeObstacle(ID3D12GraphicsCommandList* commandList);
+    DirectX::XMFLOAT3 SmokeObstacleWorldRadii() const;
+    Microsoft::WRL::ComPtr<ID3D12RootSignature> m_SmokeObstacleRootSignature;
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SmokeObstaclePSO;
     float m_SmokeGpuAccumulator = 0.0f;
     unsigned m_SmokeGpuPendingSteps = 0;
     int m_SmokeGpuPressureIterations = 20;

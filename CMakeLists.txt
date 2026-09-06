@@ -101,6 +101,14 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     d3dcompiler
 )
 
+# Deploy the obstacle shader alongside the other runtime-compiled shaders.
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:${PROJECT_NAME}>/Shaders"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_SOURCE_DIR}/src/Shaders/smoke_obstacle.hlsl"
+        "$<TARGET_FILE_DIR:${PROJECT_NAME}>/Shaders/smoke_obstacle.hlsl"
+)
+
 # Optional: treat warnings as errors in CI builds
 # if(CMAKE_BUILD_TYPE STREQUAL "Release")
 #     if(MSVC)

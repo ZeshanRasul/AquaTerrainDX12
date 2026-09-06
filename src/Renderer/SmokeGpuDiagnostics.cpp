@@ -111,6 +111,14 @@ void Renderer::DrawSmokeGpuDebug()
         ImGui::SetTooltip("Radius in simulation units. Changes apply on the next simulation step.\n"
             "Use Reset for a clean comparison; resizing does not model a moving solid.");
     ImGui::EndDisabled();
+    const auto worldRadii = SmokeObstacleWorldRadii();
+    const auto cellSpacing = m_SmokeSolver.Density().GridSpacing();
+    ImGui::Text("Radius in cells: %.2f, %.2f, %.2f",
+        m_SmokeGpuSphereRadius / cellSpacing.x,
+        m_SmokeGpuSphereRadius / cellSpacing.y,
+        m_SmokeGpuSphereRadius / cellSpacing.z);
+    ImGui::Text("World diameters: %.2f, %.2f, %.2f",
+        2.0f * worldRadii.x, 2.0f * worldRadii.y, 2.0f * worldRadii.z);
     if (ImGui::Button("Single step"))
     {
         m_SmokeGpuPaused = true;
@@ -248,7 +256,8 @@ void Renderer::SaveSmokeGpuBenchmark()
             << ",\n  \"density_rate\": 30,\n  \"temperature_rate\": 10,\n  \"source_acceleration\": [0,0,0],"
             << "\n  \"pressure_iterations\": " << m_SmokeGpuBenchmarkIterations
             << ",\n  \"sphere_enabled\": " << (m_SmokeGpuSphereEnabled ? "true" : "false")
-            << ",\n  \"sphere_centre\": [0,0.1,0]"
+            << ",\n  \"sphere_centre\": [" << m_SmokeGpuSphereCentre.x << ','
+            << m_SmokeGpuSphereCentre.y << ',' << m_SmokeGpuSphereCentre.z << ']'
             << ",\n  \"sphere_radius\": " << m_SmokeGpuSphereRadius
             << ",\n  \"jacobi_weight\": " << (2.0 / 3.0)
             << ",\n  \"fluid_density\": " << m_SmokeSolver.FluidDensity()
@@ -281,4 +290,98 @@ void Renderer::SaveSmokeGpuBenchmark()
     {
         m_SmokeGpuBenchmarkStatus = std::string("Export failed: ") + e.what();
     }
+}
+
+DirectX::XMFLOAT3 Renderer::SmokeObstacleWorldRadii() const
+{
+    const auto n = m_SmokeSolver.Density().Resolution();
+    const auto h = m_SmokeSolver.Density().GridSpacing();
+    return {
+        static_cast<float>(m_SmokeGpuSphereRadius * m_SmokeSize[0] / (n.x * h.x)),
+        static_cast<float>(m_SmokeGpuSphereRadius * m_SmokeSize[1] / (n.y * h.y)),
+        static_cast<float>(m_SmokeGpuSphereRadius * m_SmokeSize[2] / (n.z * h.z))
+    };
+}
+
+void Renderer::CreateSmokeObstaclePipeline()
+{
+    CD3DX12_ROOT_PARAMETER root;
+    root.InitAsConstants(28, 0);
+    CD3DX12_ROOT_SIGNATURE_DESC description(1, &root, 0, nullptr,
+        D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+    Microsoft::WRL::ComPtr<ID3DBlob> serialized, errors;
+    const HRESULT result = D3D12SerializeRootSignature(&description,
+        D3D_ROOT_SIGNATURE_VERSION_1, &serialized, &errors);
+    if (errors) OutputDebugStringA(static_cast<const char*>(errors->GetBufferPointer()));
+    ThrowIfFailed(result);
+    ThrowIfFailed(m_Device->CreateRootSignature(0, serialized->GetBufferPointer(),
+        serialized->GetBufferSize(), IID_PPV_ARGS(&m_SmokeObstacleRootSignature)));
+    const auto vs = d3dUtil::CompileShader(L"Shaders/smoke_obstacle.hlsl", nullptr, "VS", "vs_5_0");
+    const auto ps = d3dUtil::CompileShader(L"Shaders/smoke_obstacle.hlsl", nullptr, "PS", "ps_5_0");
+    const D3D12_INPUT_ELEMENT_DESC layout[] = {
+        { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+        { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+    };
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC pso = {};
+    pso.pRootSignature = m_SmokeObstacleRootSignature.Get();
+    pso.InputLayout = { layout, _countof(layout) };
+    pso.VS = { vs->GetBufferPointer(), vs->GetBufferSize() };
+    pso.PS = { ps->GetBufferPointer(), ps->GetBufferSize() };
+    pso.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+    pso.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+    pso.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+    pso.SampleMask = UINT_MAX;
+    pso.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+    pso.NumRenderTargets = 1;
+    pso.RTVFormats[0] = m_BackBufferFormat;
+    pso.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
+    pso.SampleDesc.Count = 1;
+    ThrowIfFailed(m_Device->CreateGraphicsPipelineState(&pso, IID_PPV_ARGS(&m_SmokeObstaclePSO)));
+    ThrowIfFailed(m_SmokeObstaclePSO->SetName(L"Smoke.Obstacle.Opaque"));
+}
+
+void Renderer::DrawSmokeObstacle(ID3D12GraphicsCommandList* commandList)
+{
+    const auto n = m_SmokeSolver.Density().Resolution();
+    const auto h = m_SmokeSolver.Density().GridSpacing();
+    const auto origin = m_SmokeSolver.Density().Origin();
+    // Same mapping as the density volume: simulation domain -> unit texture box -> world.
+    const XMFLOAT3 centreWorld = {
+        static_cast<float>(m_SmokePosition[0] +
+            ((m_SmokeGpuSphereCentre.x - origin.x) / (n.x * h.x) - 0.5) * m_SmokeSize[0]),
+        static_cast<float>(m_SmokePosition[1] +
+            ((m_SmokeGpuSphereCentre.y - origin.y) / (n.y * h.y) - 0.5) * m_SmokeSize[1]),
+        static_cast<float>(m_SmokePosition[2] +
+            ((m_SmokeGpuSphereCentre.z - origin.z) / (n.z * h.z) - 0.5) * m_SmokeSize[2])
+    };
+    const auto radii = SmokeObstacleWorldRadii();
+    // Luna's existing sphere mesh has radius 0.5.
+    const XMFLOAT3 scale = { 2 * radii.x, 2 * radii.y, 2 * radii.z };
+    const XMMATRIX world = XMMatrixScaling(scale.x, scale.y, scale.z) *
+        XMMatrixTranslation(centreWorld.x, centreWorld.y, centreWorld.z);
+    struct Constants
+    {
+        XMFLOAT4X4 worldViewProjection;
+        XMFLOAT3 inverseScale; float pad0;
+        XMFLOAT3 lightDirection; float pad1;
+        XMFLOAT4 colour;
+    } constants{};
+    static_assert(sizeof(Constants) == 28 * sizeof(float));
+    XMStoreFloat4x4(&constants.worldViewProjection, XMMatrixTranspose(
+        world * XMLoadFloat4x4(&m_View) * XMLoadFloat4x4(&m_Proj)));
+    constants.inverseScale = { 1.0f / scale.x, 1.0f / scale.y, 1.0f / scale.z };
+    constants.lightDirection = m_MainPassCB.Lights[0].Direction;
+    constants.colour = { 0.65f, 0.70f, 0.76f, 1.0f };
+    commandList->SetPipelineState(m_SmokeObstaclePSO.Get());
+    commandList->SetGraphicsRootSignature(m_SmokeObstacleRootSignature.Get());
+    commandList->SetGraphicsRoot32BitConstants(0, 28, &constants, 0);
+    const auto* geometry = m_Geometries.at("shapeGeo").get();
+    const auto& sphere = geometry->DrawArgs.at("sphere");
+    const auto vertices = geometry->VertexBufferView();
+    const auto indices = geometry->IndexBufferView();
+    commandList->IASetVertexBuffers(0, 1, &vertices);
+    commandList->IASetIndexBuffer(&indices);
+    commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    commandList->DrawIndexedInstanced(sphere.IndexCount, 1,
+        sphere.StartIndexLocation, sphere.BaseVertexLocation, 0);
 }

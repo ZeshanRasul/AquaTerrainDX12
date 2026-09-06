@@ -141,6 +141,7 @@ bool Renderer::InitializeD3D12(HWND& windowHandle)
 	BuildFrameResources();
 
 	BuildPSOs();
+	CreateSmokeObstaclePipeline();
 
 	CreateImGuiDescriptorHeap();
 	IMGUI_CHECKVERSION();
@@ -655,6 +656,9 @@ void Renderer::Draw()
 	m_CommandList->SetGraphicsRootDescriptorTable(0, tex);
 
 	DrawRenderItems(m_CommandList.Get(), m_SkyRenderItems);
+	if (m_FluidDemoMode == FluidDemoMode::Smoke3DGPU &&
+		m_SmokeGpuSphereEnabled && m_ShowSmokeVolume)
+		DrawSmokeObstacle(m_CommandList.Get());
 
 	m_CommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_DepthStencilBuffer.Get(), D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_DEPTH_READ | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
 	m_CommandList->OMSetRenderTargets(
@@ -4445,9 +4449,9 @@ void Renderer::DispatchSmokeSourceTest(ID3D12GraphicsCommandList* commandList)
 	constants.origin[2] = static_cast<float>(m_SmokeSolver.Density().Origin().z);
 	constants.pad2 = 0.0f;
 	constants.sphereObstacle.enabled = m_SmokeGpuSphereEnabled ? 1u : 0u;
-	constants.sphereObstacle.centre[0] = 0.0f;
-	constants.sphereObstacle.centre[1] = 0.1f;
-	constants.sphereObstacle.centre[2] = 0.0f;
+	constants.sphereObstacle.centre[0] = m_SmokeGpuSphereCentre.x;
+	constants.sphereObstacle.centre[1] = m_SmokeGpuSphereCentre.y;
+	constants.sphereObstacle.centre[2] = m_SmokeGpuSphereCentre.z;
 	constants.sphereObstacle.radius = m_SmokeGpuSphereRadius;
 
 
