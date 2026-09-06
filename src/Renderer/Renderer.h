@@ -416,6 +416,8 @@ private:
 
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SmokeClearPSO;
 
+	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SmokeClearPressurePSO;
+
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SmokeInjectPSO;
 
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SmokeApplyBuoyancyPSO;
@@ -467,5 +469,6 @@ enum SmokeBindingRootParameter : UINT
 	SmokeBindingPressureReadRoot,  // u6: pressure
 	SmokeBindingPressureWriteRoot, //u7: pressure
 	SmokeBindingPressureReadInputRoot,  // u7, u8: pressure
+	SmokeBindingDivergenceReadRoot,
 	SmokeBindingRootCount
 };

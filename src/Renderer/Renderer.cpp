@@ -3995,8 +3995,8 @@ void Renderer::CreateSmokeBindingRootSignature()
 	CD3DX12_DESCRIPTOR_RANGE inputRange;
 	inputRange.Init(
 		D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
-		6,
-		0); // t0 to t5
+		5,
+		0); // t0 to t4
 
 	CD3DX12_DESCRIPTOR_RANGE velocityRange;
 	velocityRange.Init(
@@ -4009,6 +4009,12 @@ void Renderer::CreateSmokeBindingRootSignature()
 		D3D12_DESCRIPTOR_RANGE_TYPE_UAV,
 		1,
 		5); // u5
+
+	CD3DX12_DESCRIPTOR_RANGE divergenceReadRange;
+	divergenceReadRange.Init(
+		D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
+		1,
+		5); // t5
 
 	CD3DX12_DESCRIPTOR_RANGE pressureReadRange;
 	pressureReadRange.Init(
@@ -4053,6 +4059,10 @@ void Renderer::CreateSmokeBindingRootSignature()
 
 	parameters[SmokeBindingPressureReadInputRoot].InitAsDescriptorTable(
 		1, &PressureInputRange);
+
+	parameters[SmokeBindingDivergenceReadRoot].InitAsDescriptorTable(
+		1,
+		&divergenceReadRange);
 
 	CD3DX12_ROOT_SIGNATURE_DESC description;
 	description.Init(
@@ -4152,6 +4162,11 @@ void Renderer::CreateSmokeBindingPSOs()
 		"ClearSourceFieldsCS",
 		L"Smoke.ClearSourceFields",
 		m_SmokeClearPSO);
+
+	createPSO(
+		"ClearPressureCS",
+		L"Smoke.ClearPressure",
+		m_SmokeClearPressurePSO);
 
 	createPSO(
 		"InjectSourceCS",
@@ -4299,16 +4314,10 @@ void Renderer::DispatchSmokeSourceTest(ID3D12GraphicsCommandList* commandList)
 		SmokeBindingOutputRoot, density.uav);
 
 	commandList->SetComputeRootDescriptorTable(
-		SmokeBindingVelocityRoot, velocityU.uav);
-
-	commandList->SetComputeRootDescriptorTable(
-		SmokeBindingPressureReadRoot, pressure_old.uav);
-
-	commandList->SetComputeRootDescriptorTable(
 		SmokeBindingPressureWriteRoot, pressure_new.uav);
 
 	commandList->SetComputeRootDescriptorTable(
-		SmokeBindingPressureReadInputRoot, pressure_new.uav);
+		SmokeBindingPressureReadInputRoot, m_GpuPressure[0].uav);
 
 	const UINT groupsX = (constants.gridResolution[0] + 7) / 8;
 	const UINT groupsY = (constants.gridResolution[1] + 7) / 8;
@@ -4318,10 +4327,20 @@ void Renderer::DispatchSmokeSourceTest(ID3D12GraphicsCommandList* commandList)
 	const UINT velocityGroupsY =
 		(constants.gridResolution[1] + 1 + 7) / 8;
 
+	const UINT clearGroupsX =
+		(constants.gridResolution[0] + 1 + 7) / 8;
+
+	const UINT clearGroupsY =
+		(constants.gridResolution[1] + 1 + 7) / 8;
+
+	const UINT clearGroupsZ =
+		(constants.gridResolution[2] + 1 + 3) / 4;
+
 	if (m_SmokeGpuResetRequested)
 	{
+
 		commandList->SetPipelineState(m_SmokeClearPSO.Get());
-		commandList->Dispatch(groupsX, velocityGroupsY, groupsZ);
+		commandList->Dispatch(clearGroupsX, clearGroupsY, clearGroupsZ);
 
 		const D3D12_RESOURCE_BARRIER clearBarriers[] = {
 			CD3DX12_RESOURCE_BARRIER::UAV(density.resource.Get()),
@@ -4342,16 +4361,14 @@ void Renderer::DispatchSmokeSourceTest(ID3D12GraphicsCommandList* commandList)
 
 	if (m_SmokeGpuStepRequested)
 	{
-		commandList->SetPipelineState(m_SmokeClearPSO.Get());
-		commandList->Dispatch(groupsX, velocityGroupsY, groupsZ);
+		commandList->SetPipelineState(m_SmokeClearPressurePSO.Get());
+		commandList->Dispatch(clearGroupsX, clearGroupsY, clearGroupsZ);
 
 		const D3D12_RESOURCE_BARRIER clearBarriers[] = {
-			CD3DX12_RESOURCE_BARRIER::UAV(velocityU.resource.Get()),
-			CD3DX12_RESOURCE_BARRIER::UAV(velocityV.resource.Get()),
-			CD3DX12_RESOURCE_BARRIER::UAV(velocityW.resource.Get()),
-
+			CD3DX12_RESOURCE_BARRIER::UAV(m_GpuPressure[0].resource.Get()),
+			CD3DX12_RESOURCE_BARRIER::UAV(m_GpuPressure[1].resource.Get()),
 		};
-		commandList->ResourceBarrier(3, clearBarriers);
+		commandList->ResourceBarrier(2, clearBarriers);
 
 
 		commandList->SetPipelineState(m_SmokeInjectPSO.Get());
@@ -4376,20 +4393,9 @@ void Renderer::DispatchSmokeSourceTest(ID3D12GraphicsCommandList* commandList)
 		commandList->SetPipelineState(m_SmokeApplyBuoyancyPSO.Get());
 		commandList->Dispatch(groupsX, velocityGroupsY, groupsZ);
 
-		const auto velocityUBarrier =
-			CD3DX12_RESOURCE_BARRIER::Transition(velocityU.resource.Get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-
-		commandList->ResourceBarrier(1, &velocityUBarrier);
-
-		const auto velocityVBarrier =
-			CD3DX12_RESOURCE_BARRIER::Transition(velocityV.resource.Get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-
-		commandList->ResourceBarrier(1, &velocityVBarrier);
-
-		const auto velocityWBarrier =
-			CD3DX12_RESOURCE_BARRIER::Transition(velocityW.resource.Get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-
-		commandList->ResourceBarrier(1, &velocityWBarrier);
+		transitionToSrv(velocityU);
+		transitionToSrv(velocityV);
+		transitionToSrv(velocityW);
 
 		commandList->SetComputeRootDescriptorTable(
 			SmokeBindingVelocityRoot, velocityU.srv);
@@ -4403,37 +4409,40 @@ void Renderer::DispatchSmokeSourceTest(ID3D12GraphicsCommandList* commandList)
 		unsigned readIndex = 0;
 		unsigned writeIndex = 1;
 
-		unsigned pressureIterations = 20;
-
-		pressure_old = m_GpuPressure[readIndex];
-		pressure_new = m_GpuPressure[writeIndex];
+		const unsigned pressureIterations = 20;
 
 		transitionToSrv(m_GpuPressure[readIndex]);
 
-		const auto divergenceBarrier =
-			CD3DX12_RESOURCE_BARRIER::Transition(divergence.resource.Get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+		transitionToSrv(divergence);
 
-		commandList->ResourceBarrier(1, &divergenceBarrier);
+		commandList->SetComputeRootDescriptorTable(
+			SmokeBindingDivergenceReadRoot,
+			divergence.srv);
 
-		for (unsigned iteration = 0; iteration < pressureIterations; ++iteration)
+		commandList->SetPipelineState(m_SmokeApplyPressurePSO.Get());
+
+		for (unsigned iteration = 0;
+			iteration < pressureIterations;
+			++iteration)
 		{
 			transitionToSrv(m_GpuPressure[readIndex]);
 			transitionToUav(m_GpuPressure[writeIndex]);
 
 			commandList->SetComputeRootDescriptorTable(
-				SmokeBindingDivergenceRoot, divergence.srv);
+				SmokeBindingPressureReadRoot,
+				m_GpuPressure[readIndex].srv);
 
 			commandList->SetComputeRootDescriptorTable(
-				SmokeBindingPressureReadRoot, m_GpuPressure[readIndex].srv);
+				SmokeBindingPressureWriteRoot,
+				m_GpuPressure[writeIndex].uav);
 
-			commandList->SetComputeRootDescriptorTable(
-				SmokeBindingPressureWriteRoot, m_GpuPressure[writeIndex].uav);
-
-			commandList->SetPipelineState(m_SmokeApplyPressurePSO.Get());
 			commandList->Dispatch(groupsX, groupsY, groupsZ);
 
 			std::swap(readIndex, writeIndex);
 		}
+
+		// Latest result is m_GpuPressure[readIndex].
+		transitionToSrv(m_GpuPressure[readIndex]);
 
 		m_SmokeGpuStepRequested = false;
 		++m_SmokeGpuInjectionCount;

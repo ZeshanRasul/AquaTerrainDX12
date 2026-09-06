@@ -78,19 +78,21 @@ void ClearSourceFieldsCS(uint3 id : SV_DispatchThreadID)
         VelocityW[id] = 0.0f;
     }
     
-    if (id.x < GridResolution.x &&
-    id.y < GridResolution.y &&
-    id.z <= GridResolution.z)
+    if (all(id < GridResolution))
     {
         PressureReadInput[id] = 0.0f;
-    }
-    
-    if (id.x < GridResolution.x &&
-    id.y < GridResolution.y &&
-    id.z <= GridResolution.z)
-    {
         PressureWriteInput[id] = 0.0f;
     }
+}
+
+[numthreads(8, 8, 4)]
+void ClearPressureCS(uint3 id : SV_DispatchThreadID)
+{
+    if (any(id >= GridResolution))
+        return;
+
+    PressureReadInput[id] = 0.0f;
+    PressureWriteInput[id] = 0.0f;
 }
 
 [numthreads(8, 8, 4)]
