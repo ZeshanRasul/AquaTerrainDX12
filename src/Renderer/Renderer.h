@@ -456,5 +456,6 @@ enum SmokeBindingRootParameter : UINT
 	SmokeBindingInputRoot,     // t0, t1: density and temperature
 	SmokeBindingVelocityRoot,  // u2, u3, u4: U, V, W velocity
 	SmokeBindingDivergenceRoot, // u5: divergence
+	SmokeBindingPressureRoot,  // u6, u7: pressure
 	SmokeBindingRootCount
 };

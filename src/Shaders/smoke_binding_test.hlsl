@@ -34,6 +34,9 @@ Texture3D<float> VelocityVInput : register(t3);
 Texture3D<float> VelocityWInput : register(t4);
 RWTexture3D<float> Divergence : register(u5);
 
+// Used by pressure solve.
+RWTexture3D<float> Pressure_Old : register(u6);
+RWTexture3D<float> Pressure_New : register(u7);
 
 [numthreads(8, 8, 4)]
 void ClearSourceFieldsCS(uint3 id : SV_DispatchThreadID)
@@ -64,6 +67,20 @@ void ClearSourceFieldsCS(uint3 id : SV_DispatchThreadID)
     id.z <= GridResolution.z)
     {
         VelocityW[id] = 0.0f;
+    }
+    
+    if (id.x < GridResolution.x &&
+    id.y < GridResolution.y &&
+    id.z <= GridResolution.z)
+    {
+        Pressure_Old[id] = 0.0f;
+    }
+    
+    if (id.x < GridResolution.x &&
+    id.y < GridResolution.y &&
+    id.z <= GridResolution.z)
+    {
+        Pressure_New[id] = 0.0f;
     }
 }
 
