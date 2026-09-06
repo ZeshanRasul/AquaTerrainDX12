@@ -28,7 +28,8 @@ enum class FluidDemoMode : int
 	Off = 0,
 	Fluid2D,
 	Fluid3D,
-	Smoke3D
+	Smoke3D,
+	Smoke3DGPU
 };
 
 struct HeightMap
@@ -428,6 +429,10 @@ private:
 
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SmokeSubtractPressureGradientPSO;
 
+	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SmokeAdvectScalarsPSO;
+
+	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SmokeAdvectVelocityPSO;
+
 	void CreateSmokeBindingRootSignature();
 	void CreateSmokeBindingPSOs();
 
@@ -435,6 +440,11 @@ private:
     bool m_SmokeGpuStepRequested = false;
     unsigned int m_SmokeGpuInjectionCount = 0;
     void DispatchSmokeSourceTest(ID3D12GraphicsCommandList* commandList);
+
+	std::uint32_t m_GpuScalarReadIndex = 0;
+	std::uint32_t m_GpuScalarWriteIndex = 1;
+	std::uint32_t m_GpuVelocityReadIndex = 0;
+	std::uint32_t m_GpuVelocityWriteIndex = 1;
 };
 
 struct SmokeBindingConstants
@@ -467,6 +477,7 @@ enum SmokeBindingRootParameter : UINT
 	SmokeBindingOutputRoot,    // u0, u1: density and temperature
 	SmokeBindingInputRoot,     // t0, t1: density and temperature
 	SmokeBindingVelocityRoot,  // u2, u3, u4: U, V, W velocity
+	SmokeBindingVelocityInputRoot, // t2, t3, t4: U, V, W velocity
 	SmokeBindingDivergenceRoot, // u5: divergence
 	SmokeBindingPressureReadRoot,  // u6: pressure
 	SmokeBindingPressureWriteRoot, //u7: pressure

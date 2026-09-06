@@ -47,6 +47,52 @@ Texture3D<float> DivergenceRead : register(t5);
 Texture3D<float> PressureRead : register(t6);
 RWTexture3D<float> PressureWrite : register(u6);
 
+SamplerState LinearClamp : register(s0);
+
+float SampleU(float3 q)
+{
+    float3 uvw =
+        (q + float3(0.5f, 0.0f, 0.0f)) /
+        float3(GridResolution + uint3(1, 0, 0));
+
+    return VelocityUInput.SampleLevel(LinearClamp, uvw, 0);
+}
+
+float SampleV(float3 q)
+{
+    float3 uvw =
+        (q + float3(0.0f, 0.5f, 0.0f)) /
+        float3(GridResolution + uint3(0, 1, 0));
+
+    return VelocityVInput.SampleLevel(LinearClamp, uvw, 0);
+}
+
+float SampleW(float3 q)
+{
+    float3 uvw =
+        (q + float3(0.0f, 0.0f, 0.5f)) /
+        float3(GridResolution + uint3(0, 0, 1));
+
+    return VelocityWInput.SampleLevel(LinearClamp, uvw, 0);
+}
+
+float3 SampleVelocity(float3 q)
+{
+    return float3(SampleU(q), SampleV(q), SampleW(q));
+}
+
+float3 BackTrace(float3 q)
+{
+    float3 velocity0 = SampleVelocity(q);
+
+    float3 midpoint =
+        q - 0.5f * Dt * velocity0 / GridSpacing;
+
+    float3 midpointVelocity = SampleVelocity(midpoint);
+
+    return q - Dt * midpointVelocity / GridSpacing;
+}
+
 [numthreads(8, 8, 4)]
 void ClearSourceFieldsCS(uint3 id : SV_DispatchThreadID)
 {
@@ -293,6 +339,69 @@ void SubtractPressureGradientCS(uint3 id : SV_DispatchThreadID)
                 PressureRead.Load(int4(cell - int3(0, 0, 1), 0));
 
             VelocityW[id] -= scale * (front - back) / hz;
+        }
+    }
+}
+
+[numthreads(8, 8, 4)]
+void AdvectScalarsCS(uint3 id : SV_DispatchThreadID)
+{
+    if (any(id >= GridResolution))
+        return;
+
+    float3 q = float3(id) + 0.5f;
+    float3 departure = BackTrace(q);
+
+    float3 uvw = departure / float3(GridResolution);
+
+    Density[id] =
+        DensityInput.SampleLevel(LinearClamp, uvw, 0);
+
+    Temperature[id] =
+        TemperatureInput.SampleLevel(LinearClamp, uvw, 0);
+}
+
+[numthreads(8, 8, 4)]
+void AdvectVelocityCS(uint3 id : SV_DispatchThreadID)
+{
+    uint3 n = GridResolution;
+
+    if (all(id < n + uint3(1, 0, 0)))
+    {
+        if (id.x == 0 || id.x == n.x)
+        {
+            VelocityU[id] = 0.0f;
+        }
+        else
+        {
+            float3 q = float3(id) + float3(0.0f, 0.5f, 0.5f);
+            VelocityU[id] = SampleU(BackTrace(q));
+        }
+    }
+
+    if (all(id < n + uint3(0, 1, 0)))
+    {
+        if (id.y == 0 || id.y == n.y)
+        {
+            VelocityV[id] = 0.0f;
+        }
+        else
+        {
+            float3 q = float3(id) + float3(0.5f, 0.0f, 0.5f);
+            VelocityV[id] = SampleV(BackTrace(q));
+        }
+    }
+
+    if (all(id < n + uint3(0, 0, 1)))
+    {
+        if (id.z == 0 || id.z == n.z)
+        {
+            VelocityW[id] = 0.0f;
+        }
+        else
+        {
+            float3 q = float3(id) + float3(0.5f, 0.5f, 0.0f);
+            VelocityW[id] = SampleW(BackTrace(q));
         }
     }
 }
