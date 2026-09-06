@@ -10,16 +10,30 @@ cbuffer SmokeSourceConstants : register(b0)
     float ambientTemperature;
     float temperatureBuoyancy;
     float smokeWeight;
+    
+    float hx;
+    float hy;
+    float hz;
+    float pad;
 };
 
 // Used by clear and source injection.
 RWTexture3D<float> Density : register(u0);
 RWTexture3D<float> Temperature : register(u1);
+RWTexture3D<float> VelocityU : register(u2);
+RWTexture3D<float> VelocityV : register(u3);
+RWTexture3D<float> VelocityW : register(u4);
 
 // Used by buoyancy.
 Texture3D<float> DensityInput : register(t0);
 Texture3D<float> TemperatureInput : register(t1);
-RWTexture3D<float> VelocityV : register(u2);
+
+// Used by divergence.
+Texture3D<float> VelocityUInput : register(t2);
+Texture3D<float> VelocityVInput : register(t3);
+Texture3D<float> VelocityWInput : register(t4);
+RWTexture3D<float> Divergence : register(u5);
+
 
 [numthreads(8, 8, 4)]
 void ClearSourceFieldsCS(uint3 id : SV_DispatchThreadID)
@@ -31,12 +45,25 @@ void ClearSourceFieldsCS(uint3 id : SV_DispatchThreadID)
         Temperature[id] = 0.0f;
     }
 
-    // V texture: Nx × (Ny + 1) × Nz.
+    if (id.x <= GridResolution.x &&
+    id.y < GridResolution.y &&
+    id.z < GridResolution.z)
+    {
+        VelocityU[id] = 0.0f;
+    }
+
     if (id.x < GridResolution.x &&
-        id.y <= GridResolution.y &&
-        id.z < GridResolution.z)
+    id.y <= GridResolution.y &&
+    id.z < GridResolution.z)
     {
         VelocityV[id] = 0.0f;
+    }
+
+    if (id.x < GridResolution.x &&
+    id.y < GridResolution.y &&
+    id.z <= GridResolution.z)
+    {
+        VelocityW[id] = 0.0f;
     }
 }
 
@@ -88,4 +115,13 @@ void ApplyBuoyancyCS(uint3 id : SV_DispatchThreadID)
         smokeWeight * densityAtFace;
 
     VelocityV[id] += Dt * upwardAcceleration;
+}
+
+[numthreads(8, 8, 4)]
+void ApplyDivergenceCS(uint3 id : SV_DispatchThreadID)
+{
+    Divergence[id] =
+    (VelocityUInput.Load(int4(id + uint3(1, 0, 0), 0)) - VelocityUInput.Load(int4(id, 0))) / hx +
+    (VelocityVInput.Load(int4(id + uint3(0, 1, 0), 0)) - VelocityVInput.Load(int4(id, 0))) / hy +
+    (VelocityWInput.Load(int4(id + uint3(0, 0, 1), 0)) - VelocityWInput.Load(int4(id, 0))) / hz;
 }
