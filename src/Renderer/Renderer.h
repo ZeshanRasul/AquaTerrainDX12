@@ -437,6 +437,46 @@ private:
 	void CreateSmokeBindingPSOs();
 
 	bool m_SmokeGpuResetRequested = true;
+    bool m_SmokeGpuPaused = false;
+    bool m_SmokeGpuEmitterEnabled = true;
+    float m_SmokeGpuAccumulator = 0.0f;
+    unsigned m_SmokeGpuPendingSteps = 0;
+    int m_SmokeGpuPressureIterations = 20;
+    double m_SmokeGpuLastMilliseconds = 0.0;
+    void DrawSmokeGpuDebug();
+    void CreateSmokeGpuDiagnostics();
+    void CollectSmokeGpuDiagnostics();
+    void SaveSmokeGpuBenchmark();
+
+    struct GpuSmokeSample
+    {
+        unsigned step = 0;
+        bool emit = false;
+        double milliseconds = 0.0;
+        double densitySum = 0.0, densityMin = 0.0, densityMax = 0.0;
+        Vector3 centre{};
+        unsigned nonfinite = 0;
+    };
+    struct GpuSmokeReadback
+    {
+        Microsoft::WRL::ComPtr<ID3D12Resource> buffer;
+        bool pending = false;
+        bool benchmark = false;
+        GpuSmokeSample sample;
+    };
+    std::array<GpuSmokeReadback, NumFrameResources> m_SmokeGpuReadbacks;
+    Microsoft::WRL::ComPtr<ID3D12QueryHeap> m_SmokeGpuQueries;
+    D3D12_PLACED_SUBRESOURCE_FOOTPRINT m_SmokeGpuReadbackFootprint{};
+    UINT64 m_SmokeGpuTimestampFrequency = 0;
+    bool m_SmokeGpuBenchmarkRunning = false;
+    bool m_SmokeGpuBenchmarkStopping = false;
+    unsigned m_SmokeGpuBenchmarkSubmitted = 0;
+    SmokeBenchmarkConfig m_SmokeGpuBenchmarkConfig;
+    SmokePhysicsParameters m_SmokeGpuBenchmarkPhysics;
+    int m_SmokeGpuBenchmarkIterations = 20;
+    bool m_SmokeGpuRestoreVolume = true;
+    std::vector<GpuSmokeSample> m_SmokeGpuBenchmarkSamples;
+    std::string m_SmokeGpuBenchmarkStatus = "No GPU benchmark recorded yet.";
     bool m_SmokeGpuStepRequested = false;
     unsigned int m_SmokeGpuInjectionCount = 0;
     void DispatchSmokeSourceTest(ID3D12GraphicsCommandList* commandList);

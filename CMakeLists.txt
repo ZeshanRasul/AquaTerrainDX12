@@ -33,6 +33,7 @@ file(GLOB APP_SOURCES
     "src/Events/*.cpp"
     "src/Events/*.h"
     "src/Renderer/*.cpp"
+    "src/Renderer/SmokeGpuDiagnostics.cpp"
     "src/Renderer/*.h"
     "src/Utils/*.cpp"
     "src/Utils/*.h"

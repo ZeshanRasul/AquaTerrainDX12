@@ -96,7 +96,7 @@ float3 BackTrace(float3 q)
 [numthreads(8, 8, 4)]
 void ClearSourceFieldsCS(uint3 id : SV_DispatchThreadID)
 {
-    // Scalar textures: Nx × Ny × Nz.
+    // Scalar textures: Nx ï¿½ Ny ï¿½ Nz.
     if (all(id < GridResolution))
     {
         Density[id] = 0.0f;
@@ -279,7 +279,7 @@ void SubtractPressureGradientCS(uint3 id : SV_DispatchThreadID)
     const float scale = Dt / FluidDensity;
     const int3 cell = int3(id);
 
-    // U: (Nx + 1) × Ny × Nz
+    // U: (Nx + 1) ï¿½ Ny ï¿½ Nz
     if (id.x <= GridResolution.x &&
         id.y < GridResolution.y &&
         id.z < GridResolution.z)
@@ -300,7 +300,7 @@ void SubtractPressureGradientCS(uint3 id : SV_DispatchThreadID)
         }
     }
 
-    // V: Nx × (Ny + 1) × Nz
+    // V: Nx ï¿½ (Ny + 1) ï¿½ Nz
     if (id.x < GridResolution.x &&
         id.y <= GridResolution.y &&
         id.z < GridResolution.z)
@@ -321,7 +321,7 @@ void SubtractPressureGradientCS(uint3 id : SV_DispatchThreadID)
         }
     }
 
-    // W: Nx × Ny × (Nz + 1)
+    // W: Nx ï¿½ Ny ï¿½ (Nz + 1)
     if (id.x < GridResolution.x &&
         id.y < GridResolution.y &&
         id.z <= GridResolution.z)
@@ -355,10 +355,10 @@ void AdvectScalarsCS(uint3 id : SV_DispatchThreadID)
     float3 uvw = departure / float3(GridResolution);
 
     Density[id] =
-        DensityInput.SampleLevel(LinearClamp, uvw, 0);
+        max(DensityInput.SampleLevel(LinearClamp, uvw, 0) * exp(-Padding.x * Dt), 0.0f);
 
     Temperature[id] =
-        TemperatureInput.SampleLevel(LinearClamp, uvw, 0);
+        ambientTemperature + (TemperatureInput.SampleLevel(LinearClamp, uvw, 0) - ambientTemperature) * exp(-Padding.y * Dt);
 }
 
 [numthreads(8, 8, 4)]

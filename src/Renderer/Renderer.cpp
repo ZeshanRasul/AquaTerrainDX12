@@ -120,6 +120,7 @@ bool Renderer::InitializeD3D12(HWND& windowHandle)
 	CreateSmokeGpuDescriptorHeap();
 	CreateSmokeBindingRootSignature();
 	CreateSmokeBindingPSOs();
+	CreateSmokeGpuDiagnostics();
 
 	ThrowIfFailed(m_GpuDensity[0].resource->SetName(
 		L"Smoke.BindingTest.Density"));
@@ -189,6 +190,7 @@ void Renderer::Update(GameTimer& gt, Camera& cam)
 		CloseHandle(eventHandle);
 	}
 
+	CollectSmokeGpuDiagnostics();
 	cam.UpdateViewMatrix();
 	XMStoreFloat4x4(&m_View, cam.GetView());
 	XMStoreFloat4x4(&m_Proj, cam.GetProj());
@@ -203,6 +205,20 @@ void Renderer::Update(GameTimer& gt, Camera& cam)
 	UpdateWaterCB(gt);
 
 	constexpr float step = 1.0f / 60.0f;
+	m_SmokeGpuPendingSteps = 0;
+	if (m_FluidDemoMode == FluidDemoMode::Smoke3DGPU &&
+		!m_SmokeGpuBenchmarkRunning && !m_SmokeGpuPaused)
+	{
+		m_SmokeGpuAccumulator += std::clamp(gt.DeltaTime(), 0.0f, 0.1f);
+		while (m_SmokeGpuAccumulator >= step && m_SmokeGpuPendingSteps < 2)
+		{
+			++m_SmokeGpuPendingSteps;
+			m_SmokeGpuAccumulator -= step;
+		}
+		if (m_SmokeGpuAccumulator >= step)
+			m_SmokeGpuAccumulator = std::fmod(m_SmokeGpuAccumulator, step);
+	}
+	else m_SmokeGpuAccumulator = 0.0f;
 
 	auto advanceFluidOneStep = [&]()
 		{
@@ -432,6 +448,8 @@ void Renderer::Draw()
 		DrawFluid3DDebug(m_Fluid3D);
 	else if (m_FluidDemoMode == FluidDemoMode::Smoke3D)
 		DrawSmoke3DDebug(m_SmokeSolver);
+	else if (m_FluidDemoMode == FluidDemoMode::Smoke3DGPU)
+		DrawSmokeGpuDebug();
 
 	showImgui = true;
 	ImGui::Render();
@@ -446,11 +464,20 @@ void Renderer::Draw()
 		cmdListAlloc.Get(),
 		nullptr));
 
-	m_SmokeGpuStepRequested = true;
-
 	if (m_FluidDemoMode == FluidDemoMode::Smoke3DGPU)
 	{
-		DispatchSmokeSourceTest(m_CommandList.Get());
+		unsigned steps = m_SmokeGpuPendingSteps;
+		if (m_SmokeGpuBenchmarkRunning)
+			steps = !m_SmokeGpuBenchmarkStopping &&
+				m_SmokeGpuBenchmarkSubmitted < m_SmokeGpuBenchmarkConfig.totalSteps ? 1 : 0;
+		else if (m_SmokeGpuStepRequested) steps = 1;
+		m_SmokeGpuStepRequested = false;
+		if (m_SmokeGpuResetRequested) DispatchSmokeSourceTest(m_CommandList.Get());
+		for (unsigned i = 0; i < steps; ++i)
+		{
+			m_SmokeGpuStepRequested = true;
+			DispatchSmokeSourceTest(m_CommandList.Get());
+		}
 	}
 
 	if (m_NeedRegen)
@@ -3342,6 +3369,7 @@ void Renderer::DrawFluidDemoSelector()
 		"3D Smoke Solver - CPU",
 		"3D Smoke Solver - GPU"
 	};
+	ImGui::BeginDisabled(m_SmokeBenchmark.IsRunning() || m_SmokeGpuBenchmarkRunning);
 	int selectedMode = static_cast<int>(m_FluidDemoMode);
 
 	if (ImGui::Combo(
@@ -3351,6 +3379,9 @@ void Renderer::DrawFluidDemoSelector()
 		IM_ARRAYSIZE(modeNames)))
 	{
 		m_FluidDemoMode = static_cast<FluidDemoMode>(selectedMode);
+		m_SmokeGpuAccumulator = 0.0f;
+		m_SmokeGpuPendingSteps = 0;
+		m_SmokeGpuStepRequested = false;
 		m_FluidAccumulator = 0.0f;
 		m_Fluid3DAccumulator = 0.0f;
 		m_FluidSingleStepRequested = false;
@@ -3361,6 +3392,8 @@ void Renderer::DrawFluidDemoSelector()
 			m_FluidDemoMode == FluidDemoMode::Smoke3DGPU)
 			m_SmokeDensityDirty = true;
 	}
+
+	ImGui::EndDisabled();
 
 	ImGui::Text(
 		"Frame rate: %.1f FPS (%.2f ms/frame)",
@@ -3380,8 +3413,11 @@ void Renderer::DrawFluidDemoSelector()
 	else
 	{
 		ImGui::TextUnformatted("Only the 3D solver and selected 3D views are active.");
+		ImGui::BeginDisabled(m_SmokeBenchmark.IsRunning() || m_SmokeGpuBenchmarkRunning);
 		ImGui::Checkbox("Render smoke in world", &m_ShowSmokeVolume);
-		ImGui::Checkbox("Show ImGui slice viewer", &m_ShowFluid3DSliceViewer);
+		if (m_FluidDemoMode != FluidDemoMode::Smoke3DGPU)
+			ImGui::Checkbox("Show ImGui slice viewer", &m_ShowFluid3DSliceViewer);
+		ImGui::EndDisabled();
 
 		if (m_ShowSmokeVolume)
 		{
@@ -3927,17 +3963,6 @@ void Renderer::DrawSmoke3DDebug(SmokeSolver3& smokeSolver)
 {
 	ImGui::Begin("Smoke 3D Debug");
 	ImGui::Text("Smoke 3D Debug Info");
-	ImGui::SeparatorText("GPU source test");
-	if (ImGui::Button("Reset GPU source"))
-	{
-		m_SmokeGpuResetRequested = true;
-		m_SmokeGpuStepRequested = false;
-	}
-	ImGui::SameLine();
-	if (ImGui::Button("Inject one GPU step"))
-		m_SmokeGpuStepRequested = true;
-	ImGui::Text("GPU injections recorded: %u", m_SmokeGpuInjectionCount);
-	ImGui::TextWrapped("Inspect GPU density and temperature in Nsight. The world volume still displays the CPU simulation.");
 
 	ImGui::Text(
 		"RMS divergence: %.3e -> %.3e",
@@ -4384,7 +4409,7 @@ void Renderer::DispatchSmokeSourceTest(ID3D12GraphicsCommandList* commandList)
 	constants.gridResolution[0] = static_cast<std::uint32_t>(desc.Width);
 	constants.gridResolution[1] = desc.Height;
 	constants.gridResolution[2] = desc.DepthOrArraySize;
-	constants.dt = 1.0f / 60.0f;
+	constants.dt = m_SmokeGpuBenchmarkRunning ? static_cast<float>(m_SmokeGpuBenchmarkConfig.timeStep) : 1.0f / 60.0f;
 	constants.sourceCell[0] = constants.gridResolution[0] / 2;
 	constants.sourceCell[1] = constants.gridResolution[1] / 4;
 	constants.sourceCell[2] = constants.gridResolution[2] / 2;
@@ -4402,8 +4427,18 @@ void Renderer::DispatchSmokeSourceTest(ID3D12GraphicsCommandList* commandList)
 	constants.GridSpacing[2] = constants.hz;
 	constants.FluidDensity = 1.0f;
 	constants.JacobiWeight = 2.0f / 3.0f;
-	constants.Padding[0] = 0.0f;
-	constants.Padding[1] = 0.0f;
+	const auto physics = m_SmokeGpuBenchmarkRunning ?
+		m_SmokeGpuBenchmarkPhysics : m_SmokeSolver.PhysicsParameters();
+	constants.ambientTemperature = static_cast<float>(physics.ambientTemperature);
+	constants.temperatureBuoyancy = static_cast<float>(physics.temperatureBuoyancy);
+	constants.smokeWeight = static_cast<float>(physics.smokeWeight);
+	const auto spacing = m_SmokeSolver.Density().GridSpacing();
+	constants.hx = constants.GridSpacing[0] = static_cast<float>(spacing.x);
+	constants.hy = constants.GridSpacing[1] = static_cast<float>(spacing.y);
+	constants.hz = constants.GridSpacing[2] = static_cast<float>(spacing.z);
+	constants.FluidDensity = static_cast<float>(m_SmokeSolver.FluidDensity());
+	constants.Padding[0] = static_cast<float>(physics.densityDissipation);
+	constants.Padding[1] = static_cast<float>(physics.temperatureCooling);
 	constants.Padding[2] = 0.0f;
 
 		ID3D12DescriptorHeap* heaps[] = { m_SmokeGpuDescriptorHeap.Get() };
@@ -4437,10 +4472,14 @@ void Renderer::DispatchSmokeSourceTest(ID3D12GraphicsCommandList* commandList)
 	}
 	if (!m_SmokeGpuStepRequested) return;
 
+	const UINT query = 2 * m_CurrentFrameResourceIndex;
+	commandList->EndQuery(m_SmokeGpuQueries.Get(), D3D12_QUERY_TYPE_TIMESTAMP, query);
+	const bool emit = m_SmokeGpuBenchmarkRunning ?
+		m_SmokeGpuBenchmarkSubmitted < m_SmokeGpuBenchmarkConfig.emitterSteps : m_SmokeGpuEmitterEnabled;
 	// Injection updates the current scalar state in place.
 	scalarOutputs(m_GpuScalarReadIndex);
 	commandList->SetPipelineState(m_SmokeInjectPSO.Get());
-	commandList->Dispatch(gx, gy, gz);
+	if (emit) commandList->Dispatch(gx, gy, gz);
 
 	// Advect all components from the same immutable old velocity field.
 	velocityInputs(m_GpuVelocityReadIndex);
@@ -4468,7 +4507,7 @@ void Renderer::DispatchSmokeSourceTest(ID3D12GraphicsCommandList* commandList)
 	bind(SmokeBindingDivergenceReadRoot, m_GpuDivergence.srv);
 	UINT readIndex = 0, writeIndex = 1;
 	commandList->SetPipelineState(m_SmokeApplyPressurePSO.Get());
-	constexpr UINT pressureIterations = 20;
+	const UINT pressureIterations = static_cast<UINT>(m_SmokeGpuBenchmarkRunning ? m_SmokeGpuBenchmarkIterations : m_SmokeGpuPressureIterations);
 	for (UINT i = 0; i < pressureIterations; ++i)
 	{
 		srv(m_GpuPressure[readIndex]);
@@ -4492,4 +4531,26 @@ void Renderer::DispatchSmokeSourceTest(ID3D12GraphicsCommandList* commandList)
 	std::swap(m_GpuScalarReadIndex, m_GpuScalarWriteIndex);
 	m_SmokeGpuStepRequested = false;
 	++m_SmokeGpuInjectionCount;
+	commandList->EndQuery(m_SmokeGpuQueries.Get(), D3D12_QUERY_TYPE_TIMESTAMP, query + 1);
+	auto& readback = m_SmokeGpuReadbacks[m_CurrentFrameResourceIndex];
+	commandList->ResolveQueryData(m_SmokeGpuQueries.Get(), D3D12_QUERY_TYPE_TIMESTAMP,
+		query, 2, readback.buffer.Get(), 0);
+	readback.pending = true;
+	readback.benchmark = m_SmokeGpuBenchmarkRunning;
+	readback.sample = {};
+	readback.sample.emit = emit;
+	if (m_SmokeGpuBenchmarkRunning)
+	{
+		readback.sample.step = ++m_SmokeGpuBenchmarkSubmitted;
+		auto& density = m_GpuDensity[m_GpuScalarReadIndex];
+		transition(density, D3D12_RESOURCE_STATE_COPY_SOURCE);
+		D3D12_TEXTURE_COPY_LOCATION source = {};
+		source.pResource = density.resource.Get();
+		source.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+		D3D12_TEXTURE_COPY_LOCATION destination = {};
+		destination.pResource = readback.buffer.Get();
+		destination.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+		destination.PlacedFootprint = m_SmokeGpuReadbackFootprint;
+		commandList->CopyTextureRegion(&destination, 0, 0, 0, &source, nullptr);
+	}
 }
