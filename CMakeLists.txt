@@ -118,12 +118,11 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 #     endif()
 # endif()
 
-# Optional: copy a Shaders or Assets folder next to the built exe
-# add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-#     COMMAND ${CMAKE_COMMAND} -E copy_directory
-#             "${CMAKE_SOURCE_DIR}/Assets"
-#             "$<TARGET_FILE_DIR:${PROJECT_NAME}>/Assets"
-# )
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${CMAKE_SOURCE_DIR}/src/Shaders"
+            "$<TARGET_FILE_DIR:${PROJECT_NAME}>/Shaders"
+)
 
 # Optional: set subsystem explicitly if you ever switch the executable kind at runtime
 # if(MSVC AND BUILD_WIN32_SUBSYSTEM)

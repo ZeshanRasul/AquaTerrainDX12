@@ -4447,7 +4447,7 @@ void Renderer::DispatchSmokeSourceTest(ID3D12GraphicsCommandList* commandList)
 	constants.origin[0] = static_cast<float>(m_SmokeSolver.Density().Origin().x);
 	constants.origin[1] = static_cast<float>(m_SmokeSolver.Density().Origin().y);
 	constants.origin[2] = static_cast<float>(m_SmokeSolver.Density().Origin().z);
-	constants.pad2 = 0.0f;
+	constants.openTopEnabled = m_SmokeGpuOpenTopEnabled ? 1u : 0u;
 	constants.sphereObstacle.enabled = m_SmokeGpuSphereEnabled ? 1u : 0u;
 	constants.sphereObstacle.centre[0] = m_SmokeGpuSphereCentre.x;
 	constants.sphereObstacle.centre[1] = m_SmokeGpuSphereCentre.y;

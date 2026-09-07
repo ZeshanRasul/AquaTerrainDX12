@@ -111,6 +111,7 @@ void Renderer::DrawSmokeGpuDebug()
         ImGui::SetTooltip("Radius in simulation units. Changes apply on the next simulation step.\n"
             "Use Reset for a clean comparison; resizing does not model a moving solid.");
     ImGui::EndDisabled();
+	ImGui::Checkbox("Open Top Enabled", &m_SmokeGpuOpenTopEnabled);
     const auto worldRadii = SmokeObstacleWorldRadii();
     const auto cellSpacing = m_SmokeSolver.Density().GridSpacing();
     ImGui::Text("Radius in cells: %.2f, %.2f, %.2f",

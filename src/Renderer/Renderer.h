@@ -441,6 +441,7 @@ private:
     bool m_SmokeGpuEmitterEnabled = true;
     bool m_SmokeGpuSphereEnabled = true;
     float m_SmokeGpuSphereRadius = 0.085f;
+	bool m_SmokeGpuOpenTopEnabled = false;
     DirectX::XMFLOAT3 m_SmokeGpuSphereCentre = { 0.0f, 0.1f, 0.0f };
     void CreateSmokeObstaclePipeline();
     void DrawSmokeObstacle(ID3D12GraphicsCommandList* commandList);
@@ -525,7 +526,7 @@ struct SmokeBindingConstants
 	float Padding[3];
 
 	float origin[3];
-	float pad2;
+	int openTopEnabled;
 
 	SmokeSphereObstacle sphereObstacle;
 };
