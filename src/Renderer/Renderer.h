@@ -39,6 +39,23 @@ struct HeightMap
 	UINT height;
 };
 
+enum SmokeTimestamp : UINT
+{
+	SmokeTimestampStepBegin = 0,
+	SmokeTimestampSourceEnd,
+	SmokeTimestampVelocityAdvectionEnd,
+	SmokeTimestampBuoyancyEnd,
+	SmokeTimestampDivergenceEnd,
+	SmokeTimestampPressureClearEnd,
+	SmokeTimestampPressureSolveEnd,
+	SmokeTimestampPressureGradientEnd,
+	SmokeTimestampStepEnd,
+	SmokeTimestampDiagnosticsEnd,
+	SmokeTimestampCount
+};
+
+constexpr UINT SmokeTimestampSlotsPerFrame = 2;
+
 class Renderer {
 public:
 	Renderer(HWND& windowHandle, UINT width, UINT height, Camera& cam);
@@ -407,6 +424,10 @@ private:
 	std::array<SmokeGpuTexture, 2> m_GpuPressure;
 
 	SmokeGpuTexture m_GpuDivergence;
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_SmokeGpuDiagnosticBuffer;
+	D3D12_GPU_DESCRIPTOR_HANDLE m_SmokeGpuDiagnosticUav = {};
+	D3D12_RESOURCE_STATES m_SmokeGpuDiagnosticState =
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_SmokeGpuDescriptorHeap;
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_SmokeCpuDescriptorHeap;
 
@@ -432,6 +453,9 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SmokeAdvectScalarsPSO;
 
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SmokeAdvectVelocityPSO;
+	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SmokeReduceDivergenceBeforePSO;
+	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SmokeReduceDivergenceAfterPSO;
+	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SmokeReduceVelocityPSO;
 
 	void CreateSmokeBindingRootSignature();
 	void CreateSmokeBindingPSOs();
@@ -452,6 +476,19 @@ private:
     unsigned m_SmokeGpuPendingSteps = 0;
     int m_SmokeGpuPressureIterations = 20;
     double m_SmokeGpuLastMilliseconds = 0.0;
+    double m_SmokeGpuLastPressureMilliseconds = 0.0;
+	unsigned m_SmokeGpuLastPressureIterations = 0;
+	double m_SmokeGpuAverageIterationMicroSeconds = 0.0;
+	double m_SmokeGpuPressureFraction = 0.0;
+	std::array<double, SmokeTimestampCount - 1> m_SmokeGpuLastStageMilliseconds{};
+	double m_SmokeGpuLastDivergenceBeforeRms = 0.0;
+	double m_SmokeGpuLastDivergenceBeforeMax = 0.0;
+	double m_SmokeGpuLastDivergenceAfterRms = 0.0;
+	double m_SmokeGpuLastDivergenceAfterMax = 0.0;
+	double m_SmokeGpuLastKineticEnergy = 0.0;
+	double m_SmokeGpuLastRmsSpeed = 0.0;
+	double m_SmokeGpuLastMaxSpeed = 0.0;
+	unsigned m_SmokeGpuLastDiagnosticNonfinite = 0;
     void DrawSmokeGpuDebug();
     void CreateSmokeGpuDiagnostics();
     void CollectSmokeGpuDiagnostics();
@@ -465,17 +502,42 @@ private:
         double densitySum = 0.0, densityMin = 0.0, densityMax = 0.0;
         Vector3 centre{};
         unsigned nonfinite = 0;
+		unsigned pressureIterations = 0;
+		double sourceMilliseconds = 0.0;
+		double velocityAdvectionMilliseconds = 0.0;
+		double buoyancyMilliseconds = 0.0;
+		double divergenceMilliseconds = 0.0;
+		double pressureClearMilliseconds = 0.0;
+		double pressureMilliseconds = 0.0;
+		double pressureGradientMilliseconds = 0.0;
+		double scalarAdvectionMilliseconds = 0.0;
+		double diagnosticsMilliseconds = 0.0;
+		double divergenceBeforeRms = 0.0;
+		double divergenceBeforeMax = 0.0;
+		double divergenceAfterRms = 0.0;
+		double divergenceAfterMax = 0.0;
+		double kineticEnergy = 0.0;
+		double rmsSpeed = 0.0;
+		double maxSpeed = 0.0;
+		unsigned divergenceBeforeNonfinite = 0;
+		unsigned divergenceAfterNonfinite = 0;
+		unsigned velocityNonfinite = 0;
+		unsigned diagnosticNonfinite = 0;
     };
+
     struct GpuSmokeReadback
     {
         Microsoft::WRL::ComPtr<ID3D12Resource> buffer;
         bool pending = false;
         bool benchmark = false;
+		UINT64 timestampOffset = 0;
         GpuSmokeSample sample;
     };
+
     std::array<GpuSmokeReadback, NumFrameResources> m_SmokeGpuReadbacks;
     Microsoft::WRL::ComPtr<ID3D12QueryHeap> m_SmokeGpuQueries;
     D3D12_PLACED_SUBRESOURCE_FOOTPRINT m_SmokeGpuReadbackFootprint{};
+	UINT64 m_SmokeGpuDiagnosticsReadbackOffset = 0;
     UINT64 m_SmokeGpuTimestampFrequency = 0;
     bool m_SmokeGpuBenchmarkRunning = false;
     bool m_SmokeGpuBenchmarkStopping = false;
@@ -488,7 +550,9 @@ private:
     std::string m_SmokeGpuBenchmarkStatus = "No GPU benchmark recorded yet.";
     bool m_SmokeGpuStepRequested = false;
     unsigned int m_SmokeGpuInjectionCount = 0;
-    void DispatchSmokeSourceTest(ID3D12GraphicsCommandList* commandList);
+    void DispatchSmokeSourceTest(
+		ID3D12GraphicsCommandList* commandList,
+		UINT timestampSlot = 0);
 
 	std::uint32_t m_GpuScalarReadIndex = 0;
 	std::uint32_t m_GpuScalarWriteIndex = 1;
@@ -552,5 +616,6 @@ enum SmokeBindingRootParameter : UINT
 	SmokeBindingPressureWriteRoot, //u7: pressure
 	SmokeBindingPressureReadInputRoot,  // u7, u8: pressure
 	SmokeBindingDivergenceReadRoot,
+	SmokeBindingDiagnosticsRoot, // u9: three float4 reduction records
 	SmokeBindingRootCount
 };

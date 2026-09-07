@@ -59,6 +59,7 @@ RWTexture3D<float> Divergence : register(u5);
 Texture3D<float> DivergenceRead : register(t5);
 Texture3D<float> PressureRead : register(t6);
 RWTexture3D<float> PressureWrite : register(u6);
+RWStructuredBuffer<float4> DiagnosticsOutput : register(u9);
 
 SamplerState LinearClamp : register(s0);
 
@@ -556,4 +557,153 @@ void AdvectVelocityCS(uint3 id : SV_DispatchThreadID)
             VelocityW[id] = SampleW(BackTrace(q));
         }
     }
+}
+
+// Numerical diagnostics deliberately use one 256-thread group. Each thread
+// walks a strided subset of the small reference grid, then the group performs
+// one deterministic tree reduction. The passes run after the solver timestamp.
+groupshared float DiagnosticSum[256];
+groupshared float DiagnosticMaximum[256];
+groupshared uint DiagnosticCount[256];
+groupshared uint DiagnosticNonfinite[256];
+
+bool IsFiniteDiagnostic(float value)
+{
+    return (asuint(value) & 0x7f800000u) != 0x7f800000u;
+}
+
+void FinishDiagnosticReduction(uint lane, uint outputIndex)
+{
+    GroupMemoryBarrierWithGroupSync();
+
+    [unroll]
+    for (uint stride = 128; stride > 0; stride >>= 1)
+    {
+        if (lane < stride)
+        {
+            DiagnosticSum[lane] += DiagnosticSum[lane + stride];
+            DiagnosticMaximum[lane] = max(
+                DiagnosticMaximum[lane],
+                DiagnosticMaximum[lane + stride]);
+            DiagnosticCount[lane] += DiagnosticCount[lane + stride];
+            DiagnosticNonfinite[lane] += DiagnosticNonfinite[lane + stride];
+        }
+        GroupMemoryBarrierWithGroupSync();
+    }
+
+    if (lane == 0)
+    {
+        DiagnosticsOutput[outputIndex] = float4(
+            DiagnosticSum[0],
+            DiagnosticMaximum[0],
+            float(DiagnosticCount[0]),
+            float(DiagnosticNonfinite[0]));
+    }
+}
+
+void ReduceDivergence(uint lane, uint outputIndex)
+{
+    const uint cellCount =
+        GridResolution.x * GridResolution.y * GridResolution.z;
+    float sumSquares = 0.0f;
+    float maximumAbsolute = 0.0f;
+    uint validCount = 0;
+    uint nonfiniteCount = 0;
+
+    for (uint linearIndex = lane; linearIndex < cellCount; linearIndex += 256)
+    {
+        const uint x = linearIndex % GridResolution.x;
+        const uint yz = linearIndex / GridResolution.x;
+        const uint y = yz % GridResolution.y;
+        const uint z = yz / GridResolution.y;
+        const int3 cell = int3(x, y, z);
+
+        if (ClassifyCell(cell) != CELL_FLUID)
+            continue;
+
+        const float value = DivergenceRead.Load(int4(cell, 0));
+        if (!IsFiniteDiagnostic(value))
+        {
+            ++nonfiniteCount;
+            continue;
+        }
+
+        sumSquares += value * value;
+        maximumAbsolute = max(maximumAbsolute, abs(value));
+        ++validCount;
+    }
+
+    DiagnosticSum[lane] = sumSquares;
+    DiagnosticMaximum[lane] = maximumAbsolute;
+    DiagnosticCount[lane] = validCount;
+    DiagnosticNonfinite[lane] = nonfiniteCount;
+    FinishDiagnosticReduction(lane, outputIndex);
+}
+
+[numthreads(256, 1, 1)]
+void ReduceDivergenceBeforeCS(
+    uint3 dispatchThreadId : SV_DispatchThreadID,
+    uint lane : SV_GroupIndex)
+{
+    ReduceDivergence(lane, 0);
+}
+
+[numthreads(256, 1, 1)]
+void ReduceDivergenceAfterCS(
+    uint3 dispatchThreadId : SV_DispatchThreadID,
+    uint lane : SV_GroupIndex)
+{
+    ReduceDivergence(lane, 1);
+}
+
+[numthreads(256, 1, 1)]
+void ReduceVelocityCS(
+    uint3 dispatchThreadId : SV_DispatchThreadID,
+    uint lane : SV_GroupIndex)
+{
+    const uint cellCount =
+        GridResolution.x * GridResolution.y * GridResolution.z;
+    float sumSpeedSquared = 0.0f;
+    float maximumSpeed = 0.0f;
+    uint validCount = 0;
+    uint nonfiniteCount = 0;
+
+    for (uint linearIndex = lane; linearIndex < cellCount; linearIndex += 256)
+    {
+        const uint x = linearIndex % GridResolution.x;
+        const uint yz = linearIndex / GridResolution.x;
+        const uint y = yz % GridResolution.y;
+        const uint z = yz / GridResolution.y;
+        const int3 cell = int3(x, y, z);
+
+        if (ClassifyCell(cell) != CELL_FLUID)
+            continue;
+
+        const float3 velocity = float3(
+            0.5f * (VelocityUInput.Load(int4(cell, 0)) +
+                    VelocityUInput.Load(int4(cell + int3(1, 0, 0), 0))),
+            0.5f * (VelocityVInput.Load(int4(cell, 0)) +
+                    VelocityVInput.Load(int4(cell + int3(0, 1, 0), 0))),
+            0.5f * (VelocityWInput.Load(int4(cell, 0)) +
+                    VelocityWInput.Load(int4(cell + int3(0, 0, 1), 0))));
+
+        if (!IsFiniteDiagnostic(velocity.x) ||
+            !IsFiniteDiagnostic(velocity.y) ||
+            !IsFiniteDiagnostic(velocity.z))
+        {
+            ++nonfiniteCount;
+            continue;
+        }
+
+        const float speedSquared = dot(velocity, velocity);
+        sumSpeedSquared += speedSquared;
+        maximumSpeed = max(maximumSpeed, sqrt(speedSquared));
+        ++validCount;
+    }
+
+    DiagnosticSum[lane] = sumSpeedSquared;
+    DiagnosticMaximum[lane] = maximumSpeed;
+    DiagnosticCount[lane] = validCount;
+    DiagnosticNonfinite[lane] = nonfiniteCount;
+    FinishDiagnosticReduction(lane, 2);
 }

@@ -10,15 +10,20 @@ void Renderer::CreateSmokeGpuDiagnostics()
 {
     D3D12_QUERY_HEAP_DESC desc = {};
     desc.Type = D3D12_QUERY_HEAP_TYPE_TIMESTAMP;
-    desc.Count = 2 * NumFrameResources;
+    desc.Count = static_cast<UINT>(SmokeTimestampCount) *
+        SmokeTimestampSlotsPerFrame * NumFrameResources;
     ThrowIfFailed(m_Device->CreateQueryHeap(&desc, IID_PPV_ARGS(&m_SmokeGpuQueries)));
     ThrowIfFailed(m_CommandQueue->GetTimestampFrequency(&m_SmokeGpuTimestampFrequency));
     const auto texture = m_GpuDensity[0].resource->GetDesc();
     UINT64 bytes = 0;
-    // Two timestamps precede the aligned texture footprint.
+    // Timestamp results occupy the beginning of the buffer. The copied density
+    // begins at the required 512-byte texture-footprint alignment.
     m_Device->GetCopyableFootprints(&texture, 0, 1, 512,
         &m_SmokeGpuReadbackFootprint, nullptr, nullptr, &bytes);
-    const auto buffer = CD3DX12_RESOURCE_DESC::Buffer(bytes + 512);
+    m_SmokeGpuDiagnosticsReadbackOffset = (bytes + 255u) & ~UINT64{ 255u };
+    constexpr UINT64 diagnosticBytes = 3 * sizeof(XMFLOAT4);
+    const auto buffer = CD3DX12_RESOURCE_DESC::Buffer(
+        m_SmokeGpuDiagnosticsReadbackOffset + diagnosticBytes);
     const auto heap = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_READBACK);
     for (auto& slot : m_SmokeGpuReadbacks)
         ThrowIfFailed(m_Device->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE,
@@ -34,11 +39,107 @@ void Renderer::CollectSmokeGpuDiagnostics()
         void* mapped = nullptr;
         const D3D12_RANGE reads = { 0, static_cast<SIZE_T>(slot.buffer->GetDesc().Width) };
         ThrowIfFailed(slot.buffer->Map(0, &reads, &mapped));
-        const auto* timestamps = static_cast<const UINT64*>(mapped);
-        auto sample = slot.sample;
-        sample.milliseconds = 1000.0 * static_cast<double>(timestamps[1] - timestamps[0]) /
+        const auto* timestamps = reinterpret_cast<const UINT64*>(
+            static_cast<const std::byte*>(mapped) + slot.timestampOffset);
+
+        const double tickToMilliseconds =
+            1000.0 /
             static_cast<double>(m_SmokeGpuTimestampFrequency);
+
+        const auto elapsedMilliseconds = [&](SmokeTimestamp begin, SmokeTimestamp end)
+        {
+            return static_cast<double>(timestamps[end] - timestamps[begin]) *
+                tickToMilliseconds;
+        };
+
+        auto sample = slot.sample;
+        sample.sourceMilliseconds = elapsedMilliseconds(
+            SmokeTimestampStepBegin, SmokeTimestampSourceEnd);
+        sample.velocityAdvectionMilliseconds = elapsedMilliseconds(
+            SmokeTimestampSourceEnd, SmokeTimestampVelocityAdvectionEnd);
+        sample.buoyancyMilliseconds = elapsedMilliseconds(
+            SmokeTimestampVelocityAdvectionEnd, SmokeTimestampBuoyancyEnd);
+        sample.divergenceMilliseconds = elapsedMilliseconds(
+            SmokeTimestampBuoyancyEnd, SmokeTimestampDivergenceEnd);
+        sample.pressureClearMilliseconds = elapsedMilliseconds(
+            SmokeTimestampDivergenceEnd, SmokeTimestampPressureClearEnd);
+        sample.pressureMilliseconds = elapsedMilliseconds(
+            SmokeTimestampPressureClearEnd, SmokeTimestampPressureSolveEnd);
+        sample.pressureGradientMilliseconds = elapsedMilliseconds(
+            SmokeTimestampPressureSolveEnd, SmokeTimestampPressureGradientEnd);
+        sample.scalarAdvectionMilliseconds = elapsedMilliseconds(
+            SmokeTimestampPressureGradientEnd, SmokeTimestampStepEnd);
+        sample.milliseconds = elapsedMilliseconds(
+            SmokeTimestampStepBegin, SmokeTimestampStepEnd);
+        sample.diagnosticsMilliseconds = elapsedMilliseconds(
+            SmokeTimestampStepEnd, SmokeTimestampDiagnosticsEnd);
         m_SmokeGpuLastMilliseconds = sample.milliseconds;
+        m_SmokeGpuLastPressureMilliseconds = sample.pressureMilliseconds;
+        m_SmokeGpuLastPressureIterations = sample.pressureIterations;
+        m_SmokeGpuLastStageMilliseconds = {
+            sample.sourceMilliseconds,
+            sample.velocityAdvectionMilliseconds,
+            sample.buoyancyMilliseconds,
+            sample.divergenceMilliseconds,
+            sample.pressureClearMilliseconds,
+            sample.pressureMilliseconds,
+            sample.pressureGradientMilliseconds,
+            sample.scalarAdvectionMilliseconds,
+            sample.diagnosticsMilliseconds
+        };
+
+        m_SmokeGpuAverageIterationMicroSeconds =
+            sample.pressureMilliseconds * 1000.0 /
+            static_cast<double>(std::max(sample.pressureIterations, 1u));
+
+        m_SmokeGpuPressureFraction =
+            sample.milliseconds > 0.0
+            ? sample.pressureMilliseconds / sample.milliseconds
+            : 0.0;
+
+        const auto* diagnostics = reinterpret_cast<const XMFLOAT4*>(
+            static_cast<const std::byte*>(mapped) +
+            m_SmokeGpuDiagnosticsReadbackOffset);
+        const auto divergenceMetric = [](const XMFLOAT4& record)
+        {
+            const double count = std::max(static_cast<double>(record.z), 1.0);
+            return std::sqrt(std::max(static_cast<double>(record.x), 0.0) / count);
+        };
+        sample.divergenceBeforeRms = divergenceMetric(diagnostics[0]);
+        sample.divergenceBeforeMax = diagnostics[0].y;
+        sample.divergenceAfterRms = divergenceMetric(diagnostics[1]);
+        sample.divergenceAfterMax = diagnostics[1].y;
+        const double velocityCount =
+            std::max(static_cast<double>(diagnostics[2].z), 1.0);
+        const double speedSquaredSum =
+            std::max(static_cast<double>(diagnostics[2].x), 0.0);
+        const auto gridSpacing = m_SmokeSolver.Density().GridSpacing();
+        const double cellVolume =
+            gridSpacing.x * gridSpacing.y * gridSpacing.z;
+        sample.kineticEnergy = 0.5 * m_SmokeSolver.FluidDensity() *
+            speedSquaredSum * cellVolume;
+        sample.rmsSpeed = std::sqrt(speedSquaredSum / velocityCount);
+        sample.maxSpeed = diagnostics[2].y;
+        sample.divergenceBeforeNonfinite =
+            static_cast<unsigned>(std::max(diagnostics[0].w, 0.0f));
+        sample.divergenceAfterNonfinite =
+            static_cast<unsigned>(std::max(diagnostics[1].w, 0.0f));
+        sample.velocityNonfinite =
+            static_cast<unsigned>(std::max(diagnostics[2].w, 0.0f));
+        sample.diagnosticNonfinite =
+            sample.divergenceBeforeNonfinite +
+            sample.divergenceAfterNonfinite +
+            sample.velocityNonfinite;
+
+        m_SmokeGpuLastDivergenceBeforeRms = sample.divergenceBeforeRms;
+        m_SmokeGpuLastDivergenceBeforeMax = sample.divergenceBeforeMax;
+        m_SmokeGpuLastDivergenceAfterRms = sample.divergenceAfterRms;
+        m_SmokeGpuLastDivergenceAfterMax = sample.divergenceAfterMax;
+        m_SmokeGpuLastKineticEnergy = sample.kineticEnergy;
+        m_SmokeGpuLastRmsSpeed = sample.rmsSpeed;
+        m_SmokeGpuLastMaxSpeed = sample.maxSpeed;
+        m_SmokeGpuLastDiagnosticNonfinite = sample.diagnosticNonfinite;
+
         if (slot.benchmark)
         {
             const auto n = m_SmokeSolver.Density().Resolution();
@@ -96,6 +197,49 @@ void Renderer::DrawSmokeGpuDebug()
     ImGui::Text("GPU solver: %.3f ms / step (delayed timestamp)", m_SmokeGpuLastMilliseconds);
     ImGui::Text("Simulation steps: %u | simulated time: %.2f s",
         m_SmokeGpuInjectionCount, m_SmokeGpuInjectionCount / 60.0);
+
+    ImGui::Text(
+        "GPU pressure solve: %.3f ms (%u Jacobi iterations)",
+        m_SmokeGpuLastPressureMilliseconds,
+        m_SmokeGpuLastPressureIterations);
+
+    ImGui::Text(
+		"GPU average iteration: %.3f µs",
+        m_SmokeGpuAverageIterationMicroSeconds);
+    ImGui::Text("Pressure share: %.1f%%", 100.0 * m_SmokeGpuPressureFraction);
+    ImGui::SeparatorText("Latest GPU stage timings");
+    ImGui::Text("Source injection       %8.3f ms", m_SmokeGpuLastStageMilliseconds[0]);
+    ImGui::Text("Velocity advection     %8.3f ms", m_SmokeGpuLastStageMilliseconds[1]);
+    ImGui::Text("Buoyancy               %8.3f ms", m_SmokeGpuLastStageMilliseconds[2]);
+    ImGui::Text("Divergence             %8.3f ms", m_SmokeGpuLastStageMilliseconds[3]);
+    ImGui::Text("Pressure clear/setup   %8.3f ms", m_SmokeGpuLastStageMilliseconds[4]);
+    ImGui::Text("Jacobi pressure solve  %8.3f ms", m_SmokeGpuLastStageMilliseconds[5]);
+    ImGui::Text("Gradient subtraction   %8.3f ms", m_SmokeGpuLastStageMilliseconds[6]);
+    ImGui::Text("Scalar advection       %8.3f ms", m_SmokeGpuLastStageMilliseconds[7]);
+
+    ImGui::SeparatorText("Numerical diagnostics");
+    ImGui::Text("RMS divergence: %.3e -> %.3e",
+        m_SmokeGpuLastDivergenceBeforeRms,
+        m_SmokeGpuLastDivergenceAfterRms);
+    ImGui::Text("Max |divergence|: %.3e -> %.3e",
+        m_SmokeGpuLastDivergenceBeforeMax,
+        m_SmokeGpuLastDivergenceAfterMax);
+    const double remainingDivergence =
+        m_SmokeGpuLastDivergenceBeforeRms > 1.0e-20
+        ? 100.0 * m_SmokeGpuLastDivergenceAfterRms /
+            m_SmokeGpuLastDivergenceBeforeRms
+        : 0.0;
+    ImGui::Text("Remaining RMS divergence: %.2f%%", remainingDivergence);
+    ImGui::Text("Kinetic energy: %.6e", m_SmokeGpuLastKineticEnergy);
+    ImGui::Text("Speed RMS / max: %.4f / %.4f",
+        m_SmokeGpuLastRmsSpeed,
+        m_SmokeGpuLastMaxSpeed);
+    ImGui::Text("Nonfinite diagnostic samples: %u",
+        m_SmokeGpuLastDiagnosticNonfinite);
+    ImGui::Text("GPU reduction cost: %.3f ms",
+        m_SmokeGpuLastStageMilliseconds[8]);
+    ImGui::TextDisabled("Numerical reductions and readback are outside solver timestamps.");
+
     ImGui::BeginDisabled(m_SmokeGpuBenchmarkRunning);
     if (ImGui::Checkbox("Paused", &m_SmokeGpuPaused))
     {
@@ -111,7 +255,6 @@ void Renderer::DrawSmokeGpuDebug()
         ImGui::SetTooltip("Radius in simulation units. Changes apply on the next simulation step.\n"
             "Use Reset for a clean comparison; resizing does not model a moving solid.");
     ImGui::EndDisabled();
-	ImGui::Checkbox("Open Top Enabled", &m_SmokeGpuOpenTopEnabled);
     const auto worldRadii = SmokeObstacleWorldRadii();
     const auto cellSpacing = m_SmokeSolver.Density().GridSpacing();
     ImGui::Text("Radius in cells: %.2f, %.2f, %.2f",
@@ -120,6 +263,7 @@ void Renderer::DrawSmokeGpuDebug()
         m_SmokeGpuSphereRadius / cellSpacing.z);
     ImGui::Text("World diameters: %.2f, %.2f, %.2f",
         2.0f * worldRadii.x, 2.0f * worldRadii.y, 2.0f * worldRadii.z);
+	ImGui::Checkbox("Open Top Enabled", &m_SmokeGpuOpenTopEnabled);
     if (ImGui::Button("Single step"))
     {
         m_SmokeGpuPaused = true;
@@ -146,8 +290,13 @@ void Renderer::DrawSmokeGpuDebug()
     {
         SmokeBenchmarkConfig config;
         config.implementation = "gpu_jacobi";
+        config.scenario = m_SmokeGpuOpenTopEnabled
+            ? "buoyant_plume_open_top_v1"
+            : "buoyant_plume_closed_box_v1";
         if (m_SmokeGpuSphereEnabled)
-            config.scenario = "buoyant_plume_closed_box_sphere_v1";
+            config.scenario = m_SmokeGpuOpenTopEnabled
+                ? "buoyant_plume_open_top_sphere_v1"
+                : "buoyant_plume_closed_box_sphere_v1";
         config.runLabel = m_SmokeBenchmarkRunLabel;
         config.totalSteps = std::max(1, m_SmokeBenchmarkTotalSteps);
         config.emitterSteps = std::clamp(m_SmokeBenchmarkEmitterSteps, 0, static_cast<int>(config.totalSteps));
@@ -179,7 +328,7 @@ void Renderer::DrawSmokeGpuDebug()
         if (ImGui::Button("Stop and save partial run")) m_SmokeGpuBenchmarkStopping = true;
     }
     ImGui::TextWrapped("%s", m_SmokeGpuBenchmarkStatus.c_str());
-    ImGui::TextWrapped("Exports GPU solver time and density metrics. GPU divergence/velocity metrics are not captured. Compare equal step counts and settings with the CPU benchmark; PCG and Jacobi accuracy differs.");
+    ImGui::TextWrapped("Exports GPU stage time, density, divergence and velocity metrics. Compare equal step counts and settings with the CPU benchmark; PCG and Jacobi accuracy differs.");
     ImGui::End();
 }
 
@@ -205,12 +354,31 @@ void Renderer::SaveSmokeGpuBenchmark()
             return file;
         };
         auto csv = open("steps.csv");
-        csv << "step_index,simulation_time_s,emitter_enabled,solver_gpu_ms,pressure_iterations,density_min,density_max,density_sum,density_integral,density_centre_x,density_centre_y,density_centre_z,nonfinite_density_cells\n";
+        csv << "step_index,simulation_time_s,emitter_enabled,solver_gpu_ms,diagnostics_gpu_ms,source_gpu_ms,velocity_advection_gpu_ms,buoyancy_gpu_ms,divergence_gpu_ms,pressure_clear_gpu_ms,pressure_solve_gpu_ms,pressure_gradient_gpu_ms,scalar_advection_gpu_ms,pressure_fraction,pressure_iteration_us,pressure_iterations,rms_divergence_before,max_abs_divergence_before,rms_divergence_after,max_abs_divergence_after,divergence_remaining_fraction,kinetic_energy,velocity_rms,velocity_max,nonfinite_divergence_before,nonfinite_divergence_after,nonfinite_velocity,density_min,density_max,density_sum,density_integral,density_centre_x,density_centre_y,density_centre_z,nonfinite_density_cells\n";
         std::vector<double> timings;
         for (const auto& x : samples)
         {
-            csv << x.step << ',' << x.step * config.timeStep << ',' << x.emit << ',' << x.milliseconds << ','
-                << m_SmokeGpuBenchmarkIterations << ',' << x.densityMin << ',' << x.densityMax << ',' << x.densitySum << ','
+            const double pressureFraction = x.milliseconds > 0.0
+                ? x.pressureMilliseconds / x.milliseconds : 0.0;
+            const double iterationMicroseconds = x.pressureMilliseconds * 1000.0 /
+                static_cast<double>(std::max(x.pressureIterations, 1u));
+            const double remainingDivergence = x.divergenceBeforeRms > 1.0e-20
+                ? x.divergenceAfterRms / x.divergenceBeforeRms : 0.0;
+            csv << x.step << ',' << x.step * config.timeStep << ',' << x.emit << ','
+                << x.milliseconds << ',' << x.diagnosticsMilliseconds << ','
+                << x.sourceMilliseconds << ',' << x.velocityAdvectionMilliseconds << ','
+                << x.buoyancyMilliseconds << ',' << x.divergenceMilliseconds << ','
+                << x.pressureClearMilliseconds << ',' << x.pressureMilliseconds << ','
+                << x.pressureGradientMilliseconds << ',' << x.scalarAdvectionMilliseconds << ','
+                << pressureFraction << ',' << iterationMicroseconds << ','
+                << x.pressureIterations << ','
+                << x.divergenceBeforeRms << ',' << x.divergenceBeforeMax << ','
+                << x.divergenceAfterRms << ',' << x.divergenceAfterMax << ','
+                << remainingDivergence << ',' << x.kineticEnergy << ','
+                << x.rmsSpeed << ',' << x.maxSpeed << ','
+                << x.divergenceBeforeNonfinite << ','
+                << x.divergenceAfterNonfinite << ',' << x.velocityNonfinite << ','
+                << x.densityMin << ',' << x.densityMax << ',' << x.densitySum << ','
                 << x.densitySum * h.x * h.y * h.z << ',' << x.centre.x << ',' << x.centre.y << ',' << x.centre.z << ',' << x.nonfinite << '\n';
             if (x.step > config.performanceWarmupSteps) timings.push_back(x.milliseconds);
         }
@@ -223,13 +391,68 @@ void Renderer::SaveSmokeGpuBenchmark()
             const auto b = std::min(a + 1, timings.size() - 1);
             return timings[a] + (i - a) * (timings[b] - timings[a]);
         };
+        auto stageMean = [&](double GpuSmokeSample::* member)
+        {
+            double total = 0.0;
+            std::size_t count = 0;
+            for (const auto& x : samples)
+                if (x.step > config.performanceWarmupSteps)
+                {
+                    total += x.*member;
+                    ++count;
+                }
+            return count > 0 ? total / static_cast<double>(count) : 0.0;
+        };
+        double remainingDivergenceTotal = 0.0;
+        double divergenceAfterPeak = 0.0;
+        double maxSpeedPeak = 0.0;
+        std::uint64_t diagnosticNonfiniteTotal = 0;
+        std::size_t numericalCount = 0;
+        for (const auto& x : samples)
+            if (x.step > config.performanceWarmupSteps)
+            {
+                if (x.divergenceBeforeRms > 1.0e-20)
+                    remainingDivergenceTotal +=
+                        x.divergenceAfterRms / x.divergenceBeforeRms;
+                divergenceAfterPeak = std::max(
+                    divergenceAfterPeak, x.divergenceAfterMax);
+                maxSpeedPeak = std::max(maxSpeedPeak, x.maxSpeed);
+                diagnosticNonfiniteTotal += x.diagnosticNonfinite;
+                ++numericalCount;
+            }
         auto summary = open("summary.csv");
-        summary << "implementation,completed,steps_recorded,warmup_steps_excluded,solver_gpu_ms_mean,solver_gpu_ms_p50,solver_gpu_ms_p95,solver_gpu_ms_p99\n";
+        summary << "implementation,completed,steps_recorded,warmup_steps_excluded,solver_gpu_ms_mean,solver_gpu_ms_p50,solver_gpu_ms_p95,solver_gpu_ms_p99,diagnostics_gpu_ms_mean,source_gpu_ms_mean,velocity_advection_gpu_ms_mean,buoyancy_gpu_ms_mean,divergence_gpu_ms_mean,pressure_clear_gpu_ms_mean,pressure_solve_gpu_ms_mean,pressure_gradient_gpu_ms_mean,scalar_advection_gpu_ms_mean,pressure_fraction_mean,rms_divergence_before_mean,rms_divergence_after_mean,divergence_remaining_fraction_mean,max_abs_divergence_after_peak,kinetic_energy_mean,velocity_rms_mean,velocity_max_peak,nonfinite_diagnostic_samples_total\n";
         summary << "gpu_jacobi," << completed << ',' << samples.size() << ',' << config.performanceWarmupSteps;
         if (!timings.empty())
-            summary << ',' << std::accumulate(timings.begin(), timings.end(), 0.0) / timings.size()
-                << ',' << percentile(0.50) << ',' << percentile(0.95) << ',' << percentile(0.99);
-        else summary << ",,,,";
+        {
+            const double stepMean =
+                std::accumulate(timings.begin(), timings.end(), 0.0) / timings.size();
+            summary << ',' << stepMean
+                << ',' << percentile(0.50) << ',' << percentile(0.95) << ',' << percentile(0.99)
+                << ',' << stageMean(&GpuSmokeSample::diagnosticsMilliseconds)
+                << ',' << stageMean(&GpuSmokeSample::sourceMilliseconds)
+                << ',' << stageMean(&GpuSmokeSample::velocityAdvectionMilliseconds)
+                << ',' << stageMean(&GpuSmokeSample::buoyancyMilliseconds)
+                << ',' << stageMean(&GpuSmokeSample::divergenceMilliseconds)
+                << ',' << stageMean(&GpuSmokeSample::pressureClearMilliseconds)
+                << ',' << stageMean(&GpuSmokeSample::pressureMilliseconds)
+                << ',' << stageMean(&GpuSmokeSample::pressureGradientMilliseconds)
+                << ',' << stageMean(&GpuSmokeSample::scalarAdvectionMilliseconds)
+                << ',' << stageMean(&GpuSmokeSample::pressureMilliseconds) / stepMean
+                << ',' << stageMean(&GpuSmokeSample::divergenceBeforeRms)
+                << ',' << stageMean(&GpuSmokeSample::divergenceAfterRms)
+                << ',' << (numericalCount > 0
+                    ? remainingDivergenceTotal / static_cast<double>(numericalCount)
+                    : 0.0)
+                << ',' << divergenceAfterPeak
+                << ',' << stageMean(&GpuSmokeSample::kineticEnergy)
+                << ',' << stageMean(&GpuSmokeSample::rmsSpeed)
+                << ',' << maxSpeedPeak
+                << ',' << diagnosticNonfiniteTotal;
+        }
+        else
+            for (int column = 0; column < 22; ++column)
+                summary << ',';
         summary << '\n';
         auto manifest = open("manifest.json");
         Microsoft::WRL::ComPtr<IDXGIFactory4> factory;
@@ -244,7 +467,7 @@ void Renderer::SaveSmokeGpuBenchmark()
             WideCharToMultiByte(CP_UTF8, 0, adapterDesc.Description, -1, name, sizeof(name), nullptr, nullptr);
             adapterName = name;
         }
-        manifest << "{\n  \"schema_version\": 1,\n  \"implementation\": \"gpu_jacobi\",\n  \"scenario\": " << std::quoted(config.scenario)
+        manifest << "{\n  \"schema_version\": 3,\n  \"implementation\": \"gpu_jacobi\",\n  \"scenario\": " << std::quoted(config.scenario)
             << ",\n  \"run_label\": " << std::quoted(config.runLabel)
             << ",\n  \"completed\": " << (completed ? "true" : "false")
             << ",\n  \"resolution\": [" << n.x << ',' << n.y << ',' << n.z << ']'
@@ -267,6 +490,11 @@ void Renderer::SaveSmokeGpuBenchmark()
             << ",\n  \"smoke_weight\": " << m_SmokeGpuBenchmarkPhysics.smokeWeight
             << ",\n  \"density_dissipation_per_s\": " << m_SmokeGpuBenchmarkPhysics.densityDissipation
             << ",\n  \"temperature_cooling_per_s\": " << m_SmokeGpuBenchmarkPhysics.temperatureCooling
+			<< ",\n  \"open_top_enabled\": " << (m_SmokeGpuOpenTopEnabled ? "true" : "false")
+			<< ",\n  \"solver_gpu_ms\": " << m_SmokeGpuLastMilliseconds
+            << ",\n  \"solver_gpu_pressure_ms\": " << m_SmokeGpuLastPressureMilliseconds
+			<< ",\n  \"solver_gpu_pressure_fraction\": " << m_SmokeGpuPressureFraction
+            << ",\n  \"solver_gpu_average_pressure_iteration_us\": " << m_SmokeGpuAverageIterationMicroSeconds
             << ",\n  \"rendering_enabled\": " << (config.renderingEnabledDuringRun ? "true" : "false")
             << ",\n  \"timestamp_frequency_hz\": " << m_SmokeGpuTimestampFrequency
             << ",\n  \"gpu_adapter\": " << std::quoted(adapterName)
@@ -278,11 +506,15 @@ void Renderer::SaveSmokeGpuBenchmark()
 #else
             << ",\n  \"build\": \"Release\""
 #endif
-            << ",\n  \"precision\": \"float32\",\n  \"boundary\": \"closed free-slip box\","
+            << ",\n  \"precision\": \"float32\",\n  \"boundary\": " << std::quoted(
+                m_SmokeGpuOpenTopEnabled
+                    ? "free-slip box with open top"
+                    : "closed free-slip box") << ','
             << "\n  \"advection\": \"semi-Lagrangian midpoint, hardware trilinear\","
-            << "\n  \"timing_scope\": \"GPU timestep only; excludes reset, readback, rendering, CPU diagnostics and file output\","
-            << "\n  \"readback\": \"density every step after timestamp; may affect total frame cost\","
-            << "\n  \"unavailable_metrics\": [\"divergence\",\"pressure_residual\",\"velocity\",\"temperature\"],"
+            << "\n  \"timing_scope\": \"GPU timestep split into source, velocity advection, buoyancy, divergence, pressure clear/setup, Jacobi solve, pressure-gradient subtraction and scalar advection; excludes reset, readback, rendering, CPU diagnostics and file output\","
+            << "\n  \"numerical_diagnostics\": \"single-group float32 GPU reductions over fluid cells; divergence before/after projection and cell-centred velocity energy; executed after solver timestamp\","
+            << "\n  \"readback\": \"density during benchmark and compact numerical diagnostics every step after timestamp; may affect total frame cost\","
+            << "\n  \"unavailable_metrics\": [\"pressure_residual\",\"temperature\"],"
             << "\n  \"comparison_note\": \"CPU PCG and fixed-iteration GPU Jacobi do not guarantee equal projection accuracy. Deterministic schedule, not cross-device bitwise determinism.\"\n}\n";
         csv.close(); summary.close(); manifest.close();
         m_SmokeGpuBenchmarkStatus = "Saved " + directory.string();
