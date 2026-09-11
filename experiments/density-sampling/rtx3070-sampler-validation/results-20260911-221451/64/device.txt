@@ -1,0 +1,8 @@
+NVIDIA GeForce RTX 3070 Laptop GPU
+Driver=9007199255730126
+N=64
+Queries=23503
+Format=R32_FLOAT
+Filter=MIN_MAG_MIP_LINEAR
+Address=CLAMP
+Compiler=cs_5_1 O3 strict
