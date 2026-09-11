@@ -14,6 +14,27 @@ enum class SmokeAdvectionMode
 	MacCormack = 1
 };
 
+// MacCormack combine limiter. Clamp: bound to source-field extrema (sharp, but
+// non-conservative). Revert: fall back to first-order on overshoot (Selle 2008;
+// stable, but over-diffuses). Adaptive: graded blend toward first-order by
+// overshoot magnitude (the candidate contribution).
+enum class SmokeLimiterMode
+{
+	Clamp = 0,
+	Revert = 1,
+	Adaptive = 2
+};
+
+// Passive-advection reference cases (correctness harness, not a physics scenario).
+enum class SmokeReferenceCase
+{
+	None = 0,
+	SourceOnly = 1,   // zero velocity, source on: verify injection + accumulation
+	StaticField = 2,  // zero velocity, no source: verify identity transport
+	Translation = 3,  // periodic constant translation (increment 2)
+	Rotation = 4      // solid-body rotation of a smooth blob (increment 2)
+};
+
 struct SmokeBenchmarkConfig
 {
 	std::string implementation = "cpu_pcg_reference";
@@ -31,6 +52,8 @@ struct SmokeBenchmarkConfig
 	Vector3 emitterAcceleration{};
 
 	SmokeAdvectionMode advectionMode = SmokeAdvectionMode::SemiLagrangian;
+	SmokeLimiterMode limiterMode = SmokeLimiterMode::Clamp;
+	Real vorticityEpsilon = 0.0;
 
 	bool renderingEnabledDuringRun = false;
 	std::filesystem::path outputRoot = "diagnostics/runs";

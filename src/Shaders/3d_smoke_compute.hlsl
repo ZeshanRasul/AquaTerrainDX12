@@ -22,7 +22,7 @@ cbuffer SmokeSourceConstants : register(b0)
     float hx;
     float hy;
     float hz;
-    float pad;
+    float vorticityEpsilon;
     
     float3 GridSpacing;
     float FluidDensity;
@@ -35,7 +35,37 @@ cbuffer SmokeSourceConstants : register(b0)
     uint openTopEnabled;
     
     SmokeSphereObstacle sphereObstacle;
+
+    int limiterMode; // 0 = clamp, 1 = revert, 2 = adaptive
+
+    // Passive-advection reference harness (inert in normal runs; all zero).
+    int periodicDomain;
+    int referenceVelocityMode;   // 0 zero, 1 translation +x, 2 rotation about z
+    float referenceSpeed;        // cells/step (translation) or rad/step (rotation)
+    float referenceBlobSigma;    // cells
+    float3 referenceBlobCentre;  // cells
 };
+
+// MacCormack limiter applied to a corrected value against its source-field
+// stencil bounds [lo, hi] and the first-order fallback phiHat.
+float ApplyLimiter(float corrected, float phiHat, float lo, float hi)
+{
+    if (limiterMode == 1) // revert to first order on any overshoot (Selle 2008)
+        return (corrected < lo || corrected > hi) ? phiHat : corrected;
+
+    if (limiterMode == 2)
+    {
+        // Adaptive: blend toward first order in proportion to how far the
+        // correction overshoots the local bounds. In-bounds => full correction
+        // (sharp); large overshoot => approaches revert (stable).
+        const float over = max(0.0f, corrected - hi) + max(0.0f, lo - corrected);
+        const float range = max(hi - lo, 1e-6f);
+        const float blend = saturate(over / range);
+        return lerp(corrected, phiHat, blend);
+    }
+
+    return clamp(corrected, lo, hi); // default: standard clamp
+}
 
 // Used by clear and source injection.
 RWTexture3D<float> Density : register(u0);
@@ -67,8 +97,40 @@ Texture3D<float> TemperatureHat : register(t8);
 Texture3D<float> DensityBar : register(t9);
 Texture3D<float> TemperatureBar : register(t10);
 
+RWTexture3D<float> VorticityX : register(u12);
+RWTexture3D<float> VorticityY : register(u13);
+RWTexture3D<float> VorticityZ : register(u14);
+Texture3D<float> VorticityXInput : register(t11);
+Texture3D<float> VorticityYInput : register(t12);
+Texture3D<float> VorticityZInput : register(t13);
 
 SamplerState LinearClamp : register(s0);
+SamplerState LinearWrap : register(s1);
+
+// Trilinear scalar sample. In the periodic reference case a WRAP sampler blends
+// across the domain seam (texel N-1 with texel 0); otherwise clamp. This matches
+// the modulo limiter stencil used when periodicDomain is set.
+float SampleScalarField(Texture3D<float> field, float3 uvw)
+{
+    if (periodicDomain)
+        return field.SampleLevel(LinearWrap, uvw, 0);
+    return field.SampleLevel(LinearClamp, uvw, 0);
+}
+
+#ifdef SMOKE_MASS_AUDIT
+// Recorded by the actual scalar kernel. x/y: before/after limiter;
+// z/w: signed lower/upper limiter changes. Every cell is overwritten each step.
+RWStructuredBuffer<float4> MassAudit : register(u15);
+uint AuditIndex(uint3 id) { return (id.z * GridResolution.y + id.y) * GridResolution.x + id.x; }
+[numthreads(8, 8, 4)]
+void AuditPatternCS(uint3 id : SV_DispatchThreadID)
+{
+    if (any(id >= GridResolution)) return;
+    // Distinct values expose stale frames; impulse moves in all three axes.
+    Density[id] = Dt;
+    Temperature[id] = all(id == SourceCell) ? 7.25f : 0.0f;
+}
+#endif
 
 
 
@@ -225,7 +287,7 @@ float AdvectRaw(Texture3D<float> field, uint3 id)
     float3 q = float3(id) + 0.5f;
     float3 departure = BackTrace(q);
     float3 uvw = departure / float3(GridResolution);
-    return field.SampleLevel(LinearClamp, uvw, 0);
+    return SampleScalarField(field, uvw);
 }
 
 // Min/max over the SAME 8 texels the trilinear sample reads at `departure`.
@@ -240,8 +302,10 @@ void TrilinearMinMax(Texture3D<float> field, float3 departure,
     [unroll]
     for (int i = 0; i < 8; ++i)
     {
-        int3 c = clamp(b + int3(i & 1, (i >> 1) & 1, (i >> 2) & 1),
-                       int3(0, 0, 0), int3(GridResolution) - 1);
+        int3 off = b + int3(i & 1, (i >> 1) & 1, (i >> 2) & 1);
+        int3 c = periodicDomain
+            ? (off % int3(GridResolution) + int3(GridResolution)) % int3(GridResolution)
+            : clamp(off, int3(0, 0, 0), int3(GridResolution) - 1);
         float v = field.Load(int4(c, 0));
         lo = min(lo, v);
         hi = max(hi, v);
@@ -310,6 +374,53 @@ void InjectSourceCS(uint3 id : SV_DispatchThreadID)
         Density[id] += DensityRate * Dt;
         Temperature[id] += TemperatureRate * Dt;
     }
+}
+
+// Passive-advection reference harness: smooth Gaussian blob at the domain centre.
+// The CPU analytic reference uses the IDENTICAL formula (cell-centred samples),
+// so a perfect transport scheme reproduces it exactly. Amplitude 1, sigma =
+// 0.12 * Nx cells. Writes Density (u0) and clears Temperature (u1).
+[numthreads(8, 8, 4)]
+void SetReferenceBlobCS(uint3 id : SV_DispatchThreadID)
+{
+    if (any(id >= GridResolution))
+        return;
+    const float sigma = referenceBlobSigma;
+    const float3 d = (float3(id) + 0.5f) - referenceBlobCentre;
+    Density[id] = exp(-dot(d, d) / (2.0f * sigma * sigma));
+    Temperature[id] = 0.0f;
+}
+
+// Prescribed, time-invariant velocity for the transport reference cases. Written
+// once at reset. Mode 1: constant +x translation. Mode 2: solid-body rotation
+// about the z axis through the domain centre. Velocities are scaled so the
+// per-step cell displacement equals referenceSpeed (translation) or the per-step
+// angle equals referenceSpeed (rotation), assuming a cubic grid.
+[numthreads(8, 8, 4)]
+void SetPrescribedVelocityCS(uint3 id : SV_DispatchThreadID)
+{
+    const uint3 n = GridResolution;
+    const float cx = n.x * 0.5f;
+    const float cy = n.y * 0.5f;
+    const float omega = referenceSpeed / Dt; // rad/s (rotation)
+    // U faces: (n.x+1) x n.y x n.z, positioned at (i, j+0.5, k+0.5) cells.
+    if (all(id < n + uint3(1, 0, 0)))
+    {
+        float u = 0.0f;
+        if (referenceVelocityMode == 1) u = referenceSpeed * hx / Dt;
+        else if (referenceVelocityMode == 2) u = -omega * (((id.y + 0.5f) - cy) * hy);
+        VelocityU[id] = u;
+    }
+    // V faces: n.x x (n.y+1) x n.z, positioned at (i+0.5, j, k+0.5) cells.
+    if (all(id < n + uint3(0, 1, 0)))
+    {
+        float v = 0.0f;
+        if (referenceVelocityMode == 2) v = omega * (((id.x + 0.5f) - cx) * hx);
+        VelocityV[id] = v;
+    }
+    // W faces: no z motion in either mode.
+    if (all(id < n + uint3(0, 0, 1)))
+        VelocityW[id] = 0.0f;
 }
 
 [numthreads(8, 8, 4)]
@@ -559,6 +670,9 @@ void AdvectScalarsCS(uint3 id : SV_DispatchThreadID)
 {
     if (any(id >= GridResolution))
         return;
+#ifdef SMOKE_MASS_AUDIT
+    MassAudit[AuditIndex(id)] = 0;
+#endif
 
     if (IsSolidCell(int3(id)))
     {
@@ -572,18 +686,22 @@ void AdvectScalarsCS(uint3 id : SV_DispatchThreadID)
 
     float3 uvw = departure / float3(GridResolution);
 
-    if (departure.y >= float(GridResolution.y))
+    if (!periodicDomain && departure.y >= float(GridResolution.y))
     {
         Density[id] = 0.0f;
         Temperature[id] = ambientTemperature;
         return;
     }
-    
+
+#ifdef SMOKE_MASS_AUDIT
+    float auditRaw = SampleScalarField(DensityInput, uvw);
+    MassAudit[AuditIndex(id)] = float4(auditRaw, auditRaw, 0, 0);
+#endif
     Density[id] =
-        max(DensityInput.SampleLevel(LinearClamp, uvw, 0) * exp(-Padding.x * Dt), 0.0f);
+        max(SampleScalarField(DensityInput, uvw) * exp(-Padding.x * Dt), 0.0f);
 
     Temperature[id] =
-        ambientTemperature + (TemperatureInput.SampleLevel(LinearClamp, uvw, 0) - ambientTemperature) * exp(-Padding.y * Dt);
+        ambientTemperature + (SampleScalarField(TemperatureInput, uvw) - ambientTemperature) * exp(-Padding.y * Dt);
 }
 
 [numthreads(8, 8, 4)]
@@ -783,6 +901,58 @@ void ReduceVelocityCS(
     FinishDiagnosticReduction(lane, 2);
 }
 
+// Enstrophy reduction: sum of |omega|^2 over fluid cells, and peak |omega|.
+// Reads the cell-centred vorticity textures (recomputed from the final velocity
+// before this dispatch). Writes diagnostics record 3.
+[numthreads(256, 1, 1)]
+void ReduceEnstrophyCS(
+    uint3 dispatchThreadId : SV_DispatchThreadID,
+    uint lane : SV_GroupIndex)
+{
+    const uint cellCount =
+        GridResolution.x * GridResolution.y * GridResolution.z;
+    float sumMagnitudeSquared = 0.0f;
+    float maximumMagnitude = 0.0f;
+    uint validCount = 0;
+    uint nonfiniteCount = 0;
+
+    for (uint linearIndex = lane; linearIndex < cellCount; linearIndex += 256)
+    {
+        const uint x = linearIndex % GridResolution.x;
+        const uint yz = linearIndex / GridResolution.x;
+        const uint y = yz % GridResolution.y;
+        const uint z = yz / GridResolution.y;
+        const int3 cell = int3(x, y, z);
+
+        if (ClassifyCell(cell) != CELL_FLUID)
+            continue;
+
+        const float3 omega = float3(
+            VorticityXInput.Load(int4(cell, 0)),
+            VorticityYInput.Load(int4(cell, 0)),
+            VorticityZInput.Load(int4(cell, 0)));
+
+        if (!IsFiniteDiagnostic(omega.x) ||
+            !IsFiniteDiagnostic(omega.y) ||
+            !IsFiniteDiagnostic(omega.z))
+        {
+            ++nonfiniteCount;
+            continue;
+        }
+
+        const float magnitudeSquared = dot(omega, omega);
+        sumMagnitudeSquared += magnitudeSquared;
+        maximumMagnitude = max(maximumMagnitude, sqrt(magnitudeSquared));
+        ++validCount;
+    }
+
+    DiagnosticSum[lane] = sumMagnitudeSquared;
+    DiagnosticMaximum[lane] = maximumMagnitude;
+    DiagnosticCount[lane] = validCount;
+    DiagnosticNonfinite[lane] = nonfiniteCount;
+    FinishDiagnosticReduction(lane, 3);
+}
+
 // Reused for BOTH hat (input = φⁿ, Dt = +dt) and bar (input = φ̂, Dt = −dt).
 [numthreads(8, 8, 4)]
 void AdvectScalarsRawCS(uint3 id : SV_DispatchThreadID)
@@ -805,6 +975,9 @@ void MacCormackScalarsCS(uint3 id : SV_DispatchThreadID)
 {
     if (any(id >= GridResolution))
         return;
+#ifdef SMOKE_MASS_AUDIT
+    MassAudit[AuditIndex(id)] = 0;
+#endif
     if (IsSolidCell(int3(id)))
     {
         Density[id] = 0;
@@ -814,7 +987,7 @@ void MacCormackScalarsCS(uint3 id : SV_DispatchThreadID)
 
     float3 q = float3(id) + 0.5f;
     float3 departure = BackTrace(q);
-    if (departure.y >= float(GridResolution.y))
+    if (!periodicDomain && departure.y >= float(GridResolution.y))
     {
         Density[id] = 0;
         Temperature[id] = ambientTemperature;
@@ -828,7 +1001,15 @@ void MacCormackScalarsCS(uint3 id : SV_DispatchThreadID)
     float d = dH + 0.5f * (dN - dB);
     float dlo, dhi;
     TrilinearMinMax(DensityInput, departure, dlo, dhi);
-    d = clamp(d, dlo, dhi); // standard MacCormack limiter: bound to source-field extrema
+#ifdef SMOKE_MASS_AUDIT
+    float auditCorrected = d;
+#endif
+    d = ApplyLimiter(d, dH, dlo, dhi);
+#ifdef SMOKE_MASS_AUDIT
+    MassAudit[AuditIndex(id)] = float4(auditCorrected, d,
+        auditCorrected < dlo ? d - auditCorrected : 0,
+        auditCorrected > dhi ? d - auditCorrected : 0);
+#endif
     Density[id] = max(d * exp(-Padding.x * Dt), 0.0f); // dissipation applied ONCE, here
 
     // Temperature (same pattern, ambient-relative)
@@ -838,6 +1019,74 @@ void MacCormackScalarsCS(uint3 id : SV_DispatchThreadID)
     float t = tH + 0.5f * (tN - tB);
     float tlo, thi;
     TrilinearMinMax(TemperatureInput, departure, tlo, thi);
-    t = clamp(t, tlo, thi); // standard MacCormack limiter
+    t = ApplyLimiter(t, tH, tlo, thi);
     Temperature[id] = ambientTemperature + (t - ambientTemperature) * exp(-Padding.y * Dt);
+}
+
+float3 CellVelocity(int3 c) // cell-centred, matches ReduceVelocityCS averaging
+{
+    return float3(
+        0.5f * (VelocityUInput.Load(int4(c, 0)) + VelocityUInput.Load(int4(c + int3(1, 0, 0), 0))),
+        0.5f * (VelocityVInput.Load(int4(c, 0)) + VelocityVInput.Load(int4(c + int3(0, 1, 0), 0))),
+        0.5f * (VelocityWInput.Load(int4(c, 0)) + VelocityWInput.Load(int4(c + int3(0, 0, 1), 0))));
+}
+
+[numthreads(8, 8, 4)]
+void ComputeVorticityCS(uint3 id : SV_DispatchThreadID)
+{
+    if (any(id >= GridResolution))
+        return;
+    int3 c = int3(id);
+    if (IsSolidCell(c))
+    {
+        VorticityX[id] = 0;
+        VorticityY[id] = 0;
+        VorticityZ[id] = 0;
+        return;
+    }
+
+    float3 uxp = CellVelocity(c + int3(1, 0, 0)), uxm = CellVelocity(c - int3(1, 0, 0));
+    float3 uyp = CellVelocity(c + int3(0, 1, 0)), uym = CellVelocity(c - int3(0, 1, 0));
+    float3 uzp = CellVelocity(c + int3(0, 0, 1)), uzm = CellVelocity(c - int3(0, 0, 1));
+
+    VorticityX[id] = (uyp.z - uym.z) / (2 * hy) - (uzp.y - uzm.y) / (2 * hz);
+    VorticityY[id] = (uzp.x - uzm.x) / (2 * hz) - (uxp.z - uxm.z) / (2 * hx);
+    VorticityZ[id] = (uxp.y - uxm.y) / (2 * hx) - (uyp.x - uym.x) / (2 * hy);
+}
+
+float3 OmegaVec(int3 c)
+{
+    return float3(VorticityXInput.Load(int4(c, 0)),
+                                       VorticityYInput.Load(int4(c, 0)),
+                                       VorticityZInput.Load(int4(c, 0)));
+}
+float OmegaMag(int3 c)
+{
+    return length(OmegaVec(c));
+}
+
+float3 ConfinementForceAtCell(int3 c)
+{
+    float3 eta = float3(
+        (OmegaMag(c + int3(1, 0, 0)) - OmegaMag(c - int3(1, 0, 0))) / (2 * hx),
+        (OmegaMag(c + int3(0, 1, 0)) - OmegaMag(c - int3(0, 1, 0))) / (2 * hy),
+        (OmegaMag(c + int3(0, 0, 1)) - OmegaMag(c - int3(0, 0, 1))) / (2 * hz));
+    float3 N = eta / (length(eta) + 1e-20f);
+    return vorticityEpsilon * float3(hx, hy, hz) * cross(N, OmegaVec(c));
+}
+
+[numthreads(8, 8, 4)]
+void ApplyConfinementForceCS(uint3 id : SV_DispatchThreadID) // per face, like SubtractPressureGradientCS
+{
+    uint3 n = GridResolution;
+    int3 c = int3(id);
+    // U faces
+    if (id.x <= n.x && id.y < n.y && id.z < n.z && !IsBlockedU(c) && id.x != 0 && id.x != n.x)
+        VelocityU[id] += Dt * 0.5f * (ConfinementForceAtCell(c - int3(1, 0, 0)).x + ConfinementForceAtCell(c).x);
+    // V faces
+    if (id.x < n.x && id.y <= n.y && id.z < n.z && !IsBlockedV(c) && id.y != 0 && id.y != n.y)
+        VelocityV[id] += Dt * 0.5f * (ConfinementForceAtCell(c - int3(0, 1, 0)).y + ConfinementForceAtCell(c).y);
+    // W faces
+    if (id.x < n.x && id.y < n.y && id.z <= n.z && !IsBlockedW(c) && id.z != 0 && id.z != n.z)
+        VelocityW[id] += Dt * 0.5f * (ConfinementForceAtCell(c - int3(0, 0, 1)).z + ConfinementForceAtCell(c).z);
 }

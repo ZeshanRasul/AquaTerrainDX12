@@ -1,5 +1,14 @@
 # Smoke benchmark results
 
+## Direct mass-budget audit
+
+Use `Run-SmokeMassAudit.ps1` to run SL and MacCormack with direct stage probes
+and matched uninstrumented controls; use `Analyze-SmokeMassAudit.ps1` to check
+step continuity and summarize the budget. See
+[the audit report](../experiments/mass-budget-audit/README.md) for build/run
+commands, measured results, and the MacCormack descriptor binding fix.
+Audit runs deliberately export no performance timings.
+
 ## GPU demo controls and comparisons
 
 Select **3D Smoke Solver - GPU** to open **Smoke 3D GPU controls**. It provides

@@ -1,21 +1,49 @@
 # MacCormack vs. Semi-Lagrangian advection (GPU 3D smoke)
 
+> **Audit update (2026-09-11): implementation defect found.** The MacCormack
+> scratch descriptor order did not match the shader, mixing density and
+> temperature intermediates. After correcting it, the matched emitter-off
+> density sum falls from 2460.7904 to 196.2477; SL remains 215.5240. Direct
+> stage checks and uninstrumented control runs pass. The historical data below
+> cannot establish properties of a correctly implemented MacCormack limiter,
+> including the cause of the late tail. Accuracy and performance comparisons
+> must be rerun. See the [direct mass-budget audit](../mass-budget-audit/README.md).
+
+> **⚠ Correction (2026-09-11).** An earlier version of this write-up claimed
+> MacCormack "preserves ~10× more total smoke" and read the higher peak density
+> as better accuracy. **That interpretation was wrong.** The injected density sum
+> over the run is only ~120 (30 units/s × 240 steps × 1/60 s into one cell), yet
+> the measured `density_sum` at the last emitting step is 215.5 (SL, 1.8×) and
+> **2460.8 (MacCormack, 20.5×)**. Both schemes are *creating* mass, MacCormack
+> massively — so "more total smoke" is **non-physical mass creation, not
+> preservation**, and a larger peak is not validated as more accurate without a
+> reference solution. The retained-fraction metric and the "sealed box is
+> ill-posed" claim below are likewise retracted (a finite-duration source has a
+> finite, calculable expected mass — it *is* a valid conservation test). What
+> still stands: the GPU timing, and that MacCormack produces sharper fields; what
+> it does **not** yet establish is that sharper means *more accurate*. A
+> mass-budget audit and a controlled passive-advection test against an analytic
+> reference are underway before any accuracy claim is made. The original text is
+> preserved below for the record, but read it in light of this note.
+
 **Question:** how much does a MacCormack advection scheme reduce numerical
 diffusion versus plain semi-Lagrangian (SL) advection in the DX12 compute smoke
 solver, and at what GPU cost?
 
-**Answer (headline):** at matched settings, MacCormack preserves **~12.8× higher
-peak density** and **~10× more total smoke** than semi-Lagrangian, for **+3.3%
-GPU solver time**. Peak-density preservation is the robust, well-behaved metric
-across the whole run; the total-mass integral additionally exposes a documented
-limitation of the clamped scheme (see *Limitations*).
+**Answer (headline, PARTIALLY RETRACTED — see correction above):** at matched
+settings, MacCormack produces a **~12.8× higher peak density** than
+semi-Lagrangian for **+3.3% GPU solver time**. The peak and total-density numbers
+are reported below as *measurements*, but they are **not** evidence of better
+accuracy: both schemes fail to conserve mass (MacCormack creates ~20× the
+injected amount), so these ratios conflate anti-diffusion with non-conservation.
+Treat only the solver-timing rows as validated.
 
 | Metric (32³ grid, open-top plume) | Semi-Lagrangian | MacCormack | Ratio |
 |---|--:|--:|--:|
 | Solver time, mean (ms) | 0.0917 | 0.0948 | **1.033×** |
 | Solver time, p95 (ms) | 0.0933 | 0.0963 | 1.032× |
-| **Peak density (whole run)** | **7.70** | **98.82** | **12.8×** |
-| Total density at emitter-off (step 240) | 215.5 | 2460.8 | 11.4× |
+| Peak density (whole run) — *not validated as accuracy* | 7.70 | 98.82 | 12.8× |
+| Total density @ step 240 (injected ≈ 120) — *mass creation, not preservation* | 215.5 (1.8×) | 2460.8 (20.5×) | — |
 | Kinetic energy at step 239 | 1.9e-4 | 1.5e-3 | ~7.9× |
 | Max speed at step 239 | 0.82 | 2.62 | 3.2× |
 
@@ -35,10 +63,12 @@ the gap is purely the advection scheme.
 
 ![Total density over time (log scale)](figures/density-sum.svg)
 
-*Total density (`density_sum`, log₁₀) vs. step.* MacCormack holds roughly an
-order of magnitude more smoke through emission and early decay. Note the sharp
-upturn after step ~430: a late-onset artifact of the clamped limiter discussed
-below.
+*Total density (`density_sum`, log₁₀) vs. step.* Both curves sit **far above the
+injected total (~120)** — MacCormack by ~20× even during emission — so this plot
+shows **non-conservation**, not "more smoke retained." A conservative scheme
+would track the injected mass (minus dissipation and top-boundary outflow). The
+sharp upturn after step ~430 is a further late-onset amplification of the same
+non-conservation.
 
 ## Method
 
@@ -66,29 +96,36 @@ extrema of the source field to suppress overshoot. On this solver it costs three
 extra scalar dispatches per step, which is only ~3% of frame time because the
 40-iteration Jacobi pressure solve dominates.
 
-## Interpretation
+## Interpretation (revised)
 
-The peak-density plot is the clean statement of the result: identical injection,
-but SL cannot hold a sharp feature while MacCormack can. The 12.8× peak ratio and
-~10× mass retention are the numerical signature of the diffusion MacCormack
-removes, and they translate directly to the visual difference (crisp filaments
-vs. a diffuse blob). The higher kinetic energy and max speed show the same thing
-in the velocity coupling: MacCormack preserves buoyant structure that SL smooths
-into stillness. All of this for a ~3% solver-time increase — an excellent
-detail-per-millisecond trade on this pressure-solve-dominated pipeline.
+What is defensible: MacCormack produces visibly **sharper** fields than SL, and
+does so for only ~3% more whole-solver time (though the *scalar-advection stage
+itself* is ~2.6× more expensive — the small total is because the Jacobi pressure
+solve dominates the frame).
+
+What is **not** defensible from this data: that MacCormack is more *accurate*.
+The peak-density and total-density ratios conflate two different things — reduced
+numerical diffusion (good) and non-conservation / mass creation (bad) — and this
+scenario cannot separate them. Both schemes create mass here (MacCormack ~20×
+the injected amount before the excluded tail), so "sharper" and "more mass" may
+be partly the same artifact. Establishing an accuracy claim requires (a) a
+mass-budget audit localizing where the excess mass appears, and (b) a controlled
+passive-advection test (translate/rotate a known field, no buoyancy or pressure)
+measured against the analytic solution. Both are underway.
 
 ## Limitations (and what they taught us)
 
 This comparison went through three scenario designs; the failures are
 informative and are recorded here rather than hidden.
 
-1. **A sealed box with zero dissipation is an ill-posed conservation test.**
-   With no outlet and no sink, a finite source accumulates without bound, and a
-   *non*-diffusive scheme faithfully preserves that growing peak. The test then
-   rewards diffusion (SL looks "stable" only because it destroys mass) and
-   punishes the scheme that does its job. We switched to a vented, mildly damped
-   plume and report **peak-density preservation** — a metric that reflects
-   numerical diffusion and maps to visual quality.
+1. **~~A sealed box with zero dissipation is an ill-posed conservation test.~~**
+   *(Retracted.)* A **finite-duration** source injects a finite, calculable total
+   mass (~120 here), so the sealed box is in fact a *valid* conservation test: a
+   correct scheme holds the summed density at that value after the emitter stops.
+   The blow-up we saw there was genuine non-conservation of the clamped scheme,
+   not an artifact of the test. Switching to a vented plume did not fix the
+   underlying non-conservation — it only reduced its visibility (see the
+   correction note at the top).
 
 2. **The clamped MacCormack limiter is not strictly conservative.** Clamping the
    corrected value to local extrema can inject mass; in a trapped or weakly

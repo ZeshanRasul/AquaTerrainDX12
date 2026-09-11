@@ -204,6 +204,32 @@ void Renderer::Update(GameTimer& gt, Camera& cam)
 	}
 
 	CollectSmokeGpuDiagnostics();
+    static bool auditEnvironmentChecked = false;
+    if (!auditEnvironmentChecked)
+    {
+        auditEnvironmentChecked = true;
+        wchar_t value[32]{};
+        if (GetEnvironmentVariableW(L"AQUA_SMOKE_AUDIT", value, 32))
+        {
+            m_SmokeGpuAdvectionMode = std::wstring(value) == L"sl"
+                ? SmokeAdvectionMode::SemiLagrangian : SmokeAdvectionMode::MacCormack;
+            StartSmokeMassAudit(true);
+        }
+        wchar_t refCase[32]{};
+        if (GetEnvironmentVariableW(L"AQUA_SMOKE_REFERENCE", refCase, 32))
+        {
+            wchar_t adv[32]{};
+            if (GetEnvironmentVariableW(L"AQUA_SMOKE_REFERENCE_ADVECTION", adv, 32))
+                m_SmokeGpuAdvectionMode = std::wstring(adv) == L"sl"
+                    ? SmokeAdvectionMode::SemiLagrangian : SmokeAdvectionMode::MacCormack;
+            const std::wstring which = refCase;
+            SmokeReferenceCase rc = SmokeReferenceCase::SourceOnly;
+            if (which == L"static") rc = SmokeReferenceCase::StaticField;
+            else if (which == L"translation") rc = SmokeReferenceCase::Translation;
+            else if (which == L"rotation") rc = SmokeReferenceCase::Rotation;
+            StartSmokeAdvectionReference(rc, true);
+        }
+    }
 	cam.UpdateViewMatrix();
 	XMStoreFloat4x4(&m_View, cam.GetView());
 	XMStoreFloat4x4(&m_Proj, cam.GetProj());
@@ -364,6 +390,8 @@ void Renderer::Update(GameTimer& gt, Camera& cam)
 		{
 			const SmokeBenchmarkConfig& config =
 				m_SmokeBenchmark.Config();
+
+			m_SmokeGpuBenchmarkVorticityEpsilon = config.vorticityEpsilon;
 			const bool emit = m_SmokeBenchmark.ShouldEmit();
 			const auto solverStart = std::chrono::steady_clock::now();
 
@@ -485,11 +513,13 @@ void Renderer::Draw()
 			m_SmokeGpuBenchmarkSubmitted < m_SmokeGpuBenchmarkConfig.totalSteps ? 1 : 0;
 		else if (m_SmokeGpuStepRequested) steps = 1;
 		m_SmokeGpuStepRequested = false;
-		if (m_SmokeGpuResetRequested) DispatchSmokeSourceTest(m_CommandList.Get());
+		const bool reference = m_SmokeReferenceCase != SmokeReferenceCase::None;
+		if (m_SmokeGpuResetRequested)
+			reference ? DispatchSmokeReferenceStep(m_CommandList.Get()) : DispatchSmokeSourceTest(m_CommandList.Get());
 		for (unsigned i = 0; i < steps; ++i)
 		{
 			m_SmokeGpuStepRequested = true;
-			DispatchSmokeSourceTest(m_CommandList.Get(), i);
+			reference ? DispatchSmokeReferenceStep(m_CommandList.Get(), i) : DispatchSmokeSourceTest(m_CommandList.Get(), i);
 		}
 	}
 
@@ -1450,7 +1480,31 @@ void Renderer::CreateSmokeGpuResources()
 		nullptr,
 		IID_PPV_ARGS(&m_GpuDivergence.resource)));
 
-	constexpr UINT64 diagnosticBufferSize = 3 * sizeof(XMFLOAT4);
+	ThrowIfFailed(m_Device->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		D3D12_HEAP_FLAG_NONE,
+		&textureDesc,
+		m_GpuVorticityX[0].state,
+		nullptr,
+		IID_PPV_ARGS(&m_GpuVorticityX[0].resource)));
+
+	ThrowIfFailed(m_Device->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		D3D12_HEAP_FLAG_NONE,
+		&textureDesc,
+		m_GpuVorticityY[0].state,
+		nullptr,
+		IID_PPV_ARGS(&m_GpuVorticityY[0].resource)));
+
+	ThrowIfFailed(m_Device->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		D3D12_HEAP_FLAG_NONE,
+		&textureDesc,
+		m_GpuVorticityZ[0].state,
+		nullptr,
+		IID_PPV_ARGS(&m_GpuVorticityZ[0].resource)));
+
+	constexpr UINT64 diagnosticBufferSize = 4 * sizeof(XMFLOAT4);
 	const auto diagnosticDesc = CD3DX12_RESOURCE_DESC::Buffer(
 		diagnosticBufferSize,
 		D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
@@ -1467,7 +1521,7 @@ void Renderer::CreateSmokeGpuResources()
 
 void Renderer::CreateSmokeGpuDescriptorHeap()
 {
-	constexpr UINT fieldCount = 21;
+	constexpr UINT fieldCount = 24;
 
 	D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
 	heapDesc.NumDescriptors = fieldCount * 2 + 1;
@@ -1489,8 +1543,8 @@ void Renderer::CreateSmokeGpuDescriptorHeap()
 		m_GpuV[0].resource.Get(),
 		m_GpuW[0].resource.Get(),
 		m_GpuDensityHat[0].resource.Get(),
-		m_GpuDensityBar[0].resource.Get(),
 		m_GpuTemperatureHat[0].resource.Get(),
+		m_GpuDensityBar[0].resource.Get(),
 		m_GpuTemperatureBar[0].resource.Get(),
 		m_GpuDensity[1].resource.Get(),
 		m_GpuTemperature[1].resource.Get(),
@@ -1498,12 +1552,15 @@ void Renderer::CreateSmokeGpuDescriptorHeap()
 		m_GpuV[1].resource.Get(),
 		m_GpuW[1].resource.Get(),
 		m_GpuDensityHat[1].resource.Get(),
-		m_GpuDensityBar[1].resource.Get(),
 		m_GpuTemperatureHat[1].resource.Get(),
+		m_GpuDensityBar[1].resource.Get(),
 		m_GpuTemperatureBar[1].resource.Get(),
 		m_GpuPressure[0].resource.Get(),
 		m_GpuPressure[1].resource.Get(),
 		m_GpuDivergence.resource.Get(),
+		m_GpuVorticityX[0].resource.Get(),
+		m_GpuVorticityY[0].resource.Get(),
+		m_GpuVorticityZ[0].resource.Get()
 	};
 
 	D3D12_GPU_DESCRIPTOR_HANDLE* srvHandles[fieldCount] = {
@@ -1513,8 +1570,8 @@ void Renderer::CreateSmokeGpuDescriptorHeap()
 		&m_GpuV[0].srv,
 		&m_GpuW[0].srv,
 		&m_GpuDensityHat[0].srv,
-		&m_GpuDensityBar[0].srv,
 		&m_GpuTemperatureHat[0].srv,
+		&m_GpuDensityBar[0].srv,
 		&m_GpuTemperatureBar[0].srv,
 		&m_GpuDensity[1].srv,
 		&m_GpuTemperature[1].srv,
@@ -1522,12 +1579,15 @@ void Renderer::CreateSmokeGpuDescriptorHeap()
 		&m_GpuV[1].srv,
 		&m_GpuW[1].srv,
 		&m_GpuDensityHat[1].srv,
-		&m_GpuDensityBar[1].srv,
 		&m_GpuTemperatureHat[1].srv,
+		&m_GpuDensityBar[1].srv,
 		&m_GpuTemperatureBar[1].srv,
 		&m_GpuPressure[0].srv,
 		&m_GpuPressure[1].srv,
 		&m_GpuDivergence.srv,
+		&m_GpuVorticityX[0].srv,
+		&m_GpuVorticityY[0].srv,
+		&m_GpuVorticityZ[0].srv
 	};
 
 	D3D12_GPU_DESCRIPTOR_HANDLE* uavHandles[fieldCount] = {
@@ -1537,8 +1597,8 @@ void Renderer::CreateSmokeGpuDescriptorHeap()
 		&m_GpuV[0].uav,
 		&m_GpuW[0].uav,
 		&m_GpuDensityHat[0].uav,
-		&m_GpuDensityBar[0].uav,
 		&m_GpuTemperatureHat[0].uav,
+		&m_GpuDensityBar[0].uav,
 		&m_GpuTemperatureBar[0].uav,
 		&m_GpuDensity[1].uav,
 		&m_GpuTemperature[1].uav,
@@ -1546,12 +1606,15 @@ void Renderer::CreateSmokeGpuDescriptorHeap()
 		&m_GpuV[1].uav,
 		&m_GpuW[1].uav,
 		&m_GpuDensityHat[1].uav,
-		&m_GpuDensityBar[1].uav,
 		&m_GpuTemperatureHat[1].uav,
+		&m_GpuDensityBar[1].uav,
 		&m_GpuTemperatureBar[1].uav,
 		&m_GpuPressure[0].uav,
 		&m_GpuPressure[1].uav,
-		&m_GpuDivergence.uav
+		&m_GpuDivergence.uav,
+		&m_GpuVorticityX[0].uav,
+		&m_GpuVorticityY[0].uav,
+		&m_GpuVorticityZ[0].uav
 	};
 
 	const auto cpuStart =
@@ -1599,6 +1662,17 @@ void Renderer::CreateSmokeGpuDescriptorHeap()
 			gpuStart, fieldCount + index, descriptorSize);
 	}
 
+    // Tables are contiguous: u0/u1 and t0/t1 use scalar pairs; t7..t10
+    // must be density-hat, temperature-hat, density-bar, temperature-bar.
+    for (UINT i = 0; i < 2; ++i)
+    {
+        if (m_GpuTemperatureHat[i].srv.ptr != m_GpuDensityHat[i].srv.ptr + descriptorSize ||
+            m_GpuDensityBar[i].srv.ptr != m_GpuDensityHat[i].srv.ptr + 2 * descriptorSize ||
+            m_GpuTemperatureBar[i].srv.ptr != m_GpuDensityHat[i].srv.ptr + 3 * descriptorSize ||
+            m_GpuTemperatureHat[i].uav.ptr != m_GpuDensityHat[i].uav.ptr + descriptorSize ||
+            m_GpuTemperatureBar[i].uav.ptr != m_GpuDensityBar[i].uav.ptr + descriptorSize)
+            ThrowIfFailed(E_UNEXPECTED);
+    }
 	const UINT diagnosticDescriptorIndex = fieldCount * 2;
 	const CD3DX12_CPU_DESCRIPTOR_HANDLE diagnosticCpu(
 		cpuStart, diagnosticDescriptorIndex, descriptorSize);
@@ -1606,7 +1680,7 @@ void Renderer::CreateSmokeGpuDescriptorHeap()
 	diagnosticUav.Format = DXGI_FORMAT_UNKNOWN;
 	diagnosticUav.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
 	diagnosticUav.Buffer.FirstElement = 0;
-	diagnosticUav.Buffer.NumElements = 3;
+	diagnosticUav.Buffer.NumElements = 4;
 	diagnosticUav.Buffer.StructureByteStride = sizeof(XMFLOAT4);
 	m_Device->CreateUnorderedAccessView(
 		m_SmokeGpuDiagnosticBuffer.Get(), nullptr,
@@ -4327,7 +4401,21 @@ void Renderer::CreateSmokeBindingRootSignature()
 	hatBarInputRange.Init(
 		D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
 		4,
-		7); // t7
+		7); // t7, t8, t9, t10
+
+	CD3DX12_DESCRIPTOR_RANGE vorticityRange;
+	vorticityRange.Init(
+		D3D12_DESCRIPTOR_RANGE_TYPE_UAV,
+		3,
+		12); // u12, u13, u14
+
+	CD3DX12_DESCRIPTOR_RANGE vorticityInputRange;
+	vorticityInputRange.Init(
+		D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
+		3,
+		11); // t11, t12, t13
+
+
 
 	CD3DX12_ROOT_PARAMETER parameters[SmokeBindingRootCount];
 
@@ -4367,19 +4455,36 @@ void Renderer::CreateSmokeBindingRootSignature()
 		1,
 		&hatBarInputRange);
 
-	CD3DX12_STATIC_SAMPLER_DESC linearClamp(
-		0,
-		D3D12_FILTER_MIN_MAG_MIP_LINEAR,
-		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
-		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
-		D3D12_TEXTURE_ADDRESS_MODE_CLAMP);
+	parameters[SmokeBindingVorticityRoot].InitAsDescriptorTable(
+		1,
+		&vorticityRange);
+
+	parameters[SmokeBindingVorticityReadRoot].InitAsDescriptorTable(
+		1,
+		&vorticityInputRange);
+    parameters[SmokeBindingAuditRoot].InitAsUnorderedAccessView(15);
+
+	const CD3DX12_STATIC_SAMPLER_DESC samplers[2] = {
+		// s0: clamp (normal runs). s1: wrap, for the periodic reference case so
+		// trilinear sampling blends texel N-1 with texel 0 across the domain seam.
+		CD3DX12_STATIC_SAMPLER_DESC(
+			0, D3D12_FILTER_MIN_MAG_MIP_LINEAR,
+			D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+			D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+			D3D12_TEXTURE_ADDRESS_MODE_CLAMP),
+		CD3DX12_STATIC_SAMPLER_DESC(
+			1, D3D12_FILTER_MIN_MAG_MIP_LINEAR,
+			D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+			D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+			D3D12_TEXTURE_ADDRESS_MODE_WRAP),
+	};
 
 	CD3DX12_ROOT_SIGNATURE_DESC description;
 	description.Init(
 		SmokeBindingRootCount,
 		parameters,
-		1,
-		&linearClamp,
+		2,
+		samplers,
 		D3D12_ROOT_SIGNATURE_FLAG_NONE);
 
 	Microsoft::WRL::ComPtr<ID3DBlob> serialized;
@@ -4537,6 +4642,31 @@ void Renderer::CreateSmokeBindingPSOs()
 		"MacCormackScalarsCS",
 		L"Smoke.Diagnostics.MacCormackScalars",
 		m_SmokeMacCormackScalarsPSO);
+
+	createPSO(
+		"SetReferenceBlobCS",
+		L"Smoke.Reference.SetBlob",
+		m_SmokeReferenceBlobPSO);
+
+	createPSO(
+		"SetPrescribedVelocityCS",
+		L"Smoke.Reference.SetVelocity",
+		m_SmokeReferenceVelocityPSO);
+
+	createPSO(
+		"ComputeVorticityCS",
+		L"Smoke.Diagnostics.ComputeVorticity",
+		m_SmokeComputeVorticityPSO);
+
+	createPSO(
+		"ApplyConfinementForceCS",
+		L"Smoke.Diagnostics.ApplyConfinementForce",
+		m_SmokeApplyConfinementForcePSO);
+
+	createPSO(
+		"ReduceEnstrophyCS",
+		L"Smoke.Diagnostics.ReduceEnstrophy",
+		m_SmokeReduceEnstrophyPSO);
 }
 
 void Renderer::DispatchSmokeSourceTest(
@@ -4613,7 +4743,8 @@ void Renderer::DispatchSmokeSourceTest(
 	constants.hx = 1.0f / static_cast<float>(constants.gridResolution[0]);
 	constants.hy = 1.0f / static_cast<float>(constants.gridResolution[1]);
 	constants.hz = 1.0f / static_cast<float>(constants.gridResolution[2]);
-	constants.pad = 0.0f;
+	constants.vorticityEpsilon = m_SmokeGpuBenchmarkRunning ? m_SmokeGpuBenchmarkVorticityEpsilon : m_SmokeGpuVorticityEpsilon;
+	constants.limiterMode = m_SmokeGpuBenchmarkRunning ? m_SmokeGpuBenchmarkLimiterMode : static_cast<int>(m_SmokeGpuLimiterMode);
 	constants.GridSpacing[0] = constants.hx;
 	constants.GridSpacing[1] = constants.hy;
 	constants.GridSpacing[2] = constants.hz;
@@ -4683,6 +4814,9 @@ void Renderer::DispatchSmokeSourceTest(
 	const UINT fx = (constants.gridResolution[0] + 8) / 8;
 	const UINT fy = (constants.gridResolution[1] + 8) / 8;
 	const UINT fz = (constants.gridResolution[2] + 4) / 4;
+    const bool audit = m_SmokeMassAudit && m_SmokeAuditProbes && m_SmokeGpuBenchmarkRunning;
+    if (audit)
+        commandList->SetComputeRootUnorderedAccessView(SmokeBindingAuditRoot, m_SmokeAuditCells->GetGPUVirtualAddress());
 
 	uav(m_GpuPressure[0]); uav(m_GpuPressure[1]);
 	bind(SmokeBindingPressureReadInputRoot, m_GpuPressure[0].uav);
@@ -4705,6 +4839,28 @@ void Renderer::DispatchSmokeSourceTest(
 	}
 	if (!m_SmokeGpuStepRequested) return;
 
+    if (audit)
+    {
+        // Exercise the same GPU->CPU texture copy path with known fields on
+        // every frame, in scratch textures that are overwritten before use.
+        auto pattern = constants;
+        const unsigned step = m_SmokeGpuBenchmarkSubmitted + 1;
+        pattern.dt = 0.25f + (step % 7) * 0.125f;
+        pattern.sourceCell[0] = (step * 3) % constants.gridResolution[0];
+        pattern.sourceCell[1] = (step * 5) % constants.gridResolution[1];
+        pattern.sourceCell[2] = (step * 7) % constants.gridResolution[2];
+        const UINT scratch = m_GpuScalarReadIndex;
+        uav(m_GpuDensityHat[scratch]); uav(m_GpuTemperatureHat[scratch]);
+        bind(SmokeBindingOutputRoot, m_GpuDensityHat[scratch].uav);
+        commandList->SetComputeRoot32BitConstants(SmokeBindingConstantsRoot, SmokeConstantCount, &pattern, 0);
+        commandList->SetPipelineState(m_SmokeAuditPatternPSO.Get());
+        commandList->Dispatch(gx, gy, gz);
+        CaptureSmokeMassAudit(commandList, m_GpuDensityHat[scratch], 5);
+        CaptureSmokeMassAudit(commandList, m_GpuTemperatureHat[scratch], 6);
+        commandList->SetComputeRoot32BitConstants(SmokeBindingConstantsRoot, SmokeConstantCount, &constants, 0);
+        CaptureSmokeMassAudit(commandList, m_GpuDensity[m_GpuScalarReadIndex], 0);
+    }
+
 	timestampSlot = std::min(timestampSlot, SmokeTimestampSlotsPerFrame - 1);
 	const UINT queryBase =
 		(m_CurrentFrameResourceIndex * SmokeTimestampSlotsPerFrame + timestampSlot) *
@@ -4716,6 +4872,7 @@ void Renderer::DispatchSmokeSourceTest(
 	scalarOutputs(m_GpuScalarReadIndex);
 	commandList->SetPipelineState(m_SmokeInjectPSO.Get());
 	if (emit) commandList->Dispatch(gx, gy, gz);
+    if (audit) CaptureSmokeMassAudit(commandList, m_GpuDensity[m_GpuScalarReadIndex], 1);
 	commandList->EndQuery(m_SmokeGpuQueries.Get(), D3D12_QUERY_TYPE_TIMESTAMP,
 		queryBase + SmokeTimestampSourceEnd);
 
@@ -4735,6 +4892,29 @@ void Renderer::DispatchSmokeSourceTest(
 	commandList->Dispatch(gx, fy, gz);
 	commandList->EndQuery(m_SmokeGpuQueries.Get(), D3D12_QUERY_TYPE_TIMESTAMP,
 		queryBase + SmokeTimestampBuoyancyEnd);
+
+	if (constants.vorticityEpsilon > 0.0f)   // vorticityEpsilon
+	{
+		// Pass 1: vorticity from the current (post-buoyancy) velocity
+		velocityInputs(m_GpuVelocityReadIndex);            // t2,t3,t4 (SRV)
+		uav(m_GpuVorticityX[0]); 
+		uav(m_GpuVorticityY[0]); 
+		uav(m_GpuVorticityZ[0]);
+		bind(SmokeBindingVorticityRoot, m_GpuVorticityX[0].uav);
+		commandList->SetPipelineState(m_SmokeComputeVorticityPSO.Get());
+		commandList->Dispatch(gx, gy, gz);
+		orderWrites();
+
+		// Pass 2: add confinement force in place
+		srv(m_GpuVorticityX[0]); 
+		srv(m_GpuVorticityY[0]); 
+		srv(m_GpuVorticityZ[0]);
+		bind(SmokeBindingVorticityReadRoot, m_GpuVorticityX[0].srv);
+		velocityOutputs(m_GpuVelocityReadIndex);           // u2,u3,u4 (read-modify-write)
+		commandList->SetPipelineState(m_SmokeApplyConfinementForcePSO.Get());
+		commandList->Dispatch(fx, fy, fz);
+		orderWrites();
+	}
 
 	velocityInputs(m_GpuVelocityReadIndex);
 	uav(m_GpuDivergence);
@@ -4785,14 +4965,16 @@ void Renderer::DispatchSmokeSourceTest(
 
 	if (m_SmokeGpuAdvectionMode == SmokeAdvectionMode::SemiLagrangian)
 	{
+		if (audit) CaptureSmokeMassAudit(commandList, m_GpuDensity[m_GpuScalarReadIndex], 2);
 		scalarInputs(m_GpuScalarReadIndex);
 		scalarOutputs(m_GpuScalarWriteIndex);
-		commandList->SetPipelineState(m_SmokeAdvectScalarsPSO.Get());
+		commandList->SetPipelineState(audit ? m_SmokeAuditSLPSO.Get() : m_SmokeAdvectScalarsPSO.Get());
 		commandList->Dispatch(gx, gy, gz);
 	}
 	else if (m_SmokeGpuAdvectionMode == SmokeAdvectionMode::MacCormack)
 	{
 		const UINT s = m_GpuScalarReadIndex;
+		if (audit) CaptureSmokeMassAudit(commandList, m_GpuDensity[s], 2);
 
 		scalarInputs(m_GpuScalarReadIndex);
 		uav(m_GpuDensityHat[s]);
@@ -4804,6 +4986,7 @@ void Renderer::DispatchSmokeSourceTest(
 		commandList->Dispatch(gx, gy, gz);
 		orderWrites();
 
+		if (audit) CaptureSmokeMassAudit(commandList, m_GpuDensityHat[s], 3);
 		srv(m_GpuDensityHat[s]);
 		srv(m_GpuTemperatureHat[s]);
 
@@ -4823,16 +5006,28 @@ void Renderer::DispatchSmokeSourceTest(
 		constants.dt = -constants.dt;
 		commandList->SetComputeRoot32BitConstants(SmokeBindingConstantsRoot, SmokeConstantCount, &constants, 0);
 		scalarInputs(m_GpuScalarReadIndex);
+		if (audit) CaptureSmokeMassAudit(commandList, m_GpuDensityBar[s], 4);
 
 		srv(m_GpuDensityBar[s]);
 		srv(m_GpuTemperatureBar[s]);
 
 		bind(SmokeBindingHatBarRoot, m_GpuDensityHat[s].srv);
 		scalarOutputs(m_GpuScalarWriteIndex);
-		commandList->SetPipelineState(m_SmokeMacCormackScalarsPSO.Get());
+		commandList->SetPipelineState(audit ? m_SmokeAuditMCPSO.Get() : m_SmokeMacCormackScalarsPSO.Get());
 		commandList->Dispatch(gx, gy, gz);
 	}
 	std::swap(m_GpuScalarReadIndex, m_GpuScalarWriteIndex);
+    if (audit)
+    {
+        CaptureSmokeMassAudit(commandList, m_GpuDensity[m_GpuScalarReadIndex], 7);
+        D3D12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_SmokeAuditCells.Get(),
+            D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_SOURCE);
+        commandList->ResourceBarrier(1, &barrier);
+        commandList->CopyBufferRegion(m_SmokeAuditReadbacks[m_CurrentFrameResourceIndex].Get(),
+            m_SmokeAuditCellsOffset, m_SmokeAuditCells.Get(), 0, m_SmokeAuditCells->GetDesc().Width);
+        std::swap(barrier.Transition.StateBefore, barrier.Transition.StateAfter);
+        commandList->ResourceBarrier(1, &barrier);
+    }
 	m_SmokeGpuStepRequested = false;
 	++m_SmokeGpuInjectionCount;
 	commandList->EndQuery(m_SmokeGpuQueries.Get(), D3D12_QUERY_TYPE_TIMESTAMP, queryBase + static_cast<UINT>(SmokeTimestampStepEnd));
@@ -4862,6 +5057,22 @@ void Renderer::DispatchSmokeSourceTest(
 	commandList->SetPipelineState(m_SmokeReduceVelocityPSO.Get());
 	commandList->Dispatch(1, 1, 1);
 	orderWrites();
+
+	// Enstrophy: recompute vorticity from the final projected velocity (so the
+	// metric reflects the actual resulting field for BOTH epsilon=0 and epsilon>0),
+	// then reduce sum|omega|^2 into diagnostics record 3.
+	velocityInputs(m_GpuVelocityReadIndex);
+	uav(m_GpuVorticityX[0]); uav(m_GpuVorticityY[0]); uav(m_GpuVorticityZ[0]);
+	bind(SmokeBindingVorticityRoot, m_GpuVorticityX[0].uav);
+	commandList->SetPipelineState(m_SmokeComputeVorticityPSO.Get());
+	commandList->Dispatch(gx, gy, gz);
+	orderWrites();
+	srv(m_GpuVorticityX[0]); srv(m_GpuVorticityY[0]); srv(m_GpuVorticityZ[0]);
+	bind(SmokeBindingVorticityReadRoot, m_GpuVorticityX[0].srv);
+	commandList->SetPipelineState(m_SmokeReduceEnstrophyPSO.Get());
+	commandList->Dispatch(1, 1, 1);
+	orderWrites();
+
 	commandList->EndQuery(
 		m_SmokeGpuQueries.Get(),
 		D3D12_QUERY_TYPE_TIMESTAMP,
@@ -4873,7 +5084,7 @@ void Renderer::DispatchSmokeSourceTest(
 		m_SmokeGpuDiagnosticsReadbackOffset,
 		m_SmokeGpuDiagnosticBuffer.Get(),
 		0,
-		3 * sizeof(XMFLOAT4));
+		4 * sizeof(XMFLOAT4));
 	transitionDiagnostics(D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
 	const UINT64 timestampOffset =

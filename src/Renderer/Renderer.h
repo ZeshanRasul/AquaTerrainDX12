@@ -427,6 +427,10 @@ private:
 	std::array<SmokeGpuTexture, 2> m_GpuW;
 	std::array<SmokeGpuTexture, 2> m_GpuPressure;
 
+	std::array<SmokeGpuTexture, 1> m_GpuVorticityX;
+	std::array<SmokeGpuTexture, 1> m_GpuVorticityY;
+	std::array<SmokeGpuTexture, 1> m_GpuVorticityZ;
+
 	SmokeGpuTexture m_GpuDivergence;
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_SmokeGpuDiagnosticBuffer;
 	D3D12_GPU_DESCRIPTOR_HANDLE m_SmokeGpuDiagnosticUav = {};
@@ -462,6 +466,9 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SmokeReduceVelocityPSO;
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SmokeAdvectScalarsRawPSO;
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SmokeMacCormackScalarsPSO;
+	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SmokeComputeVorticityPSO;
+	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SmokeApplyConfinementForcePSO;
+	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SmokeReduceEnstrophyPSO;
 
 	void CreateSmokeBindingRootSignature();
 	void CreateSmokeBindingPSOs();
@@ -486,6 +493,10 @@ private:
     float m_SmokeGpuAccumulator = 0.0f;
     unsigned m_SmokeGpuPendingSteps = 0;
     int m_SmokeGpuPressureIterations = 20;
+	float m_SmokeGpuVorticityEpsilon = 0.0f;
+	float m_SmokeGpuBenchmarkVorticityEpsilon = 0.0f;
+	SmokeLimiterMode m_SmokeGpuLimiterMode = SmokeLimiterMode::Clamp;
+	int m_SmokeGpuBenchmarkLimiterMode = 0;
     double m_SmokeGpuLastMilliseconds = 0.0;
     double m_SmokeGpuLastPressureMilliseconds = 0.0;
 	unsigned m_SmokeGpuLastPressureIterations = 0;
@@ -505,6 +516,41 @@ private:
     void CreateSmokeGpuDiagnostics();
     void CollectSmokeGpuDiagnostics();
     void SaveSmokeGpuBenchmark();
+    void StartSmokeMassAudit(bool automatic = false);
+    void CreateSmokeMassAudit();
+    void CaptureSmokeMassAudit(ID3D12GraphicsCommandList* commands, SmokeGpuTexture& texture, unsigned stage);
+    void CollectSmokeMassAudit(unsigned frame, unsigned step, bool emit, double densitySum, std::uint64_t densityHash);
+    void SaveSmokeMassAudit();
+    bool m_SmokeMassAudit = false;
+    bool m_SmokeMassAuditAutomatic = false;
+    bool m_SmokeAuditProbes = true;
+    static constexpr unsigned SmokeAuditStages = 8; // before/after source, pre-advection, hat, bar, constant, impulse, final
+    UINT64 m_SmokeAuditTextureStride = 0;
+    UINT64 m_SmokeAuditCellsOffset = 0;
+    D3D12_PLACED_SUBRESOURCE_FOOTPRINT m_SmokeAuditFootprint{};
+    Microsoft::WRL::ComPtr<ID3D12Resource> m_SmokeAuditCells;
+    std::array<Microsoft::WRL::ComPtr<ID3D12Resource>, NumFrameResources> m_SmokeAuditReadbacks;
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SmokeAuditSLPSO, m_SmokeAuditMCPSO, m_SmokeAuditPatternPSO;
+    std::vector<std::string> m_SmokeAuditRows;
+    std::filesystem::path m_SmokeAuditOutput;
+    unsigned m_SmokeAuditFailures = 0;
+
+    // Passive-advection reference harness (SmokeAdvectionReference.cpp).
+    void StartSmokeAdvectionReference(SmokeReferenceCase referenceCase, bool automatic = false);
+    void DispatchSmokeReferenceStep(ID3D12GraphicsCommandList* commandList, UINT timestampSlot = 0);
+    void RecordReferenceStep(const void* mapped, unsigned step);
+    void SaveSmokeAdvectionReference();
+    SmokeReferenceCase m_SmokeReferenceCase = SmokeReferenceCase::None;
+    bool m_SmokeReferenceAutomatic = false;
+    int m_SmokeReferencePeriodic = 0;
+    int m_SmokeReferenceVelocityMode = 0;   // 0 zero, 1 translation +x, 2 rotation about z
+    float m_SmokeReferenceSpeed = 0.0f;      // cells/step (translation) or rad/step (rotation)
+    float m_SmokeReferenceBlobSigma = 0.0f;  // cells
+    float m_SmokeReferenceBlobCentre[3]{};   // cells
+    std::vector<std::string> m_SmokeReferenceRows;
+    std::filesystem::path m_SmokeReferenceOutput;
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SmokeReferenceBlobPSO;
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SmokeReferenceVelocityPSO;
 
     struct GpuSmokeSample
     {
@@ -514,6 +560,7 @@ private:
         double densitySum = 0.0, densityMin = 0.0, densityMax = 0.0;
         Vector3 centre{};
         unsigned nonfinite = 0;
+        std::uint64_t densityHash = 14695981039346656037ull;
 		unsigned pressureIterations = 0;
 		double sourceMilliseconds = 0.0;
 		double velocityAdvectionMilliseconds = 0.0;
@@ -531,6 +578,8 @@ private:
 		double kineticEnergy = 0.0;
 		double rmsSpeed = 0.0;
 		double maxSpeed = 0.0;
+		double enstrophy = 0.0;
+		double maxVorticity = 0.0;
 		unsigned divergenceBeforeNonfinite = 0;
 		unsigned divergenceAfterNonfinite = 0;
 		unsigned velocityNonfinite = 0;
@@ -593,7 +642,7 @@ struct SmokeBindingConstants
 	float hx;
 	float hy;
 	float hz;
-	float pad;
+	float vorticityEpsilon;
 
 	float GridSpacing[3];
 	float FluidDensity;
@@ -606,12 +655,21 @@ struct SmokeBindingConstants
 	int openTopEnabled;
 
 	SmokeSphereObstacle sphereObstacle;
+
+	int limiterMode; // 0 = clamp, 1 = revert, 2 = adaptive (MacCormack combine)
+
+	// Passive-advection reference harness (inert in normal runs; all zero).
+	int periodicDomain;            // 1 = wrap density sampling + limiter stencil
+	int referenceVelocityMode;     // 0 zero, 1 translation +x, 2 rotation about z
+	float referenceSpeed;          // cells/step (translation) or rad/step (rotation)
+	float referenceBlobSigma;      // cells
+	float referenceBlobCentre[3];  // cells
 };
 
 
 static_assert(sizeof(SmokeSphereObstacle) == 32);
 static_assert(offsetof(SmokeBindingConstants, sphereObstacle) == 112);
-static_assert(sizeof(SmokeBindingConstants) == 144);
+static_assert(sizeof(SmokeBindingConstants) == 176);
 
 constexpr UINT SmokeConstantCount =
 static_cast<UINT>(
@@ -630,6 +688,9 @@ enum SmokeBindingRootParameter : UINT
 	SmokeBindingPressureReadInputRoot,  // u8: pressure
 	SmokeBindingDivergenceReadRoot, 
 	SmokeBindingDiagnosticsRoot, // u9: three float4 reduction records
-	SmokeBindingHatBarRoot, // u10, u11: density and temperature hat/bar
+	SmokeBindingHatBarRoot, // t7..t10: density-hat, temperature-hat, density-bar, temperature-bar
+	SmokeBindingVorticityRoot,     // u12,u13,u14 : write omega
+	SmokeBindingVorticityReadRoot, // t11,t12,t13 : read omega
+    SmokeBindingAuditRoot, // u15: per-cell audit values (audit shader variants only)
 	SmokeBindingRootCount
 };

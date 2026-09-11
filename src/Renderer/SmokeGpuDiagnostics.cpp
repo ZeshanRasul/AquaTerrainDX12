@@ -26,7 +26,7 @@ void Renderer::CreateSmokeGpuDiagnostics()
     // the buffer is too small for the copy and the diagnostics overlap density.
     const UINT64 densityEnd = m_SmokeGpuReadbackFootprint.Offset + bytes;
     m_SmokeGpuDiagnosticsReadbackOffset = (densityEnd + 255u) & ~UINT64{ 255u };
-    constexpr UINT64 diagnosticBytes = 3 * sizeof(XMFLOAT4);
+    constexpr UINT64 diagnosticBytes = 4 * sizeof(XMFLOAT4);
     const auto buffer = CD3DX12_RESOURCE_DESC::Buffer(
         m_SmokeGpuDiagnosticsReadbackOffset + diagnosticBytes);
     const auto heap = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_READBACK);
@@ -44,6 +44,11 @@ void Renderer::CollectSmokeGpuDiagnostics()
         void* mapped = nullptr;
         const D3D12_RANGE reads = { 0, static_cast<SIZE_T>(slot.buffer->GetDesc().Width) };
         ThrowIfFailed(slot.buffer->Map(0, &reads, &mapped));
+        auto sample = slot.sample;
+        // Reference dispatches copy density only: timestamps and numerical
+        // diagnostic records were not written and must not be read.
+        if (m_SmokeReferenceCase == SmokeReferenceCase::None)
+        {
         const auto* timestamps = reinterpret_cast<const UINT64*>(
             static_cast<const std::byte*>(mapped) + slot.timestampOffset);
 
@@ -57,7 +62,6 @@ void Renderer::CollectSmokeGpuDiagnostics()
                 tickToMilliseconds;
         };
 
-        auto sample = slot.sample;
         sample.sourceMilliseconds = elapsedMilliseconds(
             SmokeTimestampStepBegin, SmokeTimestampSourceEnd);
         sample.velocityAdvectionMilliseconds = elapsedMilliseconds(
@@ -125,6 +129,10 @@ void Renderer::CollectSmokeGpuDiagnostics()
             speedSquaredSum * cellVolume;
         sample.rmsSpeed = std::sqrt(speedSquaredSum / velocityCount);
         sample.maxSpeed = diagnostics[2].y;
+        // Record 3: enstrophy = integral of |omega|^2 over fluid cells.
+        sample.enstrophy =
+            std::max(static_cast<double>(diagnostics[3].x), 0.0) * cellVolume;
+        sample.maxVorticity = diagnostics[3].y;
         sample.divergenceBeforeNonfinite =
             static_cast<unsigned>(std::max(diagnostics[0].w, 0.0f));
         sample.divergenceAfterNonfinite =
@@ -144,6 +152,7 @@ void Renderer::CollectSmokeGpuDiagnostics()
         m_SmokeGpuLastRmsSpeed = sample.rmsSpeed;
         m_SmokeGpuLastMaxSpeed = sample.maxSpeed;
         m_SmokeGpuLastDiagnosticNonfinite = sample.diagnosticNonfinite;
+        }
 
         if (slot.benchmark)
         {
@@ -162,6 +171,12 @@ void Renderer::CollectSmokeGpuDiagnostics()
                     for (std::size_t i = 0; i < n.x; ++i)
                     {
                         const double d = row[i];
+                        if (m_SmokeMassAudit)
+                        {
+                            const auto* bytes = reinterpret_cast<const unsigned char*>(row + i);
+                            for (unsigned b = 0; b < sizeof(float); ++b)
+                                sample.densityHash = (sample.densityHash ^ bytes[b]) * 1099511628211ull;
+                        }
                         if (!std::isfinite(d)) { ++sample.nonfinite; continue; }
                         sample.densityMin = std::min(sample.densityMin, d);
                         sample.densityMax = std::max(sample.densityMax, d);
@@ -178,6 +193,10 @@ void Renderer::CollectSmokeGpuDiagnostics()
                 sample.centre.z /= sample.densitySum;
             }
             m_SmokeGpuBenchmarkSamples.push_back(sample);
+            if (m_SmokeMassAudit && m_SmokeAuditProbes)
+                CollectSmokeMassAudit(m_CurrentFrameResourceIndex, sample.step, sample.emit, sample.densitySum, sample.densityHash);
+            if (m_SmokeReferenceCase != SmokeReferenceCase::None)
+                RecordReferenceStep(mapped, sample.step);
         }
         const D3D12_RANGE writes = { 0, 0 };
         slot.buffer->Unmap(0, &writes);
@@ -188,17 +207,26 @@ void Renderer::CollectSmokeGpuDiagnostics()
          m_SmokeGpuBenchmarkSubmitted >= m_SmokeGpuBenchmarkConfig.totalSteps) &&
         m_SmokeGpuBenchmarkSamples.size() == m_SmokeGpuBenchmarkSubmitted)
     {
-        SaveSmokeGpuBenchmark();
+        const bool reference = m_SmokeReferenceCase != SmokeReferenceCase::None;
+        if (reference) SaveSmokeAdvectionReference();
+        else if (m_SmokeMassAudit) SaveSmokeMassAudit();
+        else SaveSmokeGpuBenchmark();
         m_SmokeGpuBenchmarkRunning = false;
         m_SmokeGpuPaused = true;
         m_SmokeGpuPendingSteps = 0;
         m_ShowSmokeVolume = m_SmokeGpuRestoreVolume;
+        if (m_SmokeMassAuditAutomatic) PostQuitMessage(m_SmokeAuditFailures ? 2 : 0);
+        if (reference && m_SmokeReferenceAutomatic) PostQuitMessage(0);
+        m_SmokeMassAudit = false;
+        m_SmokeReferenceCase = SmokeReferenceCase::None;
     }
 }
 
 void Renderer::DrawSmokeGpuDebug()
 {
     ImGui::Begin("Smoke 3D GPU controls");
+    if (m_SmokeMassAudit)
+        ImGui::TextWrapped("Correctness audit active: displayed timings include probes and are not performance results.");
     ImGui::Text("GPU solver: %.3f ms / step (delayed timestamp)", m_SmokeGpuLastMilliseconds);
     ImGui::Text("Simulation steps: %u | simulated time: %.2f s",
         m_SmokeGpuInjectionCount, m_SmokeGpuInjectionCount / 60.0);
@@ -246,12 +274,25 @@ void Renderer::DrawSmokeGpuDebug()
     ImGui::TextDisabled("Numerical reductions and readback are outside solver timestamps.");
 
     ImGui::BeginDisabled(m_SmokeGpuBenchmarkRunning);
+    if (ImGui::Button("Start mass-budget audit (480 steps)")) StartSmokeMassAudit();
+    if (ImGui::Button("Reference: source-only (case 1)")) StartSmokeAdvectionReference(SmokeReferenceCase::SourceOnly);
+    ImGui::SameLine();
+    if (ImGui::Button("Reference: static field (case 2)")) StartSmokeAdvectionReference(SmokeReferenceCase::StaticField);
+    if (ImGui::Button("Reference: translation (case 3)")) StartSmokeAdvectionReference(SmokeReferenceCase::Translation);
+    ImGui::SameLine();
+    if (ImGui::Button("Reference: rotation (case 4)")) StartSmokeAdvectionReference(SmokeReferenceCase::Rotation);
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("Passive-advection reference (zero velocity). Uses the current\n"
+            "Advection Mode / Limiter. Source-only checks injection; static checks\n"
+            "identity transport. Both should give ~0 error for a correct scheme.");
+    ImGui::TextDisabled("Audit captures intermediate fields; its timings are not performance measurements.");
     if (ImGui::Checkbox("Paused", &m_SmokeGpuPaused))
     {
         m_SmokeGpuPendingSteps = 0;
         m_SmokeGpuAccumulator = 0;
     }
 	ImGui::Combo("Advection Mode", reinterpret_cast<int*>(&m_SmokeGpuAdvectionMode), "Semi-Lagrangian\0MacCormack\0\0");
+	ImGui::Combo("MacCormack Limiter", reinterpret_cast<int*>(&m_SmokeGpuLimiterMode), "Clamp\0Revert\0Adaptive\0\0");
     ImGui::Checkbox("Emitter enabled", &m_SmokeGpuEmitterEnabled);
     ImGui::Checkbox("Sphere obstacle enabled", &m_SmokeGpuSphereEnabled);
     ImGui::BeginDisabled(!m_SmokeGpuSphereEnabled);
@@ -270,6 +311,10 @@ void Renderer::DrawSmokeGpuDebug()
         m_SmokeGpuSphereRadius / cellSpacing.z);
     ImGui::Text("World diameters: %.2f, %.2f, %.2f",
         2.0f * worldRadii.x, 2.0f * worldRadii.y, 2.0f * worldRadii.z);
+
+    ImGui::SliderFloat("Vorticity Epsilon", &m_SmokeGpuVorticityEpsilon,
+        0.0f, 20.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+
 	ImGui::Checkbox("Open Top Enabled", &m_SmokeGpuOpenTopEnabled);
     if (ImGui::Button("Single step"))
     {
@@ -349,9 +394,19 @@ void Renderer::DrawSmokeGpuDebug()
         SmokeBenchmarkConfig config;
         config.implementation = "gpu_jacobi";
         config.scenario = "abtest_buoyant_plume_open_top_v1";
-        config.runLabel = (m_SmokeGpuAdvectionMode == SmokeAdvectionMode::MacCormack)
-            ? "ab_maccormack"
-            : "ab_semilagrangian";
+        // The run label encodes BOTH varied dimensions so any A/B pair is
+        // self-identifying: hold one fixed and vary the other between runs
+        // (advection mode via the combo, or vorticity strength via the slider).
+        {
+            const std::string modeTag =
+                (m_SmokeGpuAdvectionMode == SmokeAdvectionMode::MacCormack)
+                    ? "maccormack" : "semilagrangian";
+            const int epsilonTag =
+                static_cast<int>(m_SmokeGpuVorticityEpsilon + 0.5f);
+            config.runLabel =
+                "ab_" + modeTag + "_vort" + std::to_string(epsilonTag);
+        }
+        config.vorticityEpsilon = m_SmokeGpuVorticityEpsilon;
         config.totalSteps = 480;
         config.emitterSteps = 240;
         config.performanceWarmupSteps = 30;
@@ -373,8 +428,11 @@ void Renderer::DrawSmokeGpuDebug()
         physics.densityDissipation = 0.1;
         physics.temperatureCooling = 0.5;
 
+        config.limiterMode = m_SmokeGpuLimiterMode;
         m_SmokeGpuBenchmarkConfig = config;
         m_SmokeGpuBenchmarkPhysics = physics;
+        m_SmokeGpuBenchmarkVorticityEpsilon = config.vorticityEpsilon;
+        m_SmokeGpuBenchmarkLimiterMode = static_cast<int>(m_SmokeGpuLimiterMode);
         m_SmokeGpuBenchmarkIterations = 40;
         m_SmokeGpuBenchmarkSamples.clear();
         m_SmokeGpuBenchmarkSamples.reserve(config.totalSteps);
@@ -388,13 +446,79 @@ void Renderer::DrawSmokeGpuDebug()
         m_ShowSmokeVolume = false;
         m_SmokeGpuBenchmarkStatus =
             std::string("Matched A/B run (") + config.runLabel +
-            "): recording. Repeat with the other advection mode.";
+            "): recording. Repeat with the other setting (advection mode or vorticity epsilon).";
     }
     if (ImGui::IsItemHovered())
         ImGui::SetTooltip(
             "Pins closed box, no sphere, 480 steps (240 emitting), 40 Jacobi\n"
             "iterations, zero density dissipation. Only the advection mode varies.\n"
             "Run once per mode, then compare the two output directories.");
+
+    // Limiter gate: the adversarial sealed-box scenario (closed top, zero
+    // dissipation) where clamp fills the domain and revert over-diffuses.
+    // Forces MacCormack + no confinement so ONLY the limiter varies. Run once
+    // per limiter mode (Clamp / Revert / Adaptive) and compare.
+    if (ImGui::Button("Start limiter-stress benchmark"))
+    {
+        m_SmokeGpuOpenTopEnabled = false;
+        m_SmokeGpuSphereEnabled = false;
+        m_SphereTranslationEnabled = false;
+        m_SmokeGpuAdvectionMode = SmokeAdvectionMode::MacCormack;
+        m_SmokeGpuVorticityEpsilon = 0.0f;
+
+        SmokeBenchmarkConfig config;
+        config.implementation = "gpu_jacobi";
+        config.scenario = "limiter_stress_closed_box_v1";
+        const char* limiterTag =
+            (m_SmokeGpuLimiterMode == SmokeLimiterMode::Adaptive) ? "adaptive"
+            : (m_SmokeGpuLimiterMode == SmokeLimiterMode::Revert) ? "revert"
+            : "clamp";
+        config.runLabel = std::string("stress_") + limiterTag;
+        config.totalSteps = 480;
+        config.emitterSteps = 240;
+        config.performanceWarmupSteps = 30;
+        config.timeStep = 1.0 / 60.0;
+        const auto n = m_SmokeSolver.Density().Resolution();
+        config.emitterCell = { n.x / 2, n.y / 4, n.z / 2 };
+        config.advectionMode = m_SmokeGpuAdvectionMode;
+        config.limiterMode = m_SmokeGpuLimiterMode;
+        config.vorticityEpsilon = 0.0;
+        config.renderingEnabledDuringRun = false;
+
+        // Gentle cooled buoyancy keeps the plume in-domain (no top-boundary sink),
+        // and zero dissipation means any density-integral drift is the limiter's
+        // (non-)conservation alone: clamp grows it, revert collapses it.
+        SmokePhysicsParameters physics;
+        physics.ambientTemperature = 0.0;
+        physics.temperatureBuoyancy = 0.3;
+        physics.smokeWeight = 0.05;
+        physics.densityDissipation = 0.0;
+        physics.temperatureCooling = 0.5;
+
+        m_SmokeGpuBenchmarkConfig = config;
+        m_SmokeGpuBenchmarkPhysics = physics;
+        m_SmokeGpuBenchmarkVorticityEpsilon = 0.0f;
+        m_SmokeGpuBenchmarkLimiterMode = static_cast<int>(m_SmokeGpuLimiterMode);
+        m_SmokeGpuBenchmarkIterations = 40;
+        m_SmokeGpuBenchmarkSamples.clear();
+        m_SmokeGpuBenchmarkSamples.reserve(config.totalSteps);
+        m_SmokeGpuBenchmarkSubmitted = 0;
+        m_SmokeGpuBenchmarkStopping = false;
+        m_SmokeGpuBenchmarkRunning = true;
+        m_SmokeGpuResetRequested = true;
+        m_SmokeGpuStepRequested = false;
+        m_SmokeGpuPendingSteps = 0;
+        m_SmokeGpuRestoreVolume = m_ShowSmokeVolume;
+        m_ShowSmokeVolume = false;
+        m_SmokeGpuBenchmarkStatus =
+            std::string("Limiter-stress run (") + config.runLabel +
+            "): recording. Repeat for Clamp / Revert / Adaptive.";
+    }
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip(
+            "Adversarial sealed box (closed top, zero dissipation), MacCormack,\n"
+            "no confinement. Only the MacCormack Limiter combo varies. Run once\n"
+            "per limiter, then compare density integral (stability) vs peak (sharpness).");
     ImGui::EndDisabled();
     if (m_SmokeGpuBenchmarkRunning)
     {
@@ -430,7 +554,7 @@ void Renderer::SaveSmokeGpuBenchmark()
             return file;
         };
         auto csv = open("steps.csv");
-        csv << "step_index,simulation_time_s,emitter_enabled,solver_gpu_ms,diagnostics_gpu_ms,source_gpu_ms,velocity_advection_gpu_ms,buoyancy_gpu_ms,divergence_gpu_ms,pressure_clear_gpu_ms,pressure_solve_gpu_ms,pressure_gradient_gpu_ms,scalar_advection_gpu_ms,pressure_fraction,pressure_iteration_us,pressure_iterations,rms_divergence_before,max_abs_divergence_before,rms_divergence_after,max_abs_divergence_after,divergence_remaining_fraction,kinetic_energy,velocity_rms,velocity_max,nonfinite_divergence_before,nonfinite_divergence_after,nonfinite_velocity,density_min,density_max,density_sum,density_integral,density_centre_x,density_centre_y,density_centre_z,nonfinite_density_cells\n";
+        csv << "step_index,simulation_time_s,emitter_enabled,solver_gpu_ms,diagnostics_gpu_ms,source_gpu_ms,velocity_advection_gpu_ms,buoyancy_gpu_ms,divergence_gpu_ms,pressure_clear_gpu_ms,pressure_solve_gpu_ms,pressure_gradient_gpu_ms,scalar_advection_gpu_ms,pressure_fraction,pressure_iteration_us,pressure_iterations,rms_divergence_before,max_abs_divergence_before,rms_divergence_after,max_abs_divergence_after,divergence_remaining_fraction,kinetic_energy,velocity_rms,velocity_max,nonfinite_divergence_before,nonfinite_divergence_after,nonfinite_velocity,density_min,density_max,density_sum,density_integral,density_centre_x,density_centre_y,density_centre_z,nonfinite_density_cells,enstrophy,max_vorticity\n";
         std::vector<double> timings;
         for (const auto& x : samples)
         {
@@ -455,7 +579,8 @@ void Renderer::SaveSmokeGpuBenchmark()
                 << x.divergenceBeforeNonfinite << ','
                 << x.divergenceAfterNonfinite << ',' << x.velocityNonfinite << ','
                 << x.densityMin << ',' << x.densityMax << ',' << x.densitySum << ','
-                << x.densitySum * h.x * h.y * h.z << ',' << x.centre.x << ',' << x.centre.y << ',' << x.centre.z << ',' << x.nonfinite << '\n';
+                << x.densitySum * h.x * h.y * h.z << ',' << x.centre.x << ',' << x.centre.y << ',' << x.centre.z << ',' << x.nonfinite
+                << ',' << x.enstrophy << ',' << x.maxVorticity << '\n';
             if (x.step > config.performanceWarmupSteps) timings.push_back(x.milliseconds);
         }
         const bool completed = samples.size() == config.totalSteps;
@@ -497,7 +622,7 @@ void Renderer::SaveSmokeGpuBenchmark()
                 ++numericalCount;
             }
         auto summary = open("summary.csv");
-        summary << "implementation,completed,steps_recorded,warmup_steps_excluded,solver_gpu_ms_mean,solver_gpu_ms_p50,solver_gpu_ms_p95,solver_gpu_ms_p99,diagnostics_gpu_ms_mean,source_gpu_ms_mean,velocity_advection_gpu_ms_mean,buoyancy_gpu_ms_mean,divergence_gpu_ms_mean,pressure_clear_gpu_ms_mean,pressure_solve_gpu_ms_mean,pressure_gradient_gpu_ms_mean,scalar_advection_gpu_ms_mean,pressure_fraction_mean,rms_divergence_before_mean,rms_divergence_after_mean,divergence_remaining_fraction_mean,max_abs_divergence_after_peak,kinetic_energy_mean,velocity_rms_mean,velocity_max_peak,nonfinite_diagnostic_samples_total\n";
+        summary << "implementation,completed,steps_recorded,warmup_steps_excluded,solver_gpu_ms_mean,solver_gpu_ms_p50,solver_gpu_ms_p95,solver_gpu_ms_p99,diagnostics_gpu_ms_mean,source_gpu_ms_mean,velocity_advection_gpu_ms_mean,buoyancy_gpu_ms_mean,divergence_gpu_ms_mean,pressure_clear_gpu_ms_mean,pressure_solve_gpu_ms_mean,pressure_gradient_gpu_ms_mean,scalar_advection_gpu_ms_mean,pressure_fraction_mean,rms_divergence_before_mean,rms_divergence_after_mean,divergence_remaining_fraction_mean,max_abs_divergence_after_peak,kinetic_energy_mean,velocity_rms_mean,velocity_max_peak,nonfinite_diagnostic_samples_total,enstrophy_mean\n";
         summary << "gpu_jacobi," << completed << ',' << samples.size() << ',' << config.performanceWarmupSteps;
         if (!timings.empty())
         {
@@ -524,10 +649,11 @@ void Renderer::SaveSmokeGpuBenchmark()
                 << ',' << stageMean(&GpuSmokeSample::kineticEnergy)
                 << ',' << stageMean(&GpuSmokeSample::rmsSpeed)
                 << ',' << maxSpeedPeak
-                << ',' << diagnosticNonfiniteTotal;
+                << ',' << diagnosticNonfiniteTotal
+                << ',' << stageMean(&GpuSmokeSample::enstrophy);
         }
         else
-            for (int column = 0; column < 22; ++column)
+            for (int column = 0; column < 23; ++column)
                 summary << ',';
         summary << '\n';
         auto manifest = open("manifest.json");
@@ -556,6 +682,8 @@ void Renderer::SaveSmokeGpuBenchmark()
             << ",\n  \"density_rate\": 30,\n  \"temperature_rate\": 10,\n  \"source_acceleration\": [0,0,0],"
             << "\n  \"pressure_iterations\": " << m_SmokeGpuBenchmarkIterations
 			<< ",\n  \"advection_mode\": " << (m_SmokeGpuAdvectionMode == SmokeAdvectionMode::SemiLagrangian ? "\"semi-Lagrangian\"" : "\"MacCormack\"")
+            << ",\n  \"limiter_mode\": " << (m_SmokeGpuBenchmarkLimiterMode == 2 ? "\"adaptive\"" : m_SmokeGpuBenchmarkLimiterMode == 1 ? "\"revert\"" : "\"clamp\"")
+            << ",\n  \"vorticity_epsilon\": " << m_SmokeGpuBenchmarkVorticityEpsilon
             << ",\n  \"sphere_enabled\": " << (m_SmokeGpuSphereEnabled ? "true" : "false")
             << ",\n  \"sphere_centre\": [" << m_SmokeGpuSphereCentre.x << ','
             << m_SmokeGpuSphereCentre.y << ',' << m_SmokeGpuSphereCentre.z << ']'

@@ -1,0 +1,1 @@
+step,emitter,before_source,after_source,before_advection,forward,reverse,corrected,limited,final,expected_injection,measured_injection,forward_delta,correction_delta,lower_changed_cells,lower_delta,upper_changed_cells,upper_delta,damping_and_positivity_delta,damping_residual,limiter_residual,pattern_errors,injection_errors,untouched_errors,nonfinite,readback_match,audit_failed
