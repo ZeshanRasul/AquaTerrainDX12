@@ -20,7 +20,12 @@ void Renderer::CreateSmokeGpuDiagnostics()
     // begins at the required 512-byte texture-footprint alignment.
     m_Device->GetCopyableFootprints(&texture, 0, 1, 512,
         &m_SmokeGpuReadbackFootprint, nullptr, nullptr, &bytes);
-    m_SmokeGpuDiagnosticsReadbackOffset = (bytes + 255u) & ~UINT64{ 255u };
+    // `bytes` is the density subresource size and does NOT include the 512-byte
+    // base offset, so the density copy actually ends at footprint.Offset + bytes.
+    // Place the diagnostics region after that end (not after `bytes`), otherwise
+    // the buffer is too small for the copy and the diagnostics overlap density.
+    const UINT64 densityEnd = m_SmokeGpuReadbackFootprint.Offset + bytes;
+    m_SmokeGpuDiagnosticsReadbackOffset = (densityEnd + 255u) & ~UINT64{ 255u };
     constexpr UINT64 diagnosticBytes = 3 * sizeof(XMFLOAT4);
     const auto buffer = CD3DX12_RESOURCE_DESC::Buffer(
         m_SmokeGpuDiagnosticsReadbackOffset + diagnosticBytes);
@@ -321,6 +326,75 @@ void Renderer::DrawSmokeGpuDebug()
         m_ShowSmokeVolume = config.renderingEnabledDuringRun;
         m_SmokeGpuBenchmarkStatus = "Recording GPU timestamps and density; waiting for completed frames.";
     }
+
+    // Matched advection A/B: pins every parameter to a canonical value so the
+    // Semi-Lagrangian and MacCormack runs differ ONLY in advection mode. Set the
+    // Advection Mode combo, click once, wait for the saved path; repeat for the
+    // other mode. The two runs are then directly comparable with
+    // diagnostics/Compare-SmokeRuns.ps1.
+    if (ImGui::Button("Start matched A/B benchmark"))
+    {
+        // Canonical scenario: open-topped, vented buoyant plume with mild dissipation,
+        // no obstacle. This matches a realistic rising plume and, crucially, is well
+        // posed: mass can leave through the top, so no scheme accumulates pathologically.
+        // The headline metric is peak-density preservation (effective numerical
+        // diffusion): MacCormack holds sharp peaks that semi-Lagrangian smears away.
+        // (A sealed, zero-dissipation box was tried first and is ill posed - with no
+        // outlet the source accumulates without bound, and the non-conservative clamp
+        // limiter then fills the domain; that measures non-conservation, not quality.)
+        m_SmokeGpuOpenTopEnabled = true;
+        m_SmokeGpuSphereEnabled = false;
+        m_SphereTranslationEnabled = false;
+
+        SmokeBenchmarkConfig config;
+        config.implementation = "gpu_jacobi";
+        config.scenario = "abtest_buoyant_plume_open_top_v1";
+        config.runLabel = (m_SmokeGpuAdvectionMode == SmokeAdvectionMode::MacCormack)
+            ? "ab_maccormack"
+            : "ab_semilagrangian";
+        config.totalSteps = 480;
+        config.emitterSteps = 240;
+        config.performanceWarmupSteps = 30;
+        config.timeStep = 1.0 / 60.0;
+        const auto n = m_SmokeSolver.Density().Resolution();
+        config.emitterCell = { n.x / 2, n.y / 4, n.z / 2 };
+        config.advectionMode = m_SmokeGpuAdvectionMode;
+        config.renderingEnabledDuringRun = false;
+
+        // Moderate buoyancy drives a steady plume up through the open top; mild,
+        // equal dissipation keeps both schemes well behaved. Because the dissipation
+        // and cooling are identical across the pair, any remaining difference in peak
+        // density and plume sharpness is due to the advection scheme's numerical
+        // diffusion alone.
+        SmokePhysicsParameters physics;
+        physics.ambientTemperature = 0.0;
+        physics.temperatureBuoyancy = 0.6;
+        physics.smokeWeight = 0.05;
+        physics.densityDissipation = 0.1;
+        physics.temperatureCooling = 0.5;
+
+        m_SmokeGpuBenchmarkConfig = config;
+        m_SmokeGpuBenchmarkPhysics = physics;
+        m_SmokeGpuBenchmarkIterations = 40;
+        m_SmokeGpuBenchmarkSamples.clear();
+        m_SmokeGpuBenchmarkSamples.reserve(config.totalSteps);
+        m_SmokeGpuBenchmarkSubmitted = 0;
+        m_SmokeGpuBenchmarkStopping = false;
+        m_SmokeGpuBenchmarkRunning = true;
+        m_SmokeGpuResetRequested = true;
+        m_SmokeGpuStepRequested = false;
+        m_SmokeGpuPendingSteps = 0;
+        m_SmokeGpuRestoreVolume = m_ShowSmokeVolume;
+        m_ShowSmokeVolume = false;
+        m_SmokeGpuBenchmarkStatus =
+            std::string("Matched A/B run (") + config.runLabel +
+            "): recording. Repeat with the other advection mode.";
+    }
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip(
+            "Pins closed box, no sphere, 480 steps (240 emitting), 40 Jacobi\n"
+            "iterations, zero density dissipation. Only the advection mode varies.\n"
+            "Run once per mode, then compare the two output directories.");
     ImGui::EndDisabled();
     if (m_SmokeGpuBenchmarkRunning)
     {
@@ -481,7 +555,7 @@ void Renderer::SaveSmokeGpuBenchmark()
             << ",\n  \"source_cell\": [" << config.emitterCell.x << ',' << config.emitterCell.y << ',' << config.emitterCell.z << ']'
             << ",\n  \"density_rate\": 30,\n  \"temperature_rate\": 10,\n  \"source_acceleration\": [0,0,0],"
             << "\n  \"pressure_iterations\": " << m_SmokeGpuBenchmarkIterations
-			<< "\n  \"advection_mode\": " << (m_SmokeGpuAdvectionMode == SmokeAdvectionMode::SemiLagrangian ? "\"semi-Lagrangian\"" : "\"MacCormack\"")
+			<< ",\n  \"advection_mode\": " << (m_SmokeGpuAdvectionMode == SmokeAdvectionMode::SemiLagrangian ? "\"semi-Lagrangian\"" : "\"MacCormack\"")
             << ",\n  \"sphere_enabled\": " << (m_SmokeGpuSphereEnabled ? "true" : "false")
             << ",\n  \"sphere_centre\": [" << m_SmokeGpuSphereCentre.x << ','
             << m_SmokeGpuSphereCentre.y << ',' << m_SmokeGpuSphereCentre.z << ']'

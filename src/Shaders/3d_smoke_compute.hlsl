@@ -828,7 +828,7 @@ void MacCormackScalarsCS(uint3 id : SV_DispatchThreadID)
     float d = dH + 0.5f * (dN - dB);
     float dlo, dhi;
     TrilinearMinMax(DensityInput, departure, dlo, dhi);
-    d = clamp(d, dlo, dhi); // limiter → falls back toward φ̂
+    d = clamp(d, dlo, dhi); // standard MacCormack limiter: bound to source-field extrema
     Density[id] = max(d * exp(-Padding.x * Dt), 0.0f); // dissipation applied ONCE, here
 
     // Temperature (same pattern, ambient-relative)
@@ -838,6 +838,6 @@ void MacCormackScalarsCS(uint3 id : SV_DispatchThreadID)
     float t = tH + 0.5f * (tN - tB);
     float tlo, thi;
     TrilinearMinMax(TemperatureInput, departure, tlo, thi);
-    t = clamp(t, tlo, thi);
+    t = clamp(t, tlo, thi); // standard MacCormack limiter
     Temperature[id] = ambientTemperature + (t - ambientTemperature) * exp(-Padding.y * Dt);
 }
