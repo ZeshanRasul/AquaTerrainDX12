@@ -1,0 +1,98 @@
+[
+  {
+    "run": "sharp-r32-sl-s0-d1-a1-i-1",
+    "all_eight_fields_match_original": true
+  },
+  {
+    "run": "sharp-r32-sl-s0-d1-a1-i512",
+    "all_eight_fields_match_original": true
+  },
+  {
+    "run": "sharp-r32-sl-s0-d1-a1-i4096",
+    "all_eight_fields_match_original": true
+  },
+  {
+    "run": "sharp-r32-sl-s0-d1-a1-i8192",
+    "all_eight_fields_match_original": true
+  },
+  {
+    "run": "sharp-r32-maccormack-s0-d1-a1-i-1",
+    "all_eight_fields_match_original": true
+  },
+  {
+    "run": "sharp-r32-maccormack-s0-d1-a1-i512",
+    "all_eight_fields_match_original": true
+  },
+  {
+    "run": "sharp-r32-maccormack-s0-d1-a1-i4096",
+    "all_eight_fields_match_original": true
+  },
+  {
+    "run": "sharp-r32-maccormack-s0-d1-a1-i8192",
+    "all_eight_fields_match_original": true
+  },
+  {
+    "run": "smooth-r32-sl-s0-d1-a1-i-1",
+    "all_eight_fields_match_original": true
+  },
+  {
+    "run": "smooth-r32-sl-s0-d1-a1-i512",
+    "all_eight_fields_match_original": true
+  },
+  {
+    "run": "smooth-r32-sl-s0-d1-a1-i4096",
+    "all_eight_fields_match_original": true
+  },
+  {
+    "run": "smooth-r32-sl-s0-d1-a1-i8192",
+    "all_eight_fields_match_original": true
+  },
+  {
+    "run": "sharp-r64-sl-s0-d1-a1-i-1",
+    "all_eight_fields_match_original": true
+  },
+  {
+    "run": "sharp-r64-sl-s0-d1-a1-i2048",
+    "all_eight_fields_match_original": true
+  },
+  {
+    "run": "sharp-r64-sl-s0-d1-a1-i4096",
+    "all_eight_fields_match_original": true
+  },
+  {
+    "run": "sharp-r64-sl-s0-d1-a1-i8192",
+    "all_eight_fields_match_original": true
+  },
+  {
+    "run": "sharp-r64-maccormack-s0-d1-a1-i-1",
+    "all_eight_fields_match_original": true
+  },
+  {
+    "run": "sharp-r64-maccormack-s0-d1-a1-i2048",
+    "all_eight_fields_match_original": true
+  },
+  {
+    "run": "sharp-r64-maccormack-s0-d1-a1-i4096",
+    "all_eight_fields_match_original": true
+  },
+  {
+    "run": "sharp-r64-maccormack-s0-d1-a1-i8192",
+    "all_eight_fields_match_original": true
+  },
+  {
+    "run": "smooth-r64-sl-s0-d1-a1-i-1",
+    "all_eight_fields_match_original": true
+  },
+  {
+    "run": "smooth-r64-sl-s0-d1-a1-i2048",
+    "all_eight_fields_match_original": true
+  },
+  {
+    "run": "smooth-r64-sl-s0-d1-a1-i4096",
+    "all_eight_fields_match_original": true
+  },
+  {
+    "run": "smooth-r64-sl-s0-d1-a1-i8192",
+    "all_eight_fields_match_original": true
+  }
+]

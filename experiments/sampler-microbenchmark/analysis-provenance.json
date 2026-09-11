@@ -1,0 +1,34 @@
+[
+  {
+    "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\diagnostics\\test_sampler_validation.py",
+    "Hash": "3C1F12F06CC25F202A010824B417787BC52EC3AC9EF0DACBA539ACF14E10891A"
+  },
+  {
+    "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\diagnostics\\plot_sampler.py",
+    "Hash": "176B24F2150E8B99A367D107809145E2AA54F17C81FC0A6E3494A7CB851C78F0"
+  },
+  {
+    "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\experiments\\sampler-microbenchmark\\README.md",
+    "Hash": "343C80FE3C81D3A7FA21C164CF951FE789ABC0176BEBC1A5F18EA5ACD2C9EBEF"
+  },
+  {
+    "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\experiments\\sampler-microbenchmark\\FINDINGS.md",
+    "Hash": "A3560CE46F14C0375B7B628DDE1FD330213306D927464A18A288FB0DF5089712"
+  },
+  {
+    "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\experiments\\sampler-microbenchmark\\summary.json",
+    "Hash": "3911DDAE0B852B94BD15F842B38E0866DE9496E228A6FB971C76633232C8D5B8"
+  },
+  {
+    "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\experiments\\sampler-microbenchmark\\validation.json",
+    "Hash": "4D0199DB9516DB229EF53F3B252F1CD279128989A3DD903141AC7F9D0E726A64"
+  },
+  {
+    "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\experiments\\sampler-microbenchmark\\figures\\sampler-response.svg",
+    "Hash": "9122247EF279E5E588A6E53FF9066BCD875D00296EE35DC4696C570A648185E8"
+  },
+  {
+    "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\experiments\\sampler-microbenchmark\\figures\\sampler-response.png",
+    "Hash": "2B571B1AFB08A0CB48E8219450AA7E45B96B6B103616D2505693F85A06AF15D7"
+  }
+]

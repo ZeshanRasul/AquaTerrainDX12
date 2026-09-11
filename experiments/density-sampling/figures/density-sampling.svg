@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="660" viewBox="0 0 1000 660">
+<rect width="1000" height="660" fill="white"/><g font-family="Arial, sans-serif" fill="#192d3b">
+<text x="35" y="38" font-size="23">Density interpolation changes the apparent projection plateau</text>
+<text x="35" y="67" font-size="14">Normalized L1 to each sampling path’s 8192-iteration reference · RTX 5090</text>
+<text x="505" y="103" font-size="16">Step 1</text><text x="790" y="103" font-size="16">Step 2</text>
+<text x="35" y="132" font-size="14">Shape / grid</text>
+<text x="205" y="132" font-size="14">Shift</text>
+<text x="300" y="132" font-size="14">dt scale</text>
+<text x="430" y="132" font-size="14">Hardware</text>
+<text x="575" y="132" font-size="14">Float</text>
+<text x="720" y="132" font-size="14">Hardware</text>
+<text x="865" y="132" font-size="14">Float</text>
+<rect x="25" y="146" width="940" height="35" fill="#f1f5f8"/>
+<text x="35" y="168" font-size="14">sharp / 32³</text>
+<text x="205" y="168" font-size="14">0</text>
+<text x="300" y="168" font-size="14">1</text>
+<text x="430" y="168" font-size="14" fill="#a23b16">0 (exact)</text>
+<text x="575" y="168" font-size="14" fill="#192d3b">6.362e-05</text>
+<text x="720" y="168" font-size="14" fill="#a23b16">0 (exact)</text>
+<text x="865" y="168" font-size="14" fill="#192d3b">1.273e-04</text>
+<text x="35" y="205" font-size="14">sharp / 32³</text>
+<text x="205" y="205" font-size="14">0.75</text>
+<text x="300" y="205" font-size="14">1</text>
+<text x="430" y="205" font-size="14" fill="#192d3b">9.313e-05</text>
+<text x="575" y="205" font-size="14" fill="#192d3b">6.778e-05</text>
+<text x="720" y="205" font-size="14" fill="#192d3b">1.774e-04</text>
+<text x="865" y="205" font-size="14" fill="#192d3b">1.353e-04</text>
+<rect x="25" y="220" width="940" height="35" fill="#f1f5f8"/>
+<text x="35" y="242" font-size="14">sharp / 32³</text>
+<text x="205" y="242" font-size="14">0</text>
+<text x="300" y="242" font-size="14">2</text>
+<text x="430" y="242" font-size="14" fill="#192d3b">1.398e-04</text>
+<text x="575" y="242" font-size="14" fill="#192d3b">1.258e-04</text>
+<text x="720" y="242" font-size="14" fill="#192d3b">2.630e-04</text>
+<text x="865" y="242" font-size="14" fill="#192d3b">2.517e-04</text>
+<text x="35" y="279" font-size="14">sharp / 32³</text>
+<text x="205" y="279" font-size="14">0.5</text>
+<text x="300" y="279" font-size="14">0.5</text>
+<text x="430" y="279" font-size="14" fill="#a23b16">0 (exact)</text>
+<text x="575" y="279" font-size="14" fill="#192d3b">3.389e-05</text>
+<text x="720" y="279" font-size="14" fill="#a23b16">0 (exact)</text>
+<text x="865" y="279" font-size="14" fill="#192d3b">6.772e-05</text>
+<rect x="25" y="294" width="940" height="35" fill="#f1f5f8"/>
+<text x="35" y="316" font-size="14">smooth / 32³</text>
+<text x="205" y="316" font-size="14">0</text>
+<text x="300" y="316" font-size="14">1</text>
+<text x="430" y="316" font-size="14" fill="#192d3b">2.521e-05</text>
+<text x="575" y="316" font-size="14" fill="#192d3b">5.750e-05</text>
+<text x="720" y="316" font-size="14" fill="#192d3b">5.026e-05</text>
+<text x="865" y="316" font-size="14" fill="#192d3b">1.148e-04</text>
+<text x="35" y="353" font-size="14">sharp / 64³</text>
+<text x="205" y="353" font-size="14">0</text>
+<text x="300" y="353" font-size="14">1</text>
+<text x="430" y="353" font-size="14" fill="#a23b16">0 (exact)</text>
+<text x="575" y="353" font-size="14" fill="#192d3b">6.243e-05</text>
+<text x="720" y="353" font-size="14" fill="#192d3b">1.103e-05</text>
+<text x="865" y="353" font-size="14" fill="#192d3b">1.245e-04</text>
+<rect x="25" y="368" width="940" height="35" fill="#f1f5f8"/>
+<text x="35" y="390" font-size="14">sharp / 64³</text>
+<text x="205" y="390" font-size="14">0.25</text>
+<text x="300" y="390" font-size="14">1</text>
+<text x="430" y="390" font-size="14" fill="#192d3b">2.004e-05</text>
+<text x="575" y="390" font-size="14" fill="#192d3b">6.016e-05</text>
+<text x="720" y="390" font-size="14" fill="#192d3b">3.454e-05</text>
+<text x="865" y="390" font-size="14" fill="#192d3b">1.200e-04</text>
+<text x="35" y="427" font-size="14">sharp / 64³</text>
+<text x="205" y="427" font-size="14">0</text>
+<text x="300" y="427" font-size="14">2</text>
+<text x="430" y="427" font-size="14" fill="#192d3b">1.058e-04</text>
+<text x="575" y="427" font-size="14" fill="#192d3b">1.235e-04</text>
+<text x="720" y="427" font-size="14" fill="#192d3b">2.159e-04</text>
+<text x="865" y="427" font-size="14" fill="#192d3b">2.465e-04</text>
+<rect x="25" y="442" width="940" height="35" fill="#f1f5f8"/>
+<text x="35" y="464" font-size="14">sharp / 64³</text>
+<text x="205" y="464" font-size="14">0.5</text>
+<text x="300" y="464" font-size="14">0.5</text>
+<text x="430" y="464" font-size="14" fill="#192d3b">1.879e-05</text>
+<text x="575" y="464" font-size="14" fill="#192d3b">2.969e-05</text>
+<text x="720" y="464" font-size="14" fill="#192d3b">3.597e-05</text>
+<text x="865" y="464" font-size="14" fill="#192d3b">5.934e-05</text>
+<text x="35" y="501" font-size="14">smooth / 64³</text>
+<text x="205" y="501" font-size="14">0</text>
+<text x="300" y="501" font-size="14">1</text>
+<text x="430" y="501" font-size="14" fill="#192d3b">3.973e-05</text>
+<text x="575" y="501" font-size="14" fill="#192d3b">5.171e-05</text>
+<text x="720" y="501" font-size="14" fill="#192d3b">7.916e-05</text>
+<text x="865" y="501" font-size="14" fill="#192d3b">1.033e-04</text>
+<text x="35" y="556" font-size="15">Projection, initial density and departure coordinates are bitwise identical across paths.</text>
+<text x="35" y="585" font-size="15">Float interpolation exposes remaining sensitivity in every tested configuration.</text>
+<text x="35" y="620" font-size="13">Sensitivity to pressure budget, not total advection error. No performance or conservation claim.</text>
+</g></svg>

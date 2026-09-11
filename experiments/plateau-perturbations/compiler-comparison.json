@@ -1,0 +1,66 @@
+[
+  {
+    "run": "sharp-r32-sl-s0-d1-a1-i-1",
+    "all_eight_fields_identical": true
+  },
+  {
+    "run": "sharp-r32-sl-s0-d1-a1-i512",
+    "all_eight_fields_identical": true
+  },
+  {
+    "run": "sharp-r32-sl-s0-d1-a1-i4096",
+    "all_eight_fields_identical": true
+  },
+  {
+    "run": "sharp-r32-sl-s0-d1-a1-i8192",
+    "all_eight_fields_identical": true
+  },
+  {
+    "run": "sharp-r32-sl-s0-d1-a2-i-1",
+    "all_eight_fields_identical": true
+  },
+  {
+    "run": "sharp-r32-sl-s0-d1-a2-i512",
+    "all_eight_fields_identical": true
+  },
+  {
+    "run": "sharp-r32-sl-s0-d1-a2-i4096",
+    "all_eight_fields_identical": true
+  },
+  {
+    "run": "sharp-r32-sl-s0-d1-a2-i8192",
+    "all_eight_fields_identical": true
+  },
+  {
+    "run": "sharp-r32-sl-s0.5-d1-a1-i-1",
+    "all_eight_fields_identical": true
+  },
+  {
+    "run": "sharp-r32-sl-s0.5-d1-a1-i512",
+    "all_eight_fields_identical": true
+  },
+  {
+    "run": "sharp-r32-sl-s0.5-d1-a1-i4096",
+    "all_eight_fields_identical": true
+  },
+  {
+    "run": "sharp-r32-sl-s0.5-d1-a1-i8192",
+    "all_eight_fields_identical": true
+  },
+  {
+    "run": "sharp-r32-sl-s0.5-d1-a2-i-1",
+    "all_eight_fields_identical": true
+  },
+  {
+    "run": "sharp-r32-sl-s0.5-d1-a2-i512",
+    "all_eight_fields_identical": true
+  },
+  {
+    "run": "sharp-r32-sl-s0.5-d1-a2-i4096",
+    "all_eight_fields_identical": true
+  },
+  {
+    "run": "sharp-r32-sl-s0.5-d1-a2-i8192",
+    "all_eight_fields_identical": true
+  }
+]

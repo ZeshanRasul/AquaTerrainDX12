@@ -3,6 +3,13 @@ cmake_minimum_required(VERSION 3.24)
 # Project
 project(AquaTerrainDX12 LANGUAGES CXX)
 
+# Standalone diagnostic: no renderer or simulation dependencies.
+add_executable(SamplerMicrobenchmark diagnostics/SamplerMicrobenchmark.cpp)
+target_include_directories(SamplerMicrobenchmark PRIVATE include)
+target_compile_features(SamplerMicrobenchmark PRIVATE cxx_std_20)
+target_compile_definitions(SamplerMicrobenchmark PRIVATE UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)
+target_link_libraries(SamplerMicrobenchmark PRIVATE d3d12 dxgi d3dcompiler)
+
 # This project is Windows-only (uses Win32 API and D3D12)
 if(NOT WIN32)
     message(FATAL_ERROR "This D3D12 project builds on Windows only.")

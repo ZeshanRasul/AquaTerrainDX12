@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="540" viewBox="0 0 920 540" font-family="Segoe UI, sans-serif">
+<rect width="100%" height="100%" fill="white"/>
+<text x="90" y="28" font-size="20">Projection sensitivity: smooth, 64³</text>
+<text x="90" y="49" font-size="12">Independent one-step trials · clamp MacCormack · optimized shaders · labels: Jacobi iterations</text>
+<path d="M90.0,65 V450" stroke="#ddd"/>
+<text x="90.0" y="472" text-anchor="middle" font-size="12">0.01</text>
+<path d="M303.3333333333333,65 V450" stroke="#ddd"/>
+<text x="303.3333333333333" y="472" text-anchor="middle" font-size="12">0.1</text>
+<path d="M516.6666666666666,65 V450" stroke="#ddd"/>
+<text x="516.6666666666666" y="472" text-anchor="middle" font-size="12">1</text>
+<path d="M730.0,65 V450" stroke="#ddd"/>
+<text x="730.0" y="472" text-anchor="middle" font-size="12">10</text>
+<path d="M90,450.0 H730" stroke="#ddd"/>
+<text x="78" y="454.0" text-anchor="end" font-size="12">1e-5</text>
+<path d="M90,353.75 H730" stroke="#ddd"/>
+<text x="78" y="357.75" text-anchor="end" font-size="12">1e-4</text>
+<path d="M90,257.5 H730" stroke="#ddd"/>
+<text x="78" y="261.5" text-anchor="end" font-size="12">1e-3</text>
+<path d="M90,161.25 H730" stroke="#ddd"/>
+<text x="78" y="165.25" text-anchor="end" font-size="12">1e-2</text>
+<path d="M90,65.0 H730" stroke="#ddd"/>
+<text x="78" y="69.0" text-anchor="end" font-size="12">1e-1</text>
+<polyline points="138.33031548616773,110.58275594513344 232.3182068659159,111.68947939602498 332.16977694577406,114.9318037768303 450.95255525703686,127.983897790056 576.7026840415142,179.95358852861716 704.7555656318273,392.32976101488777" stroke="#2563eb" fill="none" stroke-width="2"/>
+<path d="M137.00103171591758,110.58275594513344 H139.07519598036103" stroke="#2563eb" stroke-width="2"/>
+<circle cx="138.33031548616773" cy="110.58275594513344" r="4" fill="#2563eb"/>
+<text x="143.33031548616773" y="103.58275594513344" font-size="10" fill="#2563eb">0</text>
+<path d="M232.0146211325327,111.68947939602498 H233.680025281248" stroke="#2563eb" stroke-width="2"/>
+<circle cx="232.3182068659159" cy="111.68947939602498" r="4" fill="#2563eb"/>
+<text x="237.3182068659159" y="104.68947939602498" font-size="10" fill="#2563eb">8</text>
+<path d="M331.9251253922791,114.9318037768303 H332.22405633655427" stroke="#2563eb" stroke-width="2"/>
+<circle cx="332.16977694577406" cy="114.9318037768303" r="4" fill="#2563eb"/>
+<text x="337.16977694577406" y="107.9318037768303" font-size="10" fill="#2563eb">32</text>
+<path d="M450.92694128874746,127.983897790056 H451.0609595082567" stroke="#2563eb" stroke-width="2"/>
+<circle cx="450.95255525703686" cy="127.983897790056" r="4" fill="#2563eb"/>
+<text x="455.95255525703686" y="120.983897790056" font-size="10" fill="#2563eb">128</text>
+<path d="M576.6999699868715,179.95358852861716 H576.7464856405763" stroke="#2563eb" stroke-width="2"/>
+<circle cx="576.7026840415142" cy="179.95358852861716" r="4" fill="#2563eb"/>
+<text x="581.7026840415142" y="172.95358852861716" font-size="10" fill="#2563eb">512</text>
+<path d="M704.7533269138504,392.32976101488777 H704.7809664248998" stroke="#2563eb" stroke-width="2"/>
+<circle cx="704.7555656318273" cy="392.32976101488777" r="4" fill="#2563eb"/>
+<text x="709.7555656318273" y="385.32976101488777" font-size="10" fill="#2563eb">2048</text>
+<text x="748" y="90" fill="#2563eb" font-size="15">sl</text>
+<polyline points="177.61088570772358,111.91762048087088 248.94928887083893,113.02418349342082 337.67156753390043,116.27336741265532 452.62169157542974,129.3113300656442 577.1783520829681,181.20203753181255 704.8839580210018,384.4019608629522" stroke="#dc2626" fill="none" stroke-width="2"/>
+<path d="M176.5394466345188,111.91762048087088 H179.6328235679143" stroke="#dc2626" stroke-width="2"/>
+<circle cx="177.61088570772358" cy="111.91762048087088" r="4" fill="#dc2626"/>
+<text x="182.61088570772358" y="126.91762048087088" font-size="10" fill="#dc2626">0</text>
+<path d="M248.7891802662367,113.02418349342082 H249.66637320604846" stroke="#dc2626" stroke-width="2"/>
+<circle cx="248.94928887083893" cy="113.02418349342082" r="4" fill="#dc2626"/>
+<text x="253.94928887083893" y="128.02418349342082" font-size="10" fill="#dc2626">8</text>
+<path d="M337.6562167775944,116.27336741265532 H337.6920312533592" stroke="#dc2626" stroke-width="2"/>
+<circle cx="337.67156753390043" cy="116.27336741265532" r="4" fill="#dc2626"/>
+<text x="342.67156753390043" y="131.27336741265532" font-size="10" fill="#dc2626">32</text>
+<path d="M452.59357494089136,129.3113300656442 H452.6675477743055" stroke="#dc2626" stroke-width="2"/>
+<circle cx="452.62169157542974" cy="129.3113300656442" r="4" fill="#dc2626"/>
+<text x="457.62169157542974" y="144.3113300656442" font-size="10" fill="#dc2626">128</text>
+<path d="M577.1606067597634,181.20203753181255 H577.1787378131198" stroke="#dc2626" stroke-width="2"/>
+<circle cx="577.1783520829681" cy="181.20203753181255" r="4" fill="#dc2626"/>
+<text x="582.1783520829681" y="196.20203753181255" font-size="10" fill="#dc2626">512</text>
+<path d="M704.8814307970121,384.4019608629522 H704.8852216071463" stroke="#dc2626" stroke-width="2"/>
+<circle cx="704.8839580210018" cy="384.4019608629522" r="4" fill="#dc2626"/>
+<text x="709.8839580210018" y="399.4019608629522" font-size="10" fill="#dc2626">2048</text>
+<text x="748" y="115" fill="#dc2626" font-size="15">maccormack</text>
+<text x="410.0" y="497" text-anchor="middle" font-size="14">Projection + advection GPU time (ms, log scale)</text>
+<text transform="translate(22,257.5) rotate(-90)" text-anchor="middle" font-size="14">Normalized L1 to same method at 8192 iterations</text>
+<text x="90" y="522" font-size="11">Bars: IQR of launch medians. Zero errors displayed at 1e-8. Projection sensitivity, not total advection accuracy.</text>
+</svg>

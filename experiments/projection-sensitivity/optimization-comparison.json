@@ -1,0 +1,386 @@
+[
+  {
+    "config": "smooth-r32-sl-i0-rep1",
+    "all_fields_identical": true,
+    "max_absolute_by_field": {
+      "initial_density": 0.0,
+      "div_before": 0.0,
+      "pressure": 0.0,
+      "div_after": 0.0,
+      "u": 0.0,
+      "v": 0.0,
+      "w": 0.0,
+      "density": 0.0
+    },
+    "density_l1_relative": 0.0,
+    "velocity_l2_relative": 0.0
+  },
+  {
+    "config": "smooth-r32-sl-i128-rep1",
+    "all_fields_identical": true,
+    "max_absolute_by_field": {
+      "initial_density": 0.0,
+      "div_before": 0.0,
+      "pressure": 0.0,
+      "div_after": 0.0,
+      "u": 0.0,
+      "v": 0.0,
+      "w": 0.0,
+      "density": 0.0
+    },
+    "density_l1_relative": 0.0,
+    "velocity_l2_relative": 0.0
+  },
+  {
+    "config": "smooth-r32-sl-i8192-rep1",
+    "all_fields_identical": true,
+    "max_absolute_by_field": {
+      "initial_density": 0.0,
+      "div_before": 0.0,
+      "pressure": 0.0,
+      "div_after": 0.0,
+      "u": 0.0,
+      "v": 0.0,
+      "w": 0.0,
+      "density": 0.0
+    },
+    "density_l1_relative": 0.0,
+    "velocity_l2_relative": 0.0
+  },
+  {
+    "config": "smooth-r32-maccormack-i0-rep1",
+    "all_fields_identical": true,
+    "max_absolute_by_field": {
+      "initial_density": 0.0,
+      "div_before": 0.0,
+      "pressure": 0.0,
+      "div_after": 0.0,
+      "u": 0.0,
+      "v": 0.0,
+      "w": 0.0,
+      "density": 0.0
+    },
+    "density_l1_relative": 0.0,
+    "velocity_l2_relative": 0.0
+  },
+  {
+    "config": "smooth-r32-maccormack-i128-rep1",
+    "all_fields_identical": true,
+    "max_absolute_by_field": {
+      "initial_density": 0.0,
+      "div_before": 0.0,
+      "pressure": 0.0,
+      "div_after": 0.0,
+      "u": 0.0,
+      "v": 0.0,
+      "w": 0.0,
+      "density": 0.0
+    },
+    "density_l1_relative": 0.0,
+    "velocity_l2_relative": 0.0
+  },
+  {
+    "config": "smooth-r32-maccormack-i8192-rep1",
+    "all_fields_identical": true,
+    "max_absolute_by_field": {
+      "initial_density": 0.0,
+      "div_before": 0.0,
+      "pressure": 0.0,
+      "div_after": 0.0,
+      "u": 0.0,
+      "v": 0.0,
+      "w": 0.0,
+      "density": 0.0
+    },
+    "density_l1_relative": 0.0,
+    "velocity_l2_relative": 0.0
+  },
+  {
+    "config": "smooth-r64-sl-i0-rep1",
+    "all_fields_identical": true,
+    "max_absolute_by_field": {
+      "initial_density": 0.0,
+      "div_before": 0.0,
+      "pressure": 0.0,
+      "div_after": 0.0,
+      "u": 0.0,
+      "v": 0.0,
+      "w": 0.0,
+      "density": 0.0
+    },
+    "density_l1_relative": 0.0,
+    "velocity_l2_relative": 0.0
+  },
+  {
+    "config": "smooth-r64-sl-i128-rep1",
+    "all_fields_identical": true,
+    "max_absolute_by_field": {
+      "initial_density": 0.0,
+      "div_before": 0.0,
+      "pressure": 0.0,
+      "div_after": 0.0,
+      "u": 0.0,
+      "v": 0.0,
+      "w": 0.0,
+      "density": 0.0
+    },
+    "density_l1_relative": 0.0,
+    "velocity_l2_relative": 0.0
+  },
+  {
+    "config": "smooth-r64-sl-i8192-rep1",
+    "all_fields_identical": true,
+    "max_absolute_by_field": {
+      "initial_density": 0.0,
+      "div_before": 0.0,
+      "pressure": 0.0,
+      "div_after": 0.0,
+      "u": 0.0,
+      "v": 0.0,
+      "w": 0.0,
+      "density": 0.0
+    },
+    "density_l1_relative": 0.0,
+    "velocity_l2_relative": 0.0
+  },
+  {
+    "config": "smooth-r64-maccormack-i0-rep1",
+    "all_fields_identical": true,
+    "max_absolute_by_field": {
+      "initial_density": 0.0,
+      "div_before": 0.0,
+      "pressure": 0.0,
+      "div_after": 0.0,
+      "u": 0.0,
+      "v": 0.0,
+      "w": 0.0,
+      "density": 0.0
+    },
+    "density_l1_relative": 0.0,
+    "velocity_l2_relative": 0.0
+  },
+  {
+    "config": "smooth-r64-maccormack-i128-rep1",
+    "all_fields_identical": true,
+    "max_absolute_by_field": {
+      "initial_density": 0.0,
+      "div_before": 0.0,
+      "pressure": 0.0,
+      "div_after": 0.0,
+      "u": 0.0,
+      "v": 0.0,
+      "w": 0.0,
+      "density": 0.0
+    },
+    "density_l1_relative": 0.0,
+    "velocity_l2_relative": 0.0
+  },
+  {
+    "config": "smooth-r64-maccormack-i8192-rep1",
+    "all_fields_identical": true,
+    "max_absolute_by_field": {
+      "initial_density": 0.0,
+      "div_before": 0.0,
+      "pressure": 0.0,
+      "div_after": 0.0,
+      "u": 0.0,
+      "v": 0.0,
+      "w": 0.0,
+      "density": 0.0
+    },
+    "density_l1_relative": 0.0,
+    "velocity_l2_relative": 0.0
+  },
+  {
+    "config": "sharp-r32-sl-i0-rep1",
+    "all_fields_identical": true,
+    "max_absolute_by_field": {
+      "initial_density": 0.0,
+      "div_before": 0.0,
+      "pressure": 0.0,
+      "div_after": 0.0,
+      "u": 0.0,
+      "v": 0.0,
+      "w": 0.0,
+      "density": 0.0
+    },
+    "density_l1_relative": 0.0,
+    "velocity_l2_relative": 0.0
+  },
+  {
+    "config": "sharp-r32-sl-i128-rep1",
+    "all_fields_identical": true,
+    "max_absolute_by_field": {
+      "initial_density": 0.0,
+      "div_before": 0.0,
+      "pressure": 0.0,
+      "div_after": 0.0,
+      "u": 0.0,
+      "v": 0.0,
+      "w": 0.0,
+      "density": 0.0
+    },
+    "density_l1_relative": 0.0,
+    "velocity_l2_relative": 0.0
+  },
+  {
+    "config": "sharp-r32-sl-i8192-rep1",
+    "all_fields_identical": true,
+    "max_absolute_by_field": {
+      "initial_density": 0.0,
+      "div_before": 0.0,
+      "pressure": 0.0,
+      "div_after": 0.0,
+      "u": 0.0,
+      "v": 0.0,
+      "w": 0.0,
+      "density": 0.0
+    },
+    "density_l1_relative": 0.0,
+    "velocity_l2_relative": 0.0
+  },
+  {
+    "config": "sharp-r32-maccormack-i0-rep1",
+    "all_fields_identical": true,
+    "max_absolute_by_field": {
+      "initial_density": 0.0,
+      "div_before": 0.0,
+      "pressure": 0.0,
+      "div_after": 0.0,
+      "u": 0.0,
+      "v": 0.0,
+      "w": 0.0,
+      "density": 0.0
+    },
+    "density_l1_relative": 0.0,
+    "velocity_l2_relative": 0.0
+  },
+  {
+    "config": "sharp-r32-maccormack-i128-rep1",
+    "all_fields_identical": true,
+    "max_absolute_by_field": {
+      "initial_density": 0.0,
+      "div_before": 0.0,
+      "pressure": 0.0,
+      "div_after": 0.0,
+      "u": 0.0,
+      "v": 0.0,
+      "w": 0.0,
+      "density": 0.0
+    },
+    "density_l1_relative": 0.0,
+    "velocity_l2_relative": 0.0
+  },
+  {
+    "config": "sharp-r32-maccormack-i8192-rep1",
+    "all_fields_identical": true,
+    "max_absolute_by_field": {
+      "initial_density": 0.0,
+      "div_before": 0.0,
+      "pressure": 0.0,
+      "div_after": 0.0,
+      "u": 0.0,
+      "v": 0.0,
+      "w": 0.0,
+      "density": 0.0
+    },
+    "density_l1_relative": 0.0,
+    "velocity_l2_relative": 0.0
+  },
+  {
+    "config": "sharp-r64-sl-i0-rep1",
+    "all_fields_identical": true,
+    "max_absolute_by_field": {
+      "initial_density": 0.0,
+      "div_before": 0.0,
+      "pressure": 0.0,
+      "div_after": 0.0,
+      "u": 0.0,
+      "v": 0.0,
+      "w": 0.0,
+      "density": 0.0
+    },
+    "density_l1_relative": 0.0,
+    "velocity_l2_relative": 0.0
+  },
+  {
+    "config": "sharp-r64-sl-i128-rep1",
+    "all_fields_identical": true,
+    "max_absolute_by_field": {
+      "initial_density": 0.0,
+      "div_before": 0.0,
+      "pressure": 0.0,
+      "div_after": 0.0,
+      "u": 0.0,
+      "v": 0.0,
+      "w": 0.0,
+      "density": 0.0
+    },
+    "density_l1_relative": 0.0,
+    "velocity_l2_relative": 0.0
+  },
+  {
+    "config": "sharp-r64-sl-i8192-rep1",
+    "all_fields_identical": true,
+    "max_absolute_by_field": {
+      "initial_density": 0.0,
+      "div_before": 0.0,
+      "pressure": 0.0,
+      "div_after": 0.0,
+      "u": 0.0,
+      "v": 0.0,
+      "w": 0.0,
+      "density": 0.0
+    },
+    "density_l1_relative": 0.0,
+    "velocity_l2_relative": 0.0
+  },
+  {
+    "config": "sharp-r64-maccormack-i0-rep1",
+    "all_fields_identical": true,
+    "max_absolute_by_field": {
+      "initial_density": 0.0,
+      "div_before": 0.0,
+      "pressure": 0.0,
+      "div_after": 0.0,
+      "u": 0.0,
+      "v": 0.0,
+      "w": 0.0,
+      "density": 0.0
+    },
+    "density_l1_relative": 0.0,
+    "velocity_l2_relative": 0.0
+  },
+  {
+    "config": "sharp-r64-maccormack-i128-rep1",
+    "all_fields_identical": true,
+    "max_absolute_by_field": {
+      "initial_density": 0.0,
+      "div_before": 0.0,
+      "pressure": 0.0,
+      "div_after": 0.0,
+      "u": 0.0,
+      "v": 0.0,
+      "w": 0.0,
+      "density": 0.0
+    },
+    "density_l1_relative": 0.0,
+    "velocity_l2_relative": 0.0
+  },
+  {
+    "config": "sharp-r64-maccormack-i8192-rep1",
+    "all_fields_identical": true,
+    "max_absolute_by_field": {
+      "initial_density": 0.0,
+      "div_before": 0.0,
+      "pressure": 0.0,
+      "div_after": 0.0,
+      "u": 0.0,
+      "v": 0.0,
+      "w": 0.0,
+      "density": 0.0
+    },
+    "density_l1_relative": 0.0,
+    "velocity_l2_relative": 0.0
+  }
+]

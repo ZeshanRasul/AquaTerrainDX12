@@ -604,7 +604,7 @@ void SubtractPressureGradientCS(uint3 id : SV_DispatchThreadID)
         id.z < GridResolution.z)
     {
         
-        if (id.y == GridResolution.y)
+        if (id.y == GridResolution.y && openTopEnabled != 0)
         {
             int3 below = int3(id) - int3(0, 1, 0);
 

@@ -1,0 +1,63 @@
+{
+  "order": "seeded shuffle, seed 271828",
+  "git_status": [
+    " M diagnostics/Analyze-SmokeResolutionSweep.ps1",
+    " M diagnostics/Run-SmokeResolutionSweep.ps1",
+    " M diagnostics/plot_resolution_sweep.py",
+    " M experiments/passive-advection-reference/README.md",
+    " M experiments/resolution-sweep/README.md",
+    " M src/Renderer/Renderer.h",
+    " M src/Renderer/SmokeAdvectionReference.cpp",
+    " M src/Renderer/SmokeGpuDiagnostics.cpp",
+    " M src/Shaders/3d_smoke_compute.hlsl",
+    "?? diagnostics/Run-SmokeProjectionExperiment.ps1",
+    "?? diagnostics/analyze_projection.py",
+    "?? experiments/passive-advection-reference/HANDOFF.md",
+    "?? src/Renderer/SmokeProjectionExperiment.cpp",
+    "?? src/Shaders/projection_experiment.hlsl"
+  ],
+  "optimized": true,
+  "source_sha256": {
+    "src/Renderer/SmokeProjectionExperiment.cpp": "994159EFE2F6735280BBE0BA2C119537B40209FAF7210DA9F8F956A12179E060",
+    "src/Renderer/SmokeGpuDiagnostics.cpp": "7D5625DB56034E72C9A210DF4898AD0204BCDD341CEE3250E0983B3D8C71BBC6",
+    "src/Renderer/Renderer.h": "1C1998F3B8DED2929CF5D1FFF2939EAC9D3FEDC50FA9599935BCFE8316CE3E1A",
+    "src/Renderer/Renderer.cpp": "31814E9CC85A74EB2F3851F5DA32FFB7177FE6E1B8B341EA720B7BEA2E8C9A58",
+    "diagnostics/analyze_projection.py": "56E4BBFEE6F0040B8FFF15D2BA2796E18C1401C82F583688BA069BA92C965B39",
+    "src/Shaders/3d_smoke_compute.hlsl": "EA1A46E194560F00ED501D7F04CE1543383BF0CB9EC5DB0456D995C78B5C8EBB",
+    "diagnostics/Run-SmokeProjectionExperiment.ps1": "6083F20BFF5095A5DCA7BBA4B77F58E2BEF286507780CBB2FD29F307C6F5AE01",
+    "src/Renderer/SmokeAdvectionReference.cpp": "09E8E7D42DC6F84379A3CC7BAD3358495E901518C9B2141AFA3586C28F9D7E5F",
+    "src/Shaders/projection_experiment.hlsl": "C99614E93CD3E54923C986E54B093288982767BAD7EFF1CE3CD292FBE2C1268D"
+  },
+  "utc_started": "2026-09-11T19:33:04.6463231Z",
+  "resolutions": [
+    32,
+    64
+  ],
+  "gpu": {
+    "status": "OS inventory unavailable",
+    "reason": "Access denied "
+  },
+  "shapes": [
+    "smooth",
+    "sharp"
+  ],
+  "repeats": 3,
+  "modes": [
+    "sl",
+    "maccormack"
+  ],
+  "trials": 24,
+  "executable_sha256": "FD393B80976A290F34315E20073FE175642592CE1C8144F91C8837C570283183",
+  "iterations": [
+    -1,
+    0,
+    8,
+    32,
+    128,
+    512,
+    2048,
+    4096,
+    8192
+  ],
+  "git_head": "6c09c4f062197e97d8446adb291ea4c22cc3c78a"
+}

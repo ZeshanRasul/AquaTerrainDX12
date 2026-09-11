@@ -1,0 +1,5 @@
+{
+  "analyzer_sha256": "8bf614c6ba57ba841e542d9a0352f23549126cdd3472ca881ee5a590e37dbb50",
+  "shared_validator_sha256": "207e76b36abbb87959ca851c02e31740e564ddc90f4ae93013b594310667b84e",
+  "numpy": "2.3.5"
+}

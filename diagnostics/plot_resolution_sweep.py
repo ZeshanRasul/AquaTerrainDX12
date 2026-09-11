@@ -65,14 +65,14 @@ def main(root):
         by_case.setdefault(r["case"], {}).setdefault(r["advection"], []).append(r)
     # Fixed decades keep SL/MacCormack comparable; widen if a value falls outside.
     for case, series in by_case.items():
-        costs = [p["mean_advection_ms"] for s in series.values() for p in s]
+        costs = [p["median_advection_ms"] for s in series.values() for p in s]
         errs = [p["final_l1_normalized"] for s in series.values() for p in s]
         xlo = int(math.floor(math.log10(max(min(costs), 1e-6))))
         xhi = int(math.ceil(math.log10(max(max(costs), 1e-6))))
         ylo = int(math.floor(math.log10(max(min(errs), 1e-6))))
         yhi = int(math.ceil(math.log10(max(max(errs), 1e-6))))
-        plot(case, series, "isolated advection time / step (ms, log₁₀)",
-             "mean_advection_ms", "final_l1_normalized",
+        plot(case, series, "isolated advection time / step (ms, log₁₀, optimized)",
+             "median_advection_ms", "final_l1_normalized",
              os.path.join(figs, f"{case}-error-vs-cost.svg"), (xlo, xhi), (ylo, yhi))
         print(f"wrote figures/{case}-error-vs-cost.svg")
 

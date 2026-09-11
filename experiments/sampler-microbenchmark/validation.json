@@ -1,0 +1,26 @@
+[
+  {
+    "case": "repeat",
+    "rejected": true
+  },
+  {
+    "case": "nonfinite",
+    "rejected": true
+  },
+  {
+    "case": "corner",
+    "rejected": true
+  },
+  {
+    "case": "coordinate",
+    "rejected": true
+  },
+  {
+    "case": "constant",
+    "rejected": true
+  },
+  {
+    "case": "truncated",
+    "rejected": true
+  }
+]

@@ -1,5 +1,10 @@
 # Passive-advection reference harness
 
+> **Frozen as a paper baseline (11 Sep 2026).** See [HANDOFF.md](HANDOFF.md) for
+> exactly what is validated, what remains uncertain, and how to reproduce. Timing
+> now uses optimized shaders with an optimization-invariance check; the cost
+> figures of record come from re-running the resolution sweep with the frozen suite.
+
 A prescribed-velocity transport harness that runs the **production** advection
 kernels (semi-Lagrangian and clamped MacCormack) with buoyancy, projection,
 confinement and damping all disabled, and scores each step against an analytic

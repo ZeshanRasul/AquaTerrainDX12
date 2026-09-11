@@ -551,6 +551,42 @@ private:
     std::filesystem::path m_SmokeReferenceOutput;
     Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SmokeReferenceBlobPSO;
     Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SmokeReferenceVelocityPSO;
+    // Optimized advection PSOs for timing runs ONLY (production/mass-audit paths
+    // keep their SKIP_OPTIMIZATION build). Correctness runs use the production PSOs.
+    void CreateReferenceTimingPSOs();
+    bool m_SmokeReferenceTiming = false;
+    // Independent one-step projection sensitivity trials, sharing reference dispatch.
+    void ConfigureProjectionExperiment();
+    void DispatchProjectionExperiment(ID3D12GraphicsCommandList*, const struct SmokeBindingConstants&, UINT);
+    void CaptureProjectionExperiment(ID3D12GraphicsCommandList*, const struct SmokeBindingConstants&);
+    void CaptureProjectionInitialDensity(ID3D12GraphicsCommandList*);
+    void RecordProjectionExperiment(const void*, unsigned);
+    void SaveProjectionExperiment();
+    bool m_ProjectionExperiment = false;
+    bool m_ProjectionSharp = false;
+    int m_ProjectionIterations = 0; // -1: prescribed divergence-free control
+    unsigned m_ProjectionAdvectionSteps = 1;
+    float m_ProjectionShiftCells = 0.0f;
+    double m_ProjectionDtScale = 1.0;
+    void CreateTransportProbe();
+    void DispatchTransportProbe(ID3D12GraphicsCommandList*, unsigned, bool);
+    void RecordTransportProbe(unsigned);
+    bool m_TransportProbeEnabled = false;
+    bool m_DensitySamplingFloat = false;
+    UINT64 m_TransportProbeBytes = 0;
+    Microsoft::WRL::ComPtr<ID3D12Resource> m_TransportProbeBuffer;
+    std::array<Microsoft::WRL::ComPtr<ID3D12Resource>, NumFrameResources> m_TransportProbeReadbacks;
+    std::array<Microsoft::WRL::ComPtr<ID3D12PipelineState>, 3> m_TransportProbePSOs;
+    std::array<std::uint64_t, 2> m_TransportProbeHashes{};
+    std::array<Microsoft::WRL::ComPtr<ID3D12PipelineState>, 5> m_ProjectionPSOs;
+    std::array<D3D12_PLACED_SUBRESOURCE_FOOTPRINT, 7> m_ProjectionFootprints{};
+    std::array<Microsoft::WRL::ComPtr<ID3D12Resource>, NumFrameResources> m_ProjectionReadbacks;
+    std::vector<std::string> m_ProjectionRows;
+    std::array<std::uint64_t, 8> m_ProjectionFirstHashes{};
+    unsigned m_ProjectionFailures = 0;
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SmokeRefOptAdvectScalarsPSO;
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SmokeRefOptAdvectScalarsRawPSO;
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SmokeRefOptMacCormackScalarsPSO;
 
     struct GpuSmokeSample
     {

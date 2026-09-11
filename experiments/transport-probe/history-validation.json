@@ -1,0 +1,242 @@
+[
+  {
+    "run": "sharp-r32-s0-d1-i-1-p1",
+    "all_eight_fields_match_previous_experiment": true,
+    "step1_output_matches_previous_experiment": true,
+    "traces_identical_between_steps": true
+  },
+  {
+    "run": "sharp-r32-s0-d1-i512-p1",
+    "all_eight_fields_match_previous_experiment": true,
+    "step1_output_matches_previous_experiment": true,
+    "traces_identical_between_steps": true
+  },
+  {
+    "run": "sharp-r32-s0-d1-i4096-p1",
+    "all_eight_fields_match_previous_experiment": true,
+    "step1_output_matches_previous_experiment": true,
+    "traces_identical_between_steps": true
+  },
+  {
+    "run": "sharp-r32-s0-d1-i8192-p1",
+    "all_eight_fields_match_previous_experiment": true,
+    "step1_output_matches_previous_experiment": true,
+    "traces_identical_between_steps": true
+  },
+  {
+    "run": "sharp-r32-s0.75-d1-i-1-p1",
+    "all_eight_fields_match_previous_experiment": true,
+    "step1_output_matches_previous_experiment": true,
+    "traces_identical_between_steps": true
+  },
+  {
+    "run": "sharp-r32-s0.75-d1-i512-p1",
+    "all_eight_fields_match_previous_experiment": true,
+    "step1_output_matches_previous_experiment": true,
+    "traces_identical_between_steps": true
+  },
+  {
+    "run": "sharp-r32-s0.75-d1-i4096-p1",
+    "all_eight_fields_match_previous_experiment": true,
+    "step1_output_matches_previous_experiment": true,
+    "traces_identical_between_steps": true
+  },
+  {
+    "run": "sharp-r32-s0.75-d1-i8192-p1",
+    "all_eight_fields_match_previous_experiment": true,
+    "step1_output_matches_previous_experiment": true,
+    "traces_identical_between_steps": true
+  },
+  {
+    "run": "sharp-r32-s0-d2-i-1-p1",
+    "all_eight_fields_match_previous_experiment": true,
+    "step1_output_matches_previous_experiment": true,
+    "traces_identical_between_steps": true
+  },
+  {
+    "run": "sharp-r32-s0-d2-i512-p1",
+    "all_eight_fields_match_previous_experiment": true,
+    "step1_output_matches_previous_experiment": true,
+    "traces_identical_between_steps": true
+  },
+  {
+    "run": "sharp-r32-s0-d2-i4096-p1",
+    "all_eight_fields_match_previous_experiment": true,
+    "step1_output_matches_previous_experiment": true,
+    "traces_identical_between_steps": true
+  },
+  {
+    "run": "sharp-r32-s0-d2-i8192-p1",
+    "all_eight_fields_match_previous_experiment": true,
+    "step1_output_matches_previous_experiment": true,
+    "traces_identical_between_steps": true
+  },
+  {
+    "run": "sharp-r32-s0.5-d0.5-i-1-p1",
+    "all_eight_fields_match_previous_experiment": true,
+    "step1_output_matches_previous_experiment": true,
+    "traces_identical_between_steps": true
+  },
+  {
+    "run": "sharp-r32-s0.5-d0.5-i512-p1",
+    "all_eight_fields_match_previous_experiment": true,
+    "step1_output_matches_previous_experiment": true,
+    "traces_identical_between_steps": true
+  },
+  {
+    "run": "sharp-r32-s0.5-d0.5-i4096-p1",
+    "all_eight_fields_match_previous_experiment": true,
+    "step1_output_matches_previous_experiment": true,
+    "traces_identical_between_steps": true
+  },
+  {
+    "run": "sharp-r32-s0.5-d0.5-i8192-p1",
+    "all_eight_fields_match_previous_experiment": true,
+    "step1_output_matches_previous_experiment": true,
+    "traces_identical_between_steps": true
+  },
+  {
+    "run": "smooth-r32-s0-d1-i-1-p1",
+    "all_eight_fields_match_previous_experiment": true,
+    "step1_output_matches_previous_experiment": true,
+    "traces_identical_between_steps": true
+  },
+  {
+    "run": "smooth-r32-s0-d1-i512-p1",
+    "all_eight_fields_match_previous_experiment": true,
+    "step1_output_matches_previous_experiment": true,
+    "traces_identical_between_steps": true
+  },
+  {
+    "run": "smooth-r32-s0-d1-i4096-p1",
+    "all_eight_fields_match_previous_experiment": true,
+    "step1_output_matches_previous_experiment": true,
+    "traces_identical_between_steps": true
+  },
+  {
+    "run": "smooth-r32-s0-d1-i8192-p1",
+    "all_eight_fields_match_previous_experiment": true,
+    "step1_output_matches_previous_experiment": true,
+    "traces_identical_between_steps": true
+  },
+  {
+    "run": "sharp-r64-s0-d1-i-1-p1",
+    "all_eight_fields_match_previous_experiment": true,
+    "step1_output_matches_previous_experiment": true,
+    "traces_identical_between_steps": true
+  },
+  {
+    "run": "sharp-r64-s0-d1-i2048-p1",
+    "all_eight_fields_match_previous_experiment": true,
+    "step1_output_matches_previous_experiment": true,
+    "traces_identical_between_steps": true
+  },
+  {
+    "run": "sharp-r64-s0-d1-i4096-p1",
+    "all_eight_fields_match_previous_experiment": true,
+    "step1_output_matches_previous_experiment": true,
+    "traces_identical_between_steps": true
+  },
+  {
+    "run": "sharp-r64-s0-d1-i8192-p1",
+    "all_eight_fields_match_previous_experiment": true,
+    "step1_output_matches_previous_experiment": true,
+    "traces_identical_between_steps": true
+  },
+  {
+    "run": "sharp-r64-s0.25-d1-i-1-p1",
+    "all_eight_fields_match_previous_experiment": true,
+    "step1_output_matches_previous_experiment": true,
+    "traces_identical_between_steps": true
+  },
+  {
+    "run": "sharp-r64-s0.25-d1-i2048-p1",
+    "all_eight_fields_match_previous_experiment": true,
+    "step1_output_matches_previous_experiment": true,
+    "traces_identical_between_steps": true
+  },
+  {
+    "run": "sharp-r64-s0.25-d1-i4096-p1",
+    "all_eight_fields_match_previous_experiment": true,
+    "step1_output_matches_previous_experiment": true,
+    "traces_identical_between_steps": true
+  },
+  {
+    "run": "sharp-r64-s0.25-d1-i8192-p1",
+    "all_eight_fields_match_previous_experiment": true,
+    "step1_output_matches_previous_experiment": true,
+    "traces_identical_between_steps": true
+  },
+  {
+    "run": "sharp-r64-s0-d2-i-1-p1",
+    "all_eight_fields_match_previous_experiment": true,
+    "step1_output_matches_previous_experiment": true,
+    "traces_identical_between_steps": true
+  },
+  {
+    "run": "sharp-r64-s0-d2-i2048-p1",
+    "all_eight_fields_match_previous_experiment": true,
+    "step1_output_matches_previous_experiment": true,
+    "traces_identical_between_steps": true
+  },
+  {
+    "run": "sharp-r64-s0-d2-i4096-p1",
+    "all_eight_fields_match_previous_experiment": true,
+    "step1_output_matches_previous_experiment": true,
+    "traces_identical_between_steps": true
+  },
+  {
+    "run": "sharp-r64-s0-d2-i8192-p1",
+    "all_eight_fields_match_previous_experiment": true,
+    "step1_output_matches_previous_experiment": true,
+    "traces_identical_between_steps": true
+  },
+  {
+    "run": "sharp-r64-s0.5-d0.5-i-1-p1",
+    "all_eight_fields_match_previous_experiment": true,
+    "step1_output_matches_previous_experiment": true,
+    "traces_identical_between_steps": true
+  },
+  {
+    "run": "sharp-r64-s0.5-d0.5-i2048-p1",
+    "all_eight_fields_match_previous_experiment": true,
+    "step1_output_matches_previous_experiment": true,
+    "traces_identical_between_steps": true
+  },
+  {
+    "run": "sharp-r64-s0.5-d0.5-i4096-p1",
+    "all_eight_fields_match_previous_experiment": true,
+    "step1_output_matches_previous_experiment": true,
+    "traces_identical_between_steps": true
+  },
+  {
+    "run": "sharp-r64-s0.5-d0.5-i8192-p1",
+    "all_eight_fields_match_previous_experiment": true,
+    "step1_output_matches_previous_experiment": true,
+    "traces_identical_between_steps": true
+  },
+  {
+    "run": "smooth-r64-s0-d1-i-1-p1",
+    "all_eight_fields_match_previous_experiment": true,
+    "step1_output_matches_previous_experiment": true,
+    "traces_identical_between_steps": true
+  },
+  {
+    "run": "smooth-r64-s0-d1-i2048-p1",
+    "all_eight_fields_match_previous_experiment": true,
+    "step1_output_matches_previous_experiment": true,
+    "traces_identical_between_steps": true
+  },
+  {
+    "run": "smooth-r64-s0-d1-i4096-p1",
+    "all_eight_fields_match_previous_experiment": true,
+    "step1_output_matches_previous_experiment": true,
+    "traces_identical_between_steps": true
+  },
+  {
+    "run": "smooth-r64-s0-d1-i8192-p1",
+    "all_eight_fields_match_previous_experiment": true,
+    "step1_output_matches_previous_experiment": true,
+    "traces_identical_between_steps": true
+  }
+]

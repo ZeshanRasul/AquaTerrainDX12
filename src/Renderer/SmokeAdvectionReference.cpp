@@ -20,9 +20,38 @@
 // all disabled. The production AdvectScalarsCS / MacCormack combine kernels are
 // used unchanged, so the harness tests the implementation we ship.
 
+void Renderer::CreateReferenceTimingPSOs()
+{
+    if (m_SmokeRefOptAdvectScalarsPSO) return; // compile once
+    const auto compile = [&](const char* entry, Microsoft::WRL::ComPtr<ID3D12PipelineState>& pso)
+    {
+        Microsoft::WRL::ComPtr<ID3DBlob> code, errors;
+        // OPTIMIZATION_LEVEL3, no DEBUG/SKIP_OPTIMIZATION. These PSOs are used only
+        // for timing runs; correctness runs keep the production SKIP_OPTIMIZATION
+        // build, and numerical equality between the two is verified per run.
+        const HRESULT result = D3DCompileFromFile(L"Shaders/3d_smoke_compute.hlsl", nullptr,
+            D3D_COMPILE_STANDARD_FILE_INCLUDE, entry, "cs_5_1",
+            D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_OPTIMIZATION_LEVEL3, 0, &code, &errors);
+        if (errors) OutputDebugStringA(static_cast<const char*>(errors->GetBufferPointer()));
+        ThrowIfFailed(result);
+        D3D12_COMPUTE_PIPELINE_STATE_DESC pipeline{};
+        pipeline.pRootSignature = m_SmokeBindingRootSignature.Get();
+        pipeline.CS = { code->GetBufferPointer(), code->GetBufferSize() };
+        ThrowIfFailed(m_Device->CreateComputePipelineState(&pipeline, IID_PPV_ARGS(&pso)));
+    };
+    compile("AdvectScalarsCS", m_SmokeRefOptAdvectScalarsPSO);
+    compile("AdvectScalarsRawCS", m_SmokeRefOptAdvectScalarsRawPSO);
+    compile("MacCormackScalarsCS", m_SmokeRefOptMacCormackScalarsPSO);
+}
+
 void Renderer::StartSmokeAdvectionReference(SmokeReferenceCase referenceCase, bool automatic)
 {
     if (m_SmokeGpuBenchmarkRunning) return;
+    // Timing runs use optimized advection PSOs; correctness runs (default) use the
+    // production build so their numerics match every other run and the mass audit.
+    wchar_t optText[8]{};
+    m_SmokeReferenceTiming = GetEnvironmentVariableW(L"AQUA_SMOKE_REFERENCE_OPTIMIZE", optText, 8) && optText[0] == L'1';
+    if (m_SmokeReferenceTiming) CreateReferenceTimingPSOs();
     m_SmokeReferenceCase = referenceCase;
     m_SmokeReferenceAutomatic = automatic;
     m_SmokeReferenceRows.clear();
@@ -91,7 +120,7 @@ void Renderer::StartSmokeAdvectionReference(SmokeReferenceCase referenceCase, bo
     }
     config.totalSteps = totalSteps;
     config.emitterSteps = emitterSteps;
-    config.performanceWarmupSteps = 0;
+    config.performanceWarmupSteps = m_SmokeReferenceTiming ? 30 : 0;
     config.timeStep = dt;
     config.renderingEnabledDuringRun = false;
     config.advectionMode = m_SmokeGpuAdvectionMode;
@@ -112,6 +141,7 @@ void Renderer::StartSmokeAdvectionReference(SmokeReferenceCase referenceCase, bo
     m_SmokeGpuBenchmarkVorticityEpsilon = 0.0f;
     m_SmokeGpuBenchmarkLimiterMode = static_cast<int>(m_SmokeGpuLimiterMode);
     m_SmokeGpuBenchmarkIterations = 0;
+    ConfigureProjectionExperiment();
     m_SmokeGpuBenchmarkSamples.clear();
     m_SmokeGpuBenchmarkSamples.reserve(config.totalSteps);
     m_SmokeGpuBenchmarkSubmitted = 0;
@@ -137,6 +167,7 @@ void Renderer::StartSmokeAdvectionReference(SmokeReferenceCase referenceCase, bo
 void Renderer::DispatchSmokeReferenceStep(ID3D12GraphicsCommandList* commandList, UINT timestampSlot)
 {
     if (!m_SmokeGpuResetRequested && !m_SmokeGpuStepRequested) return;
+    if (m_ProjectionExperiment && m_SmokeGpuStepRequested) m_SmokeGpuResetRequested = true;
 
     auto transition = [&](SmokeGpuTexture& texture, D3D12_RESOURCE_STATES state)
     {
@@ -217,12 +248,13 @@ void Renderer::DispatchSmokeReferenceStep(ID3D12GraphicsCommandList* commandList
         if (m_SmokeReferenceCase != SmokeReferenceCase::SourceOnly)
         {
             scalarOutputs(m_GpuScalarReadIndex);
-            commandList->SetPipelineState(m_SmokeReferenceBlobPSO.Get());
-            commandList->Dispatch(gx, gy, gz);
+            if (m_ProjectionExperiment) velocityOutputs(m_GpuVelocityReadIndex);
+            commandList->SetPipelineState(m_ProjectionExperiment ? m_ProjectionPSOs[0].Get() : m_SmokeReferenceBlobPSO.Get());
+            commandList->Dispatch(m_ProjectionExperiment ? fx : gx, m_ProjectionExperiment ? fy : gy, m_ProjectionExperiment ? fz : gz);
             orderWrites();
         }
         // Transport cases set a prescribed, time-invariant velocity once.
-        if (m_SmokeReferenceVelocityMode != 0)
+        if (m_SmokeReferenceVelocityMode != 0 && !m_ProjectionExperiment)
         {
             velocityOutputs(m_GpuVelocityReadIndex);
             commandList->SetPipelineState(m_SmokeReferenceVelocityPSO.Get());
@@ -247,17 +279,29 @@ void Renderer::DispatchSmokeReferenceStep(ID3D12GraphicsCommandList* commandList
     // pure scheme cost). Resolved into the readback buffer's timestamp region below.
     const UINT queryBase = m_CurrentFrameResourceIndex * SmokeTimestampSlotsPerFrame *
         static_cast<UINT>(SmokeTimestampCount);
+    if (m_ProjectionExperiment) CaptureProjectionInitialDensity(commandList);
     commandList->EndQuery(m_SmokeGpuQueries.Get(), D3D12_QUERY_TYPE_TIMESTAMP,
         queryBase + SmokeTimestampStepBegin);
+    if (m_ProjectionExperiment) DispatchProjectionExperiment(commandList, constants, queryBase);
 
     // Prescribed velocity is the cleared zero field; bind it as the advection input.
     velocityInputs(m_GpuVelocityReadIndex);
 
+    // Timing runs use the optimized advection PSOs; correctness runs use production.
+    ID3D12PipelineState* slPSO = m_SmokeReferenceTiming ? m_SmokeRefOptAdvectScalarsPSO.Get() : m_SmokeAdvectScalarsPSO.Get();
+    if (m_ProjectionExperiment && m_DensitySamplingFloat) slPSO = m_TransportProbePSOs[2].Get();
+    ID3D12PipelineState* rawPSO = m_SmokeReferenceTiming ? m_SmokeRefOptAdvectScalarsRawPSO.Get() : m_SmokeAdvectScalarsRawPSO.Get();
+    ID3D12PipelineState* mcPSO = m_SmokeReferenceTiming ? m_SmokeRefOptMacCormackScalarsPSO.Get() : m_SmokeMacCormackScalarsPSO.Get();
+
+    const unsigned advectionSteps = m_ProjectionExperiment ? m_ProjectionAdvectionSteps : 1;
+    for (unsigned advectionStep = 0; advectionStep < advectionSteps; ++advectionStep)
+    {
+    if (m_ProjectionExperiment && m_TransportProbeEnabled) DispatchTransportProbe(commandList, advectionStep, false);
     if (m_SmokeGpuAdvectionMode == SmokeAdvectionMode::SemiLagrangian)
     {
         scalarInputs(m_GpuScalarReadIndex);
         scalarOutputs(m_GpuScalarWriteIndex);
-        commandList->SetPipelineState(m_SmokeAdvectScalarsPSO.Get());
+        commandList->SetPipelineState(slPSO);
         commandList->Dispatch(gx, gy, gz);
     }
     else
@@ -267,7 +311,7 @@ void Renderer::DispatchSmokeReferenceStep(ID3D12GraphicsCommandList* commandList
         scalarInputs(m_GpuScalarReadIndex);
         uav(m_GpuDensityHat[s]); uav(m_GpuTemperatureHat[s]);
         bind(SmokeBindingOutputRoot, m_GpuDensityHat[s].uav);
-        commandList->SetPipelineState(m_SmokeAdvectScalarsRawPSO.Get());
+        commandList->SetPipelineState(rawPSO);
         commandList->Dispatch(gx, gy, gz);
         orderWrites();
         // Reverse: phi_bar into the Bar pair, dt negated.
@@ -277,7 +321,7 @@ void Renderer::DispatchSmokeReferenceStep(ID3D12GraphicsCommandList* commandList
         bind(SmokeBindingOutputRoot, m_GpuDensityBar[s].uav);
         constants.dt = -constants.dt;
         commandList->SetComputeRoot32BitConstants(SmokeBindingConstantsRoot, SmokeConstantCount, &constants, 0);
-        commandList->SetPipelineState(m_SmokeAdvectScalarsRawPSO.Get());
+        commandList->SetPipelineState(rawPSO);
         commandList->Dispatch(gx, gy, gz);
         orderWrites();
         constants.dt = -constants.dt;
@@ -287,14 +331,18 @@ void Renderer::DispatchSmokeReferenceStep(ID3D12GraphicsCommandList* commandList
         srv(m_GpuDensityBar[s]); srv(m_GpuTemperatureBar[s]);
         bind(SmokeBindingHatBarRoot, m_GpuDensityHat[s].srv);
         scalarOutputs(m_GpuScalarWriteIndex);
-        commandList->SetPipelineState(m_SmokeMacCormackScalarsPSO.Get());
+        commandList->SetPipelineState(mcPSO);
         commandList->Dispatch(gx, gy, gz);
     }
     std::swap(m_GpuScalarReadIndex, m_GpuScalarWriteIndex);
+    if (m_ProjectionExperiment && m_TransportProbeEnabled) DispatchTransportProbe(commandList, advectionStep, true);
+    if (advectionStep + 1 < advectionSteps) orderWrites();
+    }
     m_SmokeGpuStepRequested = false;
     ++m_SmokeGpuInjectionCount;
     commandList->EndQuery(m_SmokeGpuQueries.Get(), D3D12_QUERY_TYPE_TIMESTAMP,
         queryBase + SmokeTimestampStepEnd);
+    if (m_ProjectionExperiment) CaptureProjectionExperiment(commandList, constants);
 
     // Density readback, exactly as the benchmark path, so CollectSmokeGpuDiagnostics
     // maps the field and RecordReferenceStep can score it. Timestamps resolve into
@@ -303,8 +351,13 @@ void Renderer::DispatchSmokeReferenceStep(ID3D12GraphicsCommandList* commandList
     readback.pending = true;
     readback.benchmark = true;
     readback.timestampOffset = 0;
-    commandList->ResolveQueryData(m_SmokeGpuQueries.Get(), D3D12_QUERY_TYPE_TIMESTAMP,
-        queryBase, static_cast<UINT>(SmokeTimestampCount), readback.buffer.Get(), 0);
+    // Resolve only queries written by this path (resolving unwritten queries is invalid).
+    for (UINT q : { UINT(SmokeTimestampStepBegin), UINT(SmokeTimestampStepEnd) })
+        commandList->ResolveQueryData(m_SmokeGpuQueries.Get(), D3D12_QUERY_TYPE_TIMESTAMP,
+            queryBase + q, 1, readback.buffer.Get(), q * sizeof(UINT64));
+    if (m_ProjectionExperiment)
+        commandList->ResolveQueryData(m_SmokeGpuQueries.Get(), D3D12_QUERY_TYPE_TIMESTAMP,
+            queryBase + SmokeTimestampPressureGradientEnd, 1, readback.buffer.Get(), SmokeTimestampPressureGradientEnd * sizeof(UINT64));
     readback.sample = {};
     readback.sample.emit = emit;
     readback.sample.step = ++m_SmokeGpuBenchmarkSubmitted;
@@ -321,6 +374,7 @@ void Renderer::DispatchSmokeReferenceStep(ID3D12GraphicsCommandList* commandList
 
 void Renderer::RecordReferenceStep(const void* mapped, unsigned step)
 {
+    if (m_ProjectionExperiment) { RecordProjectionExperiment(mapped, step); return; }
     const auto n = m_SmokeSolver.Density().Resolution();
     const auto& fp = m_SmokeGpuReadbackFootprint;
     const bool sourceOnly = m_SmokeReferenceCase == SmokeReferenceCase::SourceOnly;
@@ -409,6 +463,7 @@ void Renderer::RecordReferenceStep(const void* mapped, unsigned step)
 
 void Renderer::SaveSmokeAdvectionReference()
 {
+    if (m_ProjectionExperiment) { SaveProjectionExperiment(); return; }
     try
     {
         std::filesystem::create_directories(m_SmokeReferenceOutput);
@@ -429,6 +484,9 @@ void Renderer::SaveSmokeAdvectionReference()
             << ",\n  \"case\": " << static_cast<int>(m_SmokeReferenceCase)
             << ",\n  \"advection\": " << std::quoted(m_SmokeGpuAdvectionMode == SmokeAdvectionMode::MacCormack ? "maccormack" : "sl")
             << ",\n  \"limiter_mode\": " << m_SmokeGpuBenchmarkLimiterMode
+            << ",\n  \"optimized_shaders\": " << (m_SmokeReferenceTiming ? "true" : "false")
+            << ",\n  \"shader_build\": " << std::quoted(m_SmokeReferenceTiming ? "OPTIMIZATION_LEVEL3 (timing only)" : "STRICTNESS|DEBUG|SKIP_OPTIMIZATION (production, correctness)")
+            << ",\n  \"warmup_steps\": " << m_SmokeGpuBenchmarkConfig.performanceWarmupSteps
             << ",\n  \"reference_definition\": \"cell_centred_samples\""
             << ",\n  \"velocity_mode\": " << m_SmokeReferenceVelocityMode
             << " ,\"velocity_mode_name\": " << std::quoted(m_SmokeReferenceVelocityMode == 1 ? "translation_x" : m_SmokeReferenceVelocityMode == 2 ? "rotation_z" : "zero")

@@ -1,0 +1,80 @@
+[
+  {
+    "run": "static-maccormack",
+    "scenario": "reference_static_v1",
+    "advection": "maccormack",
+    "speed": 0.0,
+    "steps": 300,
+    "nonfinite": 0.0,
+    "identity_expected": true,
+    "max_l1_normalized": 8.554679017419835E-08,
+    "final_l1_normalized": 8.554679017419835E-08,
+    "final_mass_error_rel": -8.228981088119187E-08,
+    "pass": true
+  },
+  {
+    "run": "static-sl",
+    "scenario": "reference_static_v1",
+    "advection": "sl",
+    "speed": 0.0,
+    "steps": 300,
+    "nonfinite": 0.0,
+    "identity_expected": true,
+    "max_l1_normalized": 8.554679017419835E-08,
+    "final_l1_normalized": 8.554679017419835E-08,
+    "final_mass_error_rel": -8.228981088119187E-08,
+    "pass": true
+  },
+  {
+    "run": "translation-frac-maccormack",
+    "scenario": "reference_translation_v1",
+    "advection": "maccormack",
+    "speed": 0.5,
+    "steps": 300,
+    "nonfinite": 0.0,
+    "identity_expected": false,
+    "max_l1_normalized": 0.3382351823271329,
+    "final_l1_normalized": 0.3382351823271329,
+    "final_mass_error_rel": 0.056821068145894486,
+    "pass": true
+  },
+  {
+    "run": "translation-frac-sl",
+    "scenario": "reference_translation_v1",
+    "advection": "sl",
+    "speed": 0.5,
+    "steps": 300,
+    "nonfinite": 0.0,
+    "identity_expected": false,
+    "max_l1_normalized": 0.8103343405258161,
+    "final_l1_normalized": 0.8069520110077022,
+    "final_mass_error_rel": 5.832171482125081E-06,
+    "pass": true
+  },
+  {
+    "run": "translation-whole-maccormack",
+    "scenario": "reference_translation_v1",
+    "advection": "maccormack",
+    "speed": 1.0,
+    "steps": 300,
+    "nonfinite": 0.0,
+    "identity_expected": true,
+    "max_l1_normalized": 8.554679017419873E-08,
+    "final_l1_normalized": 8.554679017419849E-08,
+    "final_mass_error_rel": -8.228980833133979E-08,
+    "pass": true
+  },
+  {
+    "run": "translation-whole-sl",
+    "scenario": "reference_translation_v1",
+    "advection": "sl",
+    "speed": 1.0,
+    "steps": 300,
+    "nonfinite": 0.0,
+    "identity_expected": true,
+    "max_l1_normalized": 8.554679017419873E-08,
+    "final_l1_normalized": 8.554679017419849E-08,
+    "final_mass_error_rel": -8.228980833133979E-08,
+    "pass": true
+  }
+]

@@ -1,0 +1,108 @@
+{
+  "utc": "2026-09-11T20:49:42.4369608Z",
+  "run_root": "D:\\dev\\Graphics\\AquaTerrainDX12\\diagnostics\\runs\\sampler-v2",
+  "files": [
+    {
+      "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\CMakeLists.txt",
+      "Hash": "420A7A9577F423F9EF6F86AC66EB1F1EEFC7748C8BC4CC27447A138B47A0896B"
+    },
+    {
+      "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\diagnostics\\SamplerMicrobenchmark.cpp",
+      "Hash": "35F47863BC513467D9B7846B8488F932D657B56F874473EDAB5FF84F815BBD10"
+    },
+    {
+      "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\diagnostics\\sampler_microbenchmark.hlsl",
+      "Hash": "11AF3F76353795F0FD1B840C68E1C5AEBA768FC31D6315B86D4DFF8A4EE7A602"
+    },
+    {
+      "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\diagnostics\\analyze_sampler.py",
+      "Hash": "B50B3027FD40F6170E7E4FCFD8E3A57A8D65C87C750AE51C231823CD38684931"
+    },
+    {
+      "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\diagnostics\\Run-SamplerMicrobenchmark.ps1",
+      "Hash": "DFBB5EEE938FF7674AC06C3E6DFB09AECD2D1E523AAB63B7085AEC9A8DA0FCCD"
+    },
+    {
+      "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\out\\build\\x64-Release\\SamplerMicrobenchmark.exe",
+      "Hash": "DE7DFDD3E06D1966932BB24A6901F4D74A74AFE7E360D08FEBA9DD6F74A1882C"
+    }
+  ],
+  "artifacts": [
+    {
+      "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\diagnostics\\runs\\sampler-v2\\queries.json",
+      "Hash": "607BB0624421196DCD092CF96D8FCBD9D6ABCE9D7322C4E0A63DFF27A30C75CA"
+    },
+    {
+      "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\diagnostics\\runs\\sampler-v2\\32\\corners.f32",
+      "Hash": "3C5D7C5FA1273540BE973EA82EA161ABEE490CF455612C3301A860193F7F1CF8"
+    },
+    {
+      "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\diagnostics\\runs\\sampler-v2\\32\\device.txt",
+      "Hash": "ACCB39CF50C9709966B02AB879D9D3EB930243EBCEBFE836F5C61E0DE5180AE9"
+    },
+    {
+      "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\diagnostics\\runs\\sampler-v2\\32\\positions.f32",
+      "Hash": "1BA80CB3904B476F75F8814C5E74E4B5822B5A9FCB62D29656F6A07474E09A71"
+    },
+    {
+      "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\diagnostics\\runs\\sampler-v2\\32\\samples-0.f32",
+      "Hash": "24867E7F135874F9FAFECE018AEE68D5013E45EC5BFF9E1D9359067C5CD059C4"
+    },
+    {
+      "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\diagnostics\\runs\\sampler-v2\\32\\samples-1.f32",
+      "Hash": "24867E7F135874F9FAFECE018AEE68D5013E45EC5BFF9E1D9359067C5CD059C4"
+    },
+    {
+      "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\diagnostics\\runs\\sampler-v2\\32\\samples-2.f32",
+      "Hash": "24867E7F135874F9FAFECE018AEE68D5013E45EC5BFF9E1D9359067C5CD059C4"
+    },
+    {
+      "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\diagnostics\\runs\\sampler-v2\\33\\corners.f32",
+      "Hash": "3C5D7C5FA1273540BE973EA82EA161ABEE490CF455612C3301A860193F7F1CF8"
+    },
+    {
+      "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\diagnostics\\runs\\sampler-v2\\33\\device.txt",
+      "Hash": "8377B306515A7D76353A0B267BF57125BF0C1AC7C59EF9FA3BEF79DC934E3389"
+    },
+    {
+      "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\diagnostics\\runs\\sampler-v2\\33\\positions.f32",
+      "Hash": "B3BFC9963BC0F839BA7860449D15B129E781F5B8A33707703BAE368F73579875"
+    },
+    {
+      "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\diagnostics\\runs\\sampler-v2\\33\\samples-0.f32",
+      "Hash": "EB31B3E19D8C5B4F998C8ED4F1143B073EEA1209FA500058934ED6C0CD61C730"
+    },
+    {
+      "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\diagnostics\\runs\\sampler-v2\\33\\samples-1.f32",
+      "Hash": "EB31B3E19D8C5B4F998C8ED4F1143B073EEA1209FA500058934ED6C0CD61C730"
+    },
+    {
+      "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\diagnostics\\runs\\sampler-v2\\33\\samples-2.f32",
+      "Hash": "EB31B3E19D8C5B4F998C8ED4F1143B073EEA1209FA500058934ED6C0CD61C730"
+    },
+    {
+      "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\diagnostics\\runs\\sampler-v2\\64\\corners.f32",
+      "Hash": "3C5D7C5FA1273540BE973EA82EA161ABEE490CF455612C3301A860193F7F1CF8"
+    },
+    {
+      "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\diagnostics\\runs\\sampler-v2\\64\\device.txt",
+      "Hash": "719F429BFD44FEABE8D551FE39DD8464870EB787A2792E19AA6EFCDB5792A455"
+    },
+    {
+      "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\diagnostics\\runs\\sampler-v2\\64\\positions.f32",
+      "Hash": "CAE1AC3EEA3626D2A66624BA4105A6BFC53078AE5F83E23C8EAA2B3C7DFF7764"
+    },
+    {
+      "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\diagnostics\\runs\\sampler-v2\\64\\samples-0.f32",
+      "Hash": "025C4832CCC012FC037BEC97F2D755E154286AF4BB9D5EE8A50ED3B2B051A2E6"
+    },
+    {
+      "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\diagnostics\\runs\\sampler-v2\\64\\samples-1.f32",
+      "Hash": "025C4832CCC012FC037BEC97F2D755E154286AF4BB9D5EE8A50ED3B2B051A2E6"
+    },
+    {
+      "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\diagnostics\\runs\\sampler-v2\\64\\samples-2.f32",
+      "Hash": "025C4832CCC012FC037BEC97F2D755E154286AF4BB9D5EE8A50ED3B2B051A2E6"
+    }
+  ]
+}

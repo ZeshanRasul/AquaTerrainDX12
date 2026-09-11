@@ -1,0 +1,6 @@
+{
+  "analyzer_sha256": "1679a9e4a4d07f64b6ca2adadcb6f1d4f2881eeb099538cdb3dfe60923109181",
+  "trace_analyzer_sha256": "2fed6ef3967b885a129aee91aa70ed46f2e169e2c083b9fa2446ccb937bcf456",
+  "projection_analyzer_sha256": "207e76b36abbb87959ca851c02e31740e564ddc90f4ae93013b594310667b84e",
+  "numpy": "2.3.5"
+}

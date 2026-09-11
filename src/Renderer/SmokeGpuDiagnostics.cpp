@@ -216,7 +216,7 @@ void Renderer::CollectSmokeGpuDiagnostics()
         m_SmokeGpuPendingSteps = 0;
         m_ShowSmokeVolume = m_SmokeGpuRestoreVolume;
         if (m_SmokeMassAuditAutomatic) PostQuitMessage(m_SmokeAuditFailures ? 2 : 0);
-        if (reference && m_SmokeReferenceAutomatic) PostQuitMessage(0);
+        if (reference && m_SmokeReferenceAutomatic) PostQuitMessage(m_ProjectionExperiment && m_ProjectionFailures ? 2 : 0);
         m_SmokeMassAudit = false;
         m_SmokeReferenceCase = SmokeReferenceCase::None;
     }

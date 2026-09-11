@@ -1,0 +1,62 @@
+[
+  {
+    "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\diagnostics\\test_density_sampling.py",
+    "Hash": "732C67ABBDF580727D871B3B80888D13BD637E522792DCAAA0AB8347F3C0062E"
+  },
+  {
+    "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\diagnostics\\plot_density_sampling.py",
+    "Hash": "42A125769381413A41C2DEAEE7B15122F187198D53C998397A65F6440D24B841"
+  },
+  {
+    "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\diagnostics\\Run-PortableSampler.ps1",
+    "Hash": "9D20CEC81BF28E5C65DF06AE99366ACB816497A5418A7CDF857E893BC7688C21"
+  },
+  {
+    "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\diagnostics\\PORTABLE-SAMPLER-README.txt",
+    "Hash": "42F9C5D51EF79A65FFA628A81BFB3708A271B1C53B513476AB745395FEFA7B69"
+  },
+  {
+    "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\experiments\\density-sampling\\analysis-provenance.json",
+    "Hash": "838884484AD82548EBA40435A239EAF15A2B17DEA3DE8BFA27A3F03C1C3B79CB"
+  },
+  {
+    "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\experiments\\density-sampling\\FINDINGS.md",
+    "Hash": "0243DEBF8A92F313BFE5E22722FE8B98771FCBA9B0B4F149E79982BD57548D63"
+  },
+  {
+    "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\experiments\\density-sampling\\negative-validation.json",
+    "Hash": "A77B39077F2F26CE159114C1BF2F527B57F9E975EE2D9AF6080345AF587CA22E"
+  },
+  {
+    "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\experiments\\density-sampling\\provenance.json",
+    "Hash": "AC01FABFCAC9992954B97CF2F8C63DB162F1A8FC559FB9440581F758FE4B0E5D"
+  },
+  {
+    "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\experiments\\density-sampling\\README.md",
+    "Hash": "4CB877186399ADC87B227DFB4BD69D1FE41FAA9708A6BAB2B2B3C7EE2186F7CE"
+  },
+  {
+    "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\experiments\\density-sampling\\rtx3070-sampler-validation.zip",
+    "Hash": "2D0B917F840CDD33D054F90817EF6667167F0A82D7F89EF10971CA24F418D70D"
+  },
+  {
+    "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\experiments\\density-sampling\\summary.csv",
+    "Hash": "795A72F30683521F2DE970FAC4E4B8836ADFBCF2DB3CAF5AAB1176CD48AB0D92"
+  },
+  {
+    "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\experiments\\density-sampling\\summary.json",
+    "Hash": "7960DDE8F3BBEC2ACB7887685BFDE328D176D40CF24AE1C6949E396D459B0FCB"
+  },
+  {
+    "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\experiments\\density-sampling\\validation.json",
+    "Hash": "9E0BB801A3FC303ABE1D27B2FBC5103E5AE740C63A9ED66D9C379E43EB37040D"
+  },
+  {
+    "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\experiments\\density-sampling\\figures\\density-sampling.png",
+    "Hash": "5F3FB5632BAD7A5F09D998E290F0262B0C34C06BAD09DA03D54DC1B4A0B181C6"
+  },
+  {
+    "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\experiments\\density-sampling\\figures\\density-sampling.svg",
+    "Hash": "EC7DDFC7651C40223EEC859D8199699AB615597384F8C76E0AB71B3AC5AFD437"
+  }
+]

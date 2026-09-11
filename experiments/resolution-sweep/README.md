@@ -9,34 +9,39 @@ first-order scheme (semi-Lagrangian) from a higher-order one (MacCormack).
 
 ## Result (RTX 5090, Release, {32,64,128}³, 300 steps)
 
-| Case | Scheme | L1 @ 32³ | L1 @ 64³ | L1 @ 128³ | **Observed order** |
+Accuracy (below) is validated and stable. The cost/error-vs-cost figures should be
+regenerated with the **frozen optimized-timing suite** (see *Run*); the numbers
+quoted below came from an initial run whose timing used the unoptimized production
+shaders and are indicative only.
+
+| Case | Scheme | L1 @ 32³ | L1 @ 64³ | L1 @ 128³ | **Refinement rate** |
 |---|---|--:|--:|--:|:--:|
 | Translation | Semi-Lagrangian | 0.792 | 0.322 | 0.133 | **1.29** |
 | Translation | MacCormack, clamp | 0.307 | 0.055 | 0.023 | **1.86** |
 | Rotation | Semi-Lagrangian | 1.079 | 0.711 | 0.366 | **0.78** |
 | Rotation | MacCormack, clamp | 0.478 | 0.150 | 0.037 | **1.85** |
 
-Order = |d log L1 / d log N|. **MacCormack converges at ~2nd order (1.85–1.86);
-semi-Lagrangian at ~1st order or below.** This is the textbook accuracy separation,
-now *measured against analytic solutions* on the corrected solver, with no
-mass-creation or buoyancy confound.
+Refinement rate = |d log L1 / d log N|: the **empirical error-decay rate for this
+smooth test**, *not* a proof of formal convergence order (no grid-independence or
+asymptotic-regime claim is made). MacCormack's rate (~1.85–1.86) is consistent with
+second-order behaviour and semi-Lagrangian's (~0.78–1.29) with first-order, measured
+against analytic solutions on the corrected solver with no mass-creation or buoyancy
+confound.
 
-**Error-vs-cost (the Pareto point).** MacCormack dominates: to reach SL's 128³
-translation accuracy (L1 0.133 at ~0.12 ms/step) MacCormack needs only ~32–64³
-(L1 0.055 at ~0.017 ms/step) — **lower error at ~7× lower advection cost.** Isolated
-advection time is ~1.5–2.3× SL's per resolution (three scalar dispatches vs. one),
-which is far cheaper than the accuracy it buys. See `figures/*-error-vs-cost.svg`.
+**Error-vs-cost (indicative).** MacCormack sits below/left of SL on the log-log
+error-vs-cost plot: to reach SL's 128³ translation accuracy it needs only ~32–64³,
+i.e. lower error at substantially lower advection cost. The exact cost ratio awaits
+the optimized-timing rerun; see `figures/*-error-vs-cost.svg`.
 
 **Conservation improves with resolution.** MacCormack's relative mass error falls
 from ~0.12 (32³) to ~−0.0003 (128³) — the clamp's non-conservation is a coarse-grid
 effect that vanishes under refinement, while SL stays conservative throughout. So
 at usable resolutions MacCormack is both more accurate *and* nearly conservative.
 
-**Two observations worth a sentence in the paper**, beyond confirming the orders:
-MacCormack falls short of a full 2.0 (the clamp limiter costs ~0.15 order near the
-blob's extrema), and SL's rotation order (0.78) is *sub*-first-order — rotational
-phase error converges more slowly than translation. Both are measured, not
-assumed.
+**Two observations worth a sentence in the paper**, beyond the rates: MacCormack's
+rate falls short of 2.0 (the clamp limiter reduces accuracy near the blob's
+extrema), and SL's rotation rate (0.78) is below one — rotational phase error decays
+more slowly than translation. Both are measured, not assumed.
 
 ## Question (answered above)
 
@@ -59,13 +64,22 @@ resolution (`AQUA_SMOKE_RESOLUTION`, read before any smoke resource is sized). T
 - Transport only: buoyancy, projection, confinement and damping all off.
 
 Grid: **{32, 64, 128}³**, cases **{translation (periodic), rotation}**, schemes
-**{SL, clamped MacCormack}** — 12 runs, 300 steps each. Isolated advection time is
-timed inside the run (GPU timestamps around the scalar-advection kernels only, no
-pressure/buoyancy confound) and written per step to `steps.csv` as `advection_ms`.
+**{SL, clamped MacCormack}**.
+
+**Correctness vs. performance are separated.** Per config the runner does one
+*correctness* run with the production (`SKIP_OPTIMIZATION`) shaders — the accuracy
+of record, matching every other run and the mass audit — and several *timing* runs
+with optimized (`OPTIMIZATION_LEVEL3`) shaders, warmup + repeats, for the isolated
+advection cost. The analyzer takes error from the correctness run, cost as the
+median over the timing runs, and **verifies optimization invariance**: the
+optimized runs' final L1 must match the correctness L1, so the timing shaders are
+confirmed not to change the numerics. Isolated advection time is GPU-timestamped
+around the scalar-advection kernels only (no pressure/buoyancy), per step in
+`steps.csv` as `advection_ms`.
 
 ## Run
 
-Build Release first (constant buffer and shader changed), then:
+Build Release first, then:
 
 ```powershell
 cmake --build out/build/x64-Release --config Release
@@ -73,9 +87,9 @@ cmake --build out/build/x64-Release --config Release
 ```
 
 The runner validates each run and calls `Analyze-SmokeResolutionSweep.ps1`, which
-writes `summary.json`, prints an error/cost table and the observed convergence
-order per (case, scheme), and (if Python is present) writes error-vs-cost SVGs to
-`<run_root>/figures/`.
+writes `summary.json`, prints the error/cost table, the empirical refinement rate
+per (case, scheme), the optimization-invariance check, and (if Python is present)
+error-vs-cost SVGs under `<run_root>/figures/`.
 
 ## What to expect
 

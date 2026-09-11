@@ -1,0 +1,26 @@
+[
+  {
+    "case": "wrong sampling mode",
+    "rejected": true
+  },
+  {
+    "case": "actual update inconsistent with float sample",
+    "rejected": true
+  },
+  {
+    "case": "incorrect interpolation",
+    "rejected": true
+  },
+  {
+    "case": "changed midpoint",
+    "rejected": true
+  },
+  {
+    "case": "broken second-step source chain",
+    "rejected": true
+  },
+  {
+    "case": "missing reference",
+    "rejected": true
+  }
+]
