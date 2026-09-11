@@ -417,7 +417,11 @@ private:
 	};
 
 	std::array<SmokeGpuTexture, 2> m_GpuDensity;
+	std::array<SmokeGpuTexture, 2> m_GpuDensityHat;
+	std::array<SmokeGpuTexture, 2> m_GpuDensityBar;
 	std::array<SmokeGpuTexture, 2> m_GpuTemperature;
+	std::array<SmokeGpuTexture, 2> m_GpuTemperatureHat;
+	std::array<SmokeGpuTexture, 2> m_GpuTemperatureBar;
 	std::array<SmokeGpuTexture, 2> m_GpuU;
 	std::array<SmokeGpuTexture, 2> m_GpuV;
 	std::array<SmokeGpuTexture, 2> m_GpuW;
@@ -456,6 +460,8 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SmokeReduceDivergenceBeforePSO;
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SmokeReduceDivergenceAfterPSO;
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SmokeReduceVelocityPSO;
+	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SmokeAdvectScalarsRawPSO;
+	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SmokeMacCormackScalarsPSO;
 
 	void CreateSmokeBindingRootSignature();
 	void CreateSmokeBindingPSOs();
@@ -467,6 +473,11 @@ private:
     float m_SmokeGpuSphereRadius = 0.085f;
 	bool m_SmokeGpuOpenTopEnabled = false;
     DirectX::XMFLOAT3 m_SmokeGpuSphereCentre = { 0.0f, 0.1f, 0.0f };
+	DirectX::XMFLOAT3 m_SmokeGpuSphereInitialCentre = { 0.0f, 0.1f, 0.0f };
+	float m_SphereObstacleAmplitude = 0.05f;
+	float m_SphereAngularFrequency = 0.5f;
+	bool m_SphereTranslationEnabled = false;
+
     void CreateSmokeObstaclePipeline();
     void DrawSmokeObstacle(ID3D12GraphicsCommandList* commandList);
     DirectX::XMFLOAT3 SmokeObstacleWorldRadii() const;
@@ -478,6 +489,7 @@ private:
     double m_SmokeGpuLastMilliseconds = 0.0;
     double m_SmokeGpuLastPressureMilliseconds = 0.0;
 	unsigned m_SmokeGpuLastPressureIterations = 0;
+	SmokeAdvectionMode m_SmokeGpuAdvectionMode = SmokeAdvectionMode::SemiLagrangian;
 	double m_SmokeGpuAverageIterationMicroSeconds = 0.0;
 	double m_SmokeGpuPressureFraction = 0.0;
 	std::array<double, SmokeTimestampCount - 1> m_SmokeGpuLastStageMilliseconds{};
@@ -565,7 +577,7 @@ struct SmokeSphereObstacle
 	float centre[3];
 	float radius;
 	std::uint32_t enabled = 1;
-	std::uint32_t padding[3] = {};
+	float velocity[3];
 };
 
 struct SmokeBindingConstants
@@ -587,7 +599,8 @@ struct SmokeBindingConstants
 	float FluidDensity;
 
 	float JacobiWeight; // Start with 2.0 / 3.0.
-	float Padding[3];
+	float Padding[2];
+	int sphereMovementEnabled;
 
 	float origin[3];
 	int openTopEnabled;
@@ -614,8 +627,9 @@ enum SmokeBindingRootParameter : UINT
 	SmokeBindingDivergenceRoot, // u5: divergence
 	SmokeBindingPressureReadRoot,  // u6: pressure
 	SmokeBindingPressureWriteRoot, //u7: pressure
-	SmokeBindingPressureReadInputRoot,  // u7, u8: pressure
-	SmokeBindingDivergenceReadRoot,
+	SmokeBindingPressureReadInputRoot,  // u8: pressure
+	SmokeBindingDivergenceReadRoot, 
 	SmokeBindingDiagnosticsRoot, // u9: three float4 reduction records
+	SmokeBindingHatBarRoot, // u10, u11: density and temperature hat/bar
 	SmokeBindingRootCount
 };

@@ -7,6 +7,13 @@
 #include <string>
 #include <vector>
 
+
+enum class SmokeAdvectionMode
+{
+	SemiLagrangian = 0,
+	MacCormack = 1
+};
+
 struct SmokeBenchmarkConfig
 {
 	std::string implementation = "cpu_pcg_reference";
@@ -22,6 +29,8 @@ struct SmokeBenchmarkConfig
 	Real densityRate = 30.0;
 	Real temperatureRate = 10.0;
 	Vector3 emitterAcceleration{};
+
+	SmokeAdvectionMode advectionMode = SmokeAdvectionMode::SemiLagrangian;
 
 	bool renderingEnabledDuringRun = false;
 	std::filesystem::path outputRoot = "diagnostics/runs";

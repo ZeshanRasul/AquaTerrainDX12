@@ -246,9 +246,11 @@ void Renderer::DrawSmokeGpuDebug()
         m_SmokeGpuPendingSteps = 0;
         m_SmokeGpuAccumulator = 0;
     }
+	ImGui::Combo("Advection Mode", reinterpret_cast<int*>(&m_SmokeGpuAdvectionMode), "Semi-Lagrangian\0MacCormack\0\0");
     ImGui::Checkbox("Emitter enabled", &m_SmokeGpuEmitterEnabled);
     ImGui::Checkbox("Sphere obstacle enabled", &m_SmokeGpuSphereEnabled);
     ImGui::BeginDisabled(!m_SmokeGpuSphereEnabled);
+	ImGui::Checkbox("Sphere obstacle moving", &m_SphereTranslationEnabled);
     ImGui::SliderFloat("Sphere radius", &m_SmokeGpuSphereRadius,
         0.02f, 0.30f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
     if (ImGui::IsItemHovered())
@@ -479,6 +481,7 @@ void Renderer::SaveSmokeGpuBenchmark()
             << ",\n  \"source_cell\": [" << config.emitterCell.x << ',' << config.emitterCell.y << ',' << config.emitterCell.z << ']'
             << ",\n  \"density_rate\": 30,\n  \"temperature_rate\": 10,\n  \"source_acceleration\": [0,0,0],"
             << "\n  \"pressure_iterations\": " << m_SmokeGpuBenchmarkIterations
+			<< "\n  \"advection_mode\": " << (m_SmokeGpuAdvectionMode == SmokeAdvectionMode::SemiLagrangian ? "\"semi-Lagrangian\"" : "\"MacCormack\"")
             << ",\n  \"sphere_enabled\": " << (m_SmokeGpuSphereEnabled ? "true" : "false")
             << ",\n  \"sphere_centre\": [" << m_SmokeGpuSphereCentre.x << ','
             << m_SmokeGpuSphereCentre.y << ',' << m_SmokeGpuSphereCentre.z << ']'

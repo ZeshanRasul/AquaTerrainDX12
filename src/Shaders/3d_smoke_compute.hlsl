@@ -3,7 +3,7 @@ struct SmokeSphereObstacle
     float3 centre;
     float radius;
     uint enabled;
-    float3 padding;
+    float3 velocity;
 };
 
 cbuffer SmokeSourceConstants : register(b0)
@@ -28,7 +28,8 @@ cbuffer SmokeSourceConstants : register(b0)
     float FluidDensity;
 
     float JacobiWeight; // Start with 2.0 / 3.0.
-    float3 Padding; // Damping for density and temperature.
+    float2 Padding; // Damping for density and temperature.
+    uint sphereMovementEnabled;
     
     float3 origin;
     uint openTopEnabled;
@@ -60,6 +61,12 @@ Texture3D<float> DivergenceRead : register(t5);
 Texture3D<float> PressureRead : register(t6);
 RWTexture3D<float> PressureWrite : register(u6);
 RWStructuredBuffer<float4> DiagnosticsOutput : register(u9);
+
+Texture3D<float> DensityHat : register(t7);
+Texture3D<float> TemperatureHat : register(t8);
+Texture3D<float> DensityBar : register(t9);
+Texture3D<float> TemperatureBar : register(t10);
+
 
 SamplerState LinearClamp : register(s0);
 
@@ -105,6 +112,45 @@ uint ClassifyCell(int3 cell)
     }
 
     return CELL_FLUID;
+}
+
+bool IsSphereCell(int3 cell)
+{
+    if (any(cell < 0) || any(cell >= int3(GridResolution)))
+        return false;
+
+    const float3 position =
+        origin + (float3(cell) + 0.5f) * GridSpacing;
+
+    return sphereObstacle.enabled != 0 &&
+        SphereSdf(position, sphereObstacle) <= 0.0f;
+}
+
+float BoundaryVelocityU(int3 face)
+{
+    const bool sphereBlocked =
+        IsSphereCell(face - int3(1, 0, 0)) ||
+        IsSphereCell(face);
+
+    return sphereBlocked ? sphereObstacle.velocity.x : 0.0f;
+}
+
+float BoundaryVelocityV(int3 face)
+{
+    const bool sphereBlocked =
+        IsSphereCell(face - int3(0, 1, 0)) ||
+        IsSphereCell(face);
+
+    return sphereBlocked ? sphereObstacle.velocity.y : 0.0f;
+}
+
+float BoundaryVelocityW(int3 face)
+{
+    const bool sphereBlocked =
+        IsSphereCell(face - int3(0, 0, 1)) ||
+        IsSphereCell(face);
+
+    return sphereBlocked ? sphereObstacle.velocity.z : 0.0f;
 }
 
 bool IsSolidCell(int3 cell)
@@ -171,6 +217,35 @@ float3 BackTrace(float3 q)
     float3 midpointVelocity = SampleVelocity(midpoint);
 
     return q - Dt * midpointVelocity / GridSpacing;
+}
+
+// Pure SL advect of an arbitrary scalar SRV at cell id; no dissipation.
+float AdvectRaw(Texture3D<float> field, uint3 id)
+{
+    float3 q = float3(id) + 0.5f;
+    float3 departure = BackTrace(q);
+    float3 uvw = departure / float3(GridResolution);
+    return field.SampleLevel(LinearClamp, uvw, 0);
+}
+
+// Min/max over the SAME 8 texels the trilinear sample reads at `departure`.
+// Footprint MUST match SampleLevel or the clamp is wrong.
+void TrilinearMinMax(Texture3D<float> field, float3 departure,
+                     out float lo, out float hi)
+{
+    float3 p = departure - 0.5f; // match cell-centre convention
+    int3 b = int3(floor(p));
+    lo = 1e30f;
+    hi = -1e30f;
+    [unroll]
+    for (int i = 0; i < 8; ++i)
+    {
+        int3 c = clamp(b + int3(i & 1, (i >> 1) & 1, (i >> 2) & 1),
+                       int3(0, 0, 0), int3(GridResolution) - 1);
+        float v = field.Load(int4(c, 0));
+        lo = min(lo, v);
+        hi = max(hi, v);
+    }
 }
 
 [numthreads(8, 8, 4)]
@@ -255,7 +330,7 @@ void ApplyBuoyancyCS(uint3 id : SV_DispatchThreadID)
 
     if (IsBlockedV(int3(id)))
     {
-        VelocityV[id] = 0.0f;
+        VelocityV[id] = BoundaryVelocityV(int3(id));
         return;
     }
     
@@ -298,19 +373,19 @@ void ApplyDivergenceCS(uint3 id : SV_DispatchThreadID)
     int3 above = c + int3(0, 1, 0);
     int3 front = c + int3(0, 0, 1);
 
-    float u0 = IsBlockedU(c) ? 0.0f :
+    float u0 = IsBlockedU(c) ? BoundaryVelocityU(c) :
         VelocityUInput.Load(int4(c, 0));
-    float u1 = IsBlockedU(right) ? 0.0f :
+    float u1 = IsBlockedU(right) ? BoundaryVelocityU(right) :
         VelocityUInput.Load(int4(right, 0));
 
-    float v0 = IsBlockedV(c) ? 0.0f :
+    float v0 = IsBlockedV(c) ? BoundaryVelocityV(c) :
         VelocityVInput.Load(int4(c, 0));
-    float v1 = IsBlockedV(above) ? 0.0f :
+    float v1 = IsBlockedV(above) ? BoundaryVelocityV(above) :
         VelocityVInput.Load(int4(above, 0));
 
-    float w0 = IsBlockedW(c) ? 0.0f :
+    float w0 = IsBlockedW(c) ? BoundaryVelocityW(c) :
         VelocityWInput.Load(int4(c, 0));
-    float w1 = IsBlockedW(front) ? 0.0f :
+    float w1 = IsBlockedW(front) ? BoundaryVelocityW(front) :
         VelocityWInput.Load(int4(front, 0));
 
     Divergence[id] =
@@ -398,7 +473,7 @@ void SubtractPressureGradientCS(uint3 id : SV_DispatchThreadID)
     {
         if (id.x == 0 || id.x == GridResolution.x || IsBlockedU(cell))
         {
-            VelocityU[id] = 0.0f;
+            VelocityU[id] = BoundaryVelocityU(cell);
         }
         else
         {
@@ -424,7 +499,7 @@ void SubtractPressureGradientCS(uint3 id : SV_DispatchThreadID)
 
             if (ClassifyCell(below) == CELL_SOLID)
             {
-                VelocityV[id] = 0.0f;
+                VelocityV[id] = sphereObstacle.velocity.y;
             }
             else
             {
@@ -442,7 +517,7 @@ void SubtractPressureGradientCS(uint3 id : SV_DispatchThreadID)
         
             if (id.y == 0 || id.y == GridResolution.y || IsBlockedV(cell))
             {
-                VelocityV[id] = 0.0f;
+                VelocityV[id] = BoundaryVelocityV(cell);
             }
             else
             {
@@ -464,7 +539,7 @@ void SubtractPressureGradientCS(uint3 id : SV_DispatchThreadID)
     {
         if (id.z == 0 || id.z == GridResolution.z || IsBlockedW(cell))
         {
-            VelocityW[id] = 0.0f;
+            VelocityW[id] = BoundaryVelocityW(cell);
         }
         else
         {
@@ -521,7 +596,7 @@ void AdvectVelocityCS(uint3 id : SV_DispatchThreadID)
     {
         if (id.x == 0 || id.x == n.x || IsBlockedU(int3(id)))
         {
-            VelocityU[id] = 0.0f;
+            VelocityU[id] = BoundaryVelocityU(int3(id));
         }
         else
         {
@@ -534,7 +609,7 @@ void AdvectVelocityCS(uint3 id : SV_DispatchThreadID)
     {
         if (IsBlockedV(int3(id)))
         {
-            VelocityV[id] = 0.0f;
+            VelocityV[id] = BoundaryVelocityV(int3(id));
         }
         else
         {
@@ -549,7 +624,7 @@ void AdvectVelocityCS(uint3 id : SV_DispatchThreadID)
     {
         if (id.z == 0 || id.z == n.z || IsBlockedW(int3(id)))
         {
-            VelocityW[id] = 0.0f;
+            VelocityW[id] = BoundaryVelocityW(int3(id));
         }
         else
         {
@@ -706,4 +781,63 @@ void ReduceVelocityCS(
     DiagnosticCount[lane] = validCount;
     DiagnosticNonfinite[lane] = nonfiniteCount;
     FinishDiagnosticReduction(lane, 2);
+}
+
+// Reused for BOTH hat (input = φⁿ, Dt = +dt) and bar (input = φ̂, Dt = −dt).
+[numthreads(8, 8, 4)]
+void AdvectScalarsRawCS(uint3 id : SV_DispatchThreadID)
+{
+    if (any(id >= GridResolution))
+        return;
+    if (IsSolidCell(int3(id)))
+    {
+        Density[id] = 0;
+        Temperature[id] = ambientTemperature;
+        return;
+    }
+    Density[id] = AdvectRaw(DensityInput, id);
+    Temperature[id] = AdvectRaw(TemperatureInput, id);
+}
+
+// Combine + limiter + dissipation. Writes the final φⁿ⁺¹.
+[numthreads(8, 8, 4)]
+void MacCormackScalarsCS(uint3 id : SV_DispatchThreadID)
+{
+    if (any(id >= GridResolution))
+        return;
+    if (IsSolidCell(int3(id)))
+    {
+        Density[id] = 0;
+        Temperature[id] = ambientTemperature;
+        return;
+    }
+
+    float3 q = float3(id) + 0.5f;
+    float3 departure = BackTrace(q);
+    if (departure.y >= float(GridResolution.y))
+    {
+        Density[id] = 0;
+        Temperature[id] = ambientTemperature;
+        return;
+    }
+
+    // Density
+    float dN = DensityInput.Load(int4(id, 0)); // φⁿ  (bound at t0)
+    float dH = DensityHat.Load(int4(id, 0)); // φ̂   (new SRV)
+    float dB = DensityBar.Load(int4(id, 0)); // φ̄   (new SRV)
+    float d = dH + 0.5f * (dN - dB);
+    float dlo, dhi;
+    TrilinearMinMax(DensityInput, departure, dlo, dhi);
+    d = clamp(d, dlo, dhi); // limiter → falls back toward φ̂
+    Density[id] = max(d * exp(-Padding.x * Dt), 0.0f); // dissipation applied ONCE, here
+
+    // Temperature (same pattern, ambient-relative)
+    float tN = TemperatureInput.Load(int4(id, 0));
+    float tH = TemperatureHat.Load(int4(id, 0));
+    float tB = TemperatureBar.Load(int4(id, 0));
+    float t = tH + 0.5f * (tN - tB);
+    float tlo, thi;
+    TrilinearMinMax(TemperatureInput, departure, tlo, thi);
+    t = clamp(t, tlo, thi);
+    Temperature[id] = ambientTemperature + (t - ambientTemperature) * exp(-Padding.y * Dt);
 }

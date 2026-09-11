@@ -124,6 +124,18 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
             "$<TARGET_FILE_DIR:${PROJECT_NAME}>/Shaders"
 )
 
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${CMAKE_SOURCE_DIR}/Models"
+            "$<TARGET_FILE_DIR:${PROJECT_NAME}>/Models"
+)
+
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${CMAKE_SOURCE_DIR}/Textures"
+            "$<TARGET_FILE_DIR:${PROJECT_NAME}>/Textures"
+)
+
 # Optional: set subsystem explicitly if you ever switch the executable kind at runtime
 # if(MSVC AND BUILD_WIN32_SUBSYSTEM)
 #     target_link_options(${PROJECT_NAME} PRIVATE "/SUBSYSTEM:WINDOWS")
