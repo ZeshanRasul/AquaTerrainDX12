@@ -4809,10 +4809,10 @@ void Renderer::DispatchSmokeSourceTest(
 
 		bind(SmokeBindingInputRoot, m_GpuDensityHat[s].srv);
 
-		uav(m_GpuDensityHat[s]);
-		uav(m_GpuTemperatureHat[s]);
+		uav(m_GpuDensityBar[s]);
+		uav(m_GpuTemperatureBar[s]);
 
-		bind(SmokeBindingOutputRoot, m_GpuDensityHat[s].uav);
+		bind(SmokeBindingOutputRoot, m_GpuDensityBar[s].uav);
 
 		constants.dt = -constants.dt;
 		commandList->SetComputeRoot32BitConstants(SmokeBindingConstantsRoot, SmokeConstantCount, &constants, 0);
@@ -4828,7 +4828,6 @@ void Renderer::DispatchSmokeSourceTest(
 		srv(m_GpuTemperatureBar[s]);
 
 		bind(SmokeBindingHatBarRoot, m_GpuDensityHat[s].srv);
-
 		scalarOutputs(m_GpuScalarWriteIndex);
 		commandList->SetPipelineState(m_SmokeMacCormackScalarsPSO.Get());
 		commandList->Dispatch(gx, gy, gz);
