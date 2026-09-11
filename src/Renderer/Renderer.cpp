@@ -103,6 +103,20 @@ bool Renderer::InitializeD3D12(HWND& windowHandle)
 	CreateDepthStencilView();
 
 	CreateWaterSimTextures();
+	// Optional cubic resolution override for the reference resolution sweep. Read
+	// before any smoke GPU resource is sized, so the whole pipeline runs at it.
+	// The physical domain stays the unit cube (spacing 1/r), so a fixed-physical
+	// convergence study just varies the cell count.
+	{
+		wchar_t resText[16]{};
+		if (GetEnvironmentVariableW(L"AQUA_SMOKE_RESOLUTION", resText, 16))
+		{
+			size_t r = _wtoi(resText);
+			if (r >= 8 && r <= 256)
+				m_SmokeSolver = SmokeSolver3(
+					{ r, r, r }, { 1.0 / r, 1.0 / r, 1.0 / r }, { -0.5, -0.5, -0.5 });
+		}
+	}
 	CreateSmokeResources();
 
 	HeightMap hm = GeneratePerlinHeightmap(m_HeightMapWidth, m_HeightMapHeight, m_TerrainHeightScale, m_TerrainNoiseOctaves, m_TerrainNoisePersistance, m_TerrainNoiseSeed);

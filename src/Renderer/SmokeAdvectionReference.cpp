@@ -243,6 +243,13 @@ void Renderer::DispatchSmokeReferenceStep(ID3D12GraphicsCommandList* commandList
         orderWrites();
     }
 
+    // Isolated advection timing (no pressure/buoyancy in this path, so this is the
+    // pure scheme cost). Resolved into the readback buffer's timestamp region below.
+    const UINT queryBase = m_CurrentFrameResourceIndex * SmokeTimestampSlotsPerFrame *
+        static_cast<UINT>(SmokeTimestampCount);
+    commandList->EndQuery(m_SmokeGpuQueries.Get(), D3D12_QUERY_TYPE_TIMESTAMP,
+        queryBase + SmokeTimestampStepBegin);
+
     // Prescribed velocity is the cleared zero field; bind it as the advection input.
     velocityInputs(m_GpuVelocityReadIndex);
 
@@ -286,13 +293,18 @@ void Renderer::DispatchSmokeReferenceStep(ID3D12GraphicsCommandList* commandList
     std::swap(m_GpuScalarReadIndex, m_GpuScalarWriteIndex);
     m_SmokeGpuStepRequested = false;
     ++m_SmokeGpuInjectionCount;
+    commandList->EndQuery(m_SmokeGpuQueries.Get(), D3D12_QUERY_TYPE_TIMESTAMP,
+        queryBase + SmokeTimestampStepEnd);
 
     // Density readback, exactly as the benchmark path, so CollectSmokeGpuDiagnostics
-    // maps the field and RecordReferenceStep can score it.
+    // maps the field and RecordReferenceStep can score it. Timestamps resolve into
+    // the [0, 512) region ahead of the density copy at footprint.Offset (512).
     auto& readback = m_SmokeGpuReadbacks[m_CurrentFrameResourceIndex];
     readback.pending = true;
     readback.benchmark = true;
     readback.timestampOffset = 0;
+    commandList->ResolveQueryData(m_SmokeGpuQueries.Get(), D3D12_QUERY_TYPE_TIMESTAMP,
+        queryBase, static_cast<UINT>(SmokeTimestampCount), readback.buffer.Get(), 0);
     readback.sample = {};
     readback.sample.emit = emit;
     readback.sample.step = ++m_SmokeGpuBenchmarkSubmitted;
@@ -378,11 +390,20 @@ void Renderer::RecordReferenceStep(const void* mapped, unsigned step)
     const double l2n = refL2sq > 0 ? std::sqrt(l2sq / refL2sq) : std::sqrt(l2sq);
     const double massErr = refSum != 0 ? (sum - refSum) / refSum : sum - refSum;
 
+    // Isolated advection time for this step (timestamps resolved at buffer offset 0,
+    // ahead of the density copy at footprint.Offset). Advection-only path, so this
+    // is the pure scheme cost with no pressure/buoyancy confound.
+    const auto* timestamps = reinterpret_cast<const std::uint64_t*>(mapped);
+    const double advectionMs = m_SmokeGpuTimestampFrequency > 0
+        ? static_cast<double>(timestamps[SmokeTimestampStepEnd] - timestamps[SmokeTimestampStepBegin])
+            * 1000.0 / static_cast<double>(m_SmokeGpuTimestampFrequency)
+        : 0.0;
+
     std::ostringstream r;
     r << std::setprecision(17)
       << step << ',' << sum << ',' << refSum << ',' << (sum - refSum) << ',' << massErr << ','
       << l1 << ',' << l1n << ',' << std::sqrt(l2sq) << ',' << l2n << ','
-      << dmin << ',' << dmax << ',' << nonfinite;
+      << dmin << ',' << dmax << ',' << nonfinite << ',' << advectionMs;
     m_SmokeReferenceRows.push_back(r.str());
 }
 
@@ -394,7 +415,7 @@ void Renderer::SaveSmokeAdvectionReference()
         std::ofstream csv(m_SmokeReferenceOutput / "steps.csv");
         csv.exceptions(std::ios::failbit | std::ios::badbit);
         csv << "step,density_sum,reference_sum,mass_error_abs,mass_error_rel,"
-               "l1,l1_normalized,l2,l2_normalized,density_min,density_max,nonfinite\n";
+               "l1,l1_normalized,l2,l2_normalized,density_min,density_max,nonfinite,advection_ms\n";
         for (const auto& row : m_SmokeReferenceRows) csv << row << '\n';
         csv.close();
 
