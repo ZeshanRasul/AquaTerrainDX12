@@ -84,7 +84,8 @@ void Window::Init(const WindowProps& props)
 
     wchar_t audit[32]{};
     ShowWindow(m_Hwnd, (GetEnvironmentVariableW(L"AQUA_SMOKE_AUDIT", audit, 32) ||
-        GetEnvironmentVariableW(L"AQUA_SMOKE_REFERENCE", audit, 32)) ? SW_HIDE : SW_SHOWDEFAULT);
+        GetEnvironmentVariableW(L"AQUA_SMOKE_REFERENCE", audit, 32) ||
+        GetEnvironmentVariableW(L"AQUA_SMOKE_APPEARANCE", audit, 32)) ? SW_HIDE : SW_SHOWDEFAULT);
 	HCURSOR cursor = LoadCursor(0, IDC_ARROW);
 	SetCursor(cursor);
 

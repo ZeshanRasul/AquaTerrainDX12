@@ -1,0 +1,82 @@
+{
+  "accounting-controls-v1": {
+    "manifest_sha256": "72873cf8a0f3f6cd9155859ec7e85626e333e79c3581f10c5a47a9f902dc6d73",
+    "analysis_sha256": "94bcc7484b5a88d7d5ae17ddde47c074f76d6df5ea57e6e7a2169c3fe3f0bb17",
+    "summary": {
+      "passed": true,
+      "runs": 60,
+      "max_scaled_cell_closure": 0.0,
+      "max_normalized_absolute_closure": 0.0,
+      "optimization_differences": [],
+      "scope": "Accounting controls only; historical loss and coupled G1 untested"
+    }
+  },
+  "accounting-edge-v1": {
+    "manifest_sha256": "e9ea9c636e3f215fcc07320411835cce2b5953ee0938154f9d146a9ce698e8a0",
+    "analysis_sha256": "822f5e4c08bfbbfa2d2c36d26e18a8ae77e67e34a5f79bb0dbc6f55fdaccf509",
+    "summary": {
+      "passed": true,
+      "runs": 52,
+      "max_scaled_cell_closure": 0.0,
+      "max_normalized_absolute_closure": 0.0,
+      "optimization_differences": [],
+      "scope": "Accounting controls only; historical loss and coupled G1 untested"
+    }
+  },
+  "accounting-historical-v1": {
+    "manifest_sha256": "2ab394e222b5bfdca9ac42d658c0e64c28e6016986b90c97dad4bb72aa2c4d34",
+    "analysis_sha256": "70fc8578220791d5382d92f45084a137eaa682783b236b458fcf1c806b1949b4",
+    "summary": {
+      "passed": true,
+      "summary": [
+        {
+          "n": 32,
+          "initial_mass": 0.013671875,
+          "final_mass": 0.011778522554368308,
+          "retained": 0.8615147925480819,
+          "cumulative_stage_mass_deltas": [
+            -0.0018933524456316933,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "top_departure_events": 0,
+          "negative_before_floor_events": 0,
+          "solid_events": 0,
+          "boundary_destination_sampling_delta": 0.0,
+          "max_scaled_cell_closure": 0.0
+        },
+        {
+          "n": 64,
+          "initial_mass": 0.010986328125,
+          "final_mass": 0.01038907112540645,
+          "retained": 0.9456363406592183,
+          "cumulative_stage_mass_deltas": [
+            -0.000597256999593557,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "top_departure_events": 0,
+          "negative_before_floor_events": 0,
+          "solid_events": 0,
+          "boundary_destination_sampling_delta": 0.0,
+          "max_scaled_cell_closure": 0.0
+        }
+      ],
+      "scope": "Exact replay of historical frozen-velocity hardware-SL references; not coupled smoke or causal clamp attribution"
+    }
+  },
+  "boundary_destination_check": {
+    "all_240_steps_max_input_density": 0,
+    "all_240_steps_max_sampled_density": 0,
+    "note": "Measured over trace boundary-stencil masks; not a general boundary counterfactual"
+  },
+  "status": "Accounting validated and historical loss attributed to interior sampling; coupled G1 remains untested"
+}

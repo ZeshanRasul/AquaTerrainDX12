@@ -1,0 +1,26 @@
+[
+  {
+    "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\experiments\\density-sampling\\rtx3070-sampler-validation\\results-20260911-221451.zip",
+    "Hash": "771FA87A328BAF0F3013EB74AFA66AFE1478A722411A07F08C0946F5E87410A3"
+  },
+  {
+    "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\diagnostics\\analyze_sampler.py",
+    "Hash": "B50B3027FD40F6170E7E4FCFD8E3A57A8D65C87C750AE51C231823CD38684931"
+  },
+  {
+    "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\diagnostics\\compare_sampler_devices.py",
+    "Hash": "C0E795FC6C153C86CA6189F00B6F53B6A3CEE8710A50156E2358951EF76C2CB3"
+  },
+  {
+    "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\experiments\\sampler-rtx3070\\summary.json",
+    "Hash": "3E01DC8D5DCEACF663DD18A5FCEF908B3F3FAF17F440E97ACC331DB100E265AC"
+  },
+  {
+    "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\experiments\\sampler-rtx3070\\comparison.json",
+    "Hash": "5C749FC4BF211B4F4290CEC1531D45264226112BB235637627383B58F36DE128"
+  },
+  {
+    "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\experiments\\sampler-rtx3070\\FINDINGS.md",
+    "Hash": "52D83C7FF6837509C80948CE021365830673413744C677D449C01C7AA9AD7B35"
+  }
+]

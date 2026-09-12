@@ -1,0 +1,2 @@
+# Raw E0 captures are retained locally and referenced by hashed manifests.
+/runs/

@@ -1,0 +1,44 @@
+{
+  "returned_file_hashes_verified": 21,
+  "input_manifest_matches_package": true,
+  "inputs_bitwise_match_baseline": true,
+  "rows": [
+    {
+      "resolution": 32,
+      "queries": 23503,
+      "laptop_device": "NVIDIA GeForce RTX 3070 Laptop GPU\nDriver=9007199255730126\nN=32\nQueries=23503\nFormat=R32_FLOAT\nFilter=MIN_MAG_MIP_LINEAR\nAddress=CLAMP\nCompiler=cs_5_1 O3 strict\n",
+      "baseline_device": "NVIDIA GeForce RTX 5090\nDriver=9007199255733668\nN=32\nQueries=23503\nFormat=R32_FLOAT\nFilter=MIN_MAG_MIP_LINEAR\nAddress=CLAMP\nCompiler=cs_5_1 O3 strict\n",
+      "all_three_buffers_bitwise_equal_to_baseline": true,
+      "changed_queries": 0,
+      "changed_texture_samples": 0,
+      "maximum_absolute_difference": 0.0,
+      "laptop_sample_sha256": "24867E7F135874F9FAFECE018AEE68D5013E45EC5BFF9E1D9359067C5CD059C4",
+      "baseline_sample_sha256": "24867E7F135874F9FAFECE018AEE68D5013E45EC5BFF9E1D9359067C5CD059C4"
+    },
+    {
+      "resolution": 33,
+      "queries": 23503,
+      "laptop_device": "NVIDIA GeForce RTX 3070 Laptop GPU\nDriver=9007199255730126\nN=33\nQueries=23503\nFormat=R32_FLOAT\nFilter=MIN_MAG_MIP_LINEAR\nAddress=CLAMP\nCompiler=cs_5_1 O3 strict\n",
+      "baseline_device": "NVIDIA GeForce RTX 5090\nDriver=9007199255733668\nN=33\nQueries=23503\nFormat=R32_FLOAT\nFilter=MIN_MAG_MIP_LINEAR\nAddress=CLAMP\nCompiler=cs_5_1 O3 strict\n",
+      "all_three_buffers_bitwise_equal_to_baseline": true,
+      "changed_queries": 0,
+      "changed_texture_samples": 0,
+      "maximum_absolute_difference": 0.0,
+      "laptop_sample_sha256": "EB31B3E19D8C5B4F998C8ED4F1143B073EEA1209FA500058934ED6C0CD61C730",
+      "baseline_sample_sha256": "EB31B3E19D8C5B4F998C8ED4F1143B073EEA1209FA500058934ED6C0CD61C730"
+    },
+    {
+      "resolution": 64,
+      "queries": 23503,
+      "laptop_device": "NVIDIA GeForce RTX 3070 Laptop GPU\nDriver=9007199255730126\nN=64\nQueries=23503\nFormat=R32_FLOAT\nFilter=MIN_MAG_MIP_LINEAR\nAddress=CLAMP\nCompiler=cs_5_1 O3 strict\n",
+      "baseline_device": "NVIDIA GeForce RTX 5090\nDriver=9007199255733668\nN=64\nQueries=23503\nFormat=R32_FLOAT\nFilter=MIN_MAG_MIP_LINEAR\nAddress=CLAMP\nCompiler=cs_5_1 O3 strict\n",
+      "all_three_buffers_bitwise_equal_to_baseline": true,
+      "changed_queries": 0,
+      "changed_texture_samples": 0,
+      "maximum_absolute_difference": 0.0,
+      "laptop_sample_sha256": "025C4832CCC012FC037BEC97F2D755E154286AF4BB9D5EE8A50ED3B2B051A2E6",
+      "baseline_sample_sha256": "025C4832CCC012FC037BEC97F2D755E154286AF4BB9D5EE8A50ED3B2B051A2E6"
+    }
+  ],
+  "script_sha256": "C0E795FC6C153C86CA6189F00B6F53B6A3CEE8710A50156E2358951EF76C2CB3"
+}

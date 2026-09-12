@@ -164,6 +164,23 @@ uint ClassifyCell(int3 cell)
             return CELL_SOLID;
     }
 
+    // Diagnostic walls only. Modes 10-13 are never set by normal simulation.
+    if (referenceVelocityMode >= 11 && referenceVelocityMode <= 13)
+    {
+        float3 q = (float3(cell) + 0.5f) / float3(GridResolution);
+        float centre = referenceVelocityMode == 13 ? 0.5f : 0.5f + 0.5f / GridResolution.x;
+        if (referenceVelocityMode == 12) centre += 0.25f * (q.y - 0.5f);
+        float width = (referenceVelocityMode == 13 ? 0.25f : 1.0f) / GridResolution.x;
+        if (abs(q.x-centre) <= 0.5f*width) return CELL_SOLID;
+    }
+    if (referenceVelocityMode >= 14 && referenceVelocityMode <= 16)
+    {
+        float3 q=(float3(cell)+0.5f)/float3(GridResolution);
+        bool baffle=q.x>=0.5f && q.x<0.53125f && q.y>=0.1875f && q.y<0.8125f;
+        float gap=referenceVelocityMode==15?0.03125f:0.125f;
+        bool slot=referenceVelocityMode!=14 && q.y>=0.375f && q.y<0.375f+gap;
+        if(baffle && !slot)return CELL_SOLID;
+    }
     if (sphereObstacle.enabled != 0)
     {
         float3 position =

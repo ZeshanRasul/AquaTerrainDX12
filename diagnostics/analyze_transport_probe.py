@@ -34,15 +34,16 @@ def quantized(departure):
     return b+np.round((p-b)*256)/256
 
 
-def traces(path,manifest,fields):
+def traces(path,manifest,fields,steps=(1,2)):
     n=manifest['resolution'];previous=fields['initial_density'];out=[]
-    for step in (1,2):
+    for step in steps:
         a=np.fromfile(path/f'trace-step{step}.f32',dtype='<f4')
         require(a.size==n**3*16 and np.isfinite(a).all(),f'{path}: invalid trace size/nonfinite')
         t=a.astype(np.float64).reshape(n,n,n,4,4)
         dep=t[...,0,:3];hw=t[...,0,3];full=t[...,1,3];frac=t[...,2,:3];qsample=t[...,2,3]
         lo=t[...,3,0];hi=t[...,3,1];source=t[...,3,2];actual=t[...,3,3]
-        require(np.array_equal(source,previous),f'{path}: probe input is not actual previous density')
+        if step==1 or out:
+            require(np.array_equal(source,previous),f'{path}: probe input is not actual previous density')
         expected=full if manifest.get('density_sampling_float',False) else hw
         require(np.array_equal(expected,actual),f'{path}: recomputed selected sample does not reproduce actual output')
         position=dep.astype(np.float32)-np.float32(.5)

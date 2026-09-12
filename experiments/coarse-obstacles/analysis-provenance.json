@@ -1,0 +1,50 @@
+[
+  {
+    "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\diagnostics\\analyze_coarse_obstacles.py",
+    "Hash": "D1287543C14859BC749B6160B2F231DD7BD642A32D7380B774D8D00A1AC11FBD"
+  },
+  {
+    "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\diagnostics\\plot_coarse_obstacles.py",
+    "Hash": "5CEE6B11D0E56824AD40370793C3DFBFEBCD4A887AC6B523ECFB5A9C99CEA096"
+  },
+  {
+    "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\experiments\\coarse-obstacles\\provenance.json",
+    "Hash": "10AD4707A572A291491168192F77D139B94DC4F228A161669F0A393246C80BD6"
+  },
+  {
+    "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\experiments\\coarse-obstacles\\README.md",
+    "Hash": "9C2248583A04B71EBBBBF0D459F97DF94622B697C0F8C6458721068AE745A52B"
+  },
+  {
+    "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\experiments\\coarse-obstacles\\slices.png",
+    "Hash": "BA3FB6B4424BD9CDAFAF0D21413E874B3549CD931E4919C9DBF0799A57EE0029"
+  },
+  {
+    "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\experiments\\coarse-obstacles\\slices.svg",
+    "Hash": "D8B68F36425AB3BA45AB0DB604B33AA44222DC3D6134F010DF88E40E4B6B6CC3"
+  },
+  {
+    "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\experiments\\coarse-obstacles\\summary.csv",
+    "Hash": "58DAF38B9BA62A27FAE2B17930DDD77970394F9A22B7616B5BA9B10E7D61604F"
+  },
+  {
+    "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\experiments\\coarse-obstacles\\summary.json",
+    "Hash": "0A07A77E1AACDF69248A46C10BD985F44999C15E6B3A9A507EBBE860276FD336"
+  },
+  {
+    "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\experiments\\coarse-obstacles\\regression\\analysis-provenance.json",
+    "Hash": "CAA907BF7584209BEB5C4DEE9D5EE137A684160C75E3823A4CF37B83A3254203"
+  },
+  {
+    "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\experiments\\coarse-obstacles\\regression\\summary.csv",
+    "Hash": "C637D8D43A42A951AE7E7F92B0FCB189AC376F299497AE12118FE13143EB6BD2"
+  },
+  {
+    "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\experiments\\coarse-obstacles\\regression\\summary.json",
+    "Hash": "B57B16BAA4623739770B26EE226502DCE60571CEF040812AB5188C40709E3F93"
+  },
+  {
+    "Path": "D:\\dev\\Graphics\\AquaTerrainDX12\\experiments\\coarse-obstacles\\regression\\validation.json",
+    "Hash": "97E5A097C2F3826DED519F4D0FB6BA2BDEE8605308D0C1479428CFDFC7F1C833"
+  }
+]

@@ -1,7 +1,11 @@
 #pragma once
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdint>
+#include <filesystem>
+#include <string>
+#include <vector>
 
 #include "../Utils/d3dUtil.h"
 #include "../Utils/GeometryGenerator.h"
@@ -566,6 +570,7 @@ private:
     bool m_ProjectionSharp = false;
     int m_ProjectionIterations = 0; // -1: prescribed divergence-free control
     unsigned m_ProjectionAdvectionSteps = 1;
+    unsigned m_CoarseObstacleCase = 0;
     float m_ProjectionShiftCells = 0.0f;
     double m_ProjectionDtScale = 1.0;
     void CreateTransportProbe();
@@ -587,6 +592,156 @@ private:
     Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SmokeRefOptAdvectScalarsPSO;
     Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SmokeRefOptAdvectScalarsRawPSO;
     Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SmokeRefOptMacCormackScalarsPSO;
+
+    // Coupled appearance experiment. The source path has its own root signature
+    // and descriptors so it cannot alias the frozen mass-audit binding at u15.
+    void StartSmokeAppearanceExperiment(bool automatic = false);
+    void DispatchSmokeAppearanceSource(
+        ID3D12GraphicsCommandList*,
+        const struct SmokeBindingConstants&,
+        UINT scalarIndex,
+        bool emit);
+    void RecordSmokeAppearanceStep(const void* mapped, unsigned step);
+    void SaveSmokeAppearanceExperiment();
+    void TraceSmokeAppearanceDevice(const char* phase);
+    void ExchangeOfflinePressure(ID3D12GraphicsCommandList*, bool afterProjection);
+    unsigned m_OfflinePressureMode = 0;
+    std::array<D3D12_PLACED_SUBRESOURCE_FOOTPRINT, 9> m_OfflinePressureFootprints{};
+    Microsoft::WRL::ComPtr<ID3D12Resource> m_OfflinePressureReadback;
+    Microsoft::WRL::ComPtr<ID3D12Resource> m_OfflinePressureUpload;
+    void CaptureSmokePressureTriage(ID3D12GraphicsCommandList* list,
+        SmokeGpuTexture& texture, unsigned field);
+    void SaveSmokePressureTriage(unsigned step);
+    unsigned m_SmokePressureTriageStep = 0;
+    std::array<D3D12_PLACED_SUBRESOURCE_FOOTPRINT, 16> m_SmokePressureTriageFootprints{};
+    std::array<bool, 16> m_SmokePressureTriageCaptured{};
+    Microsoft::WRL::ComPtr<ID3D12Resource> m_SmokePressureTriageReadback;
+    DWORD m_SmokeAppearanceMessageCookie = 0;
+    bool m_SmokeAppearanceMessageCallback = false;
+    bool m_SmokeAppearanceDeviceTrace = true;
+
+    bool m_SmokeAppearanceExperiment = false;
+    bool m_SmokeAppearanceAutomatic = false;
+    unsigned m_SmokeAppearanceFailures = 0;
+
+    struct SmokeAppearanceConfig
+    {
+        std::string scene;
+        std::filesystem::path sourceRatePath;
+        std::filesystem::path outputDirectory;
+        unsigned totalSteps = 360;
+        unsigned emitterSteps = 120;
+        unsigned snapshotStride = 12;
+        unsigned sourceCount = 1;
+        int pressureIterations = 0;
+        float timeStep = 1.0f / 60.0f;
+        double targetIntegratedRate = 0.002;
+    };
+
+    struct SmokeAppearanceSourceAuditSlot
+    {
+        Microsoft::WRL::ComPtr<ID3D12Resource> buffer;
+        bool pending = false;
+        unsigned step = 0;
+        bool emit = false;
+    };
+
+    struct SmokeAppearanceSourceAuditRecord
+    {
+        unsigned step = 0;
+        bool emit = false;
+        double densityBefore = 0.0;
+        double densityAfter = 0.0;
+        double temperatureBefore = 0.0;
+        double temperatureAfter = 0.0;
+        double expectedDensityIncrement = 0.0;
+        double expectedTemperatureIncrement = 0.0;
+        double densityIncrement = 0.0;
+        double temperatureIncrement = 0.0;
+        unsigned densityMismatchCells = 0;
+        unsigned temperatureMismatchCells = 0;
+        unsigned densityNonfiniteCells = 0;
+        unsigned temperatureNonfiniteCells = 0;
+        unsigned densityNegativeCells = 0;
+        unsigned temperatureNegativeCells = 0;
+        unsigned densityPreZeroCells = 0;
+        unsigned temperaturePreZeroCells = 0;
+        std::uint64_t densityPreHash = 14695981039346656037ull;
+        std::uint64_t densityPostHash = 14695981039346656037ull;
+        std::uint64_t densityExpectedHash = 14695981039346656037ull;
+        std::uint64_t temperaturePreHash = 14695981039346656037ull;
+        std::uint64_t temperaturePostHash = 14695981039346656037ull;
+        std::uint64_t temperatureExpectedHash = 14695981039346656037ull;
+        bool scheduleMatches = false;
+    };
+
+    struct SmokeAppearanceSnapshotRecord
+    {
+        unsigned step = 0;
+        double simulationTime = 0.0;
+        double densitySum = 0.0;
+        double densityIntegral = 0.0;
+        double densityMinimum = 0.0;
+        double densityMaximum = 0.0;
+        unsigned nonfinite = 0;
+        unsigned negative = 0;
+        std::uint64_t hash = 14695981039346656037ull;
+        std::filesystem::path file;
+    };
+
+    SmokeAppearanceConfig m_SmokeAppearanceConfig;
+    Microsoft::WRL::ComPtr<ID3D12RootSignature>
+        m_SmokeAppearanceSourceRootSignature;
+    Microsoft::WRL::ComPtr<ID3D12PipelineState>
+        m_SmokeAppearanceSourcePSO;
+    Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>
+        m_SmokeAppearanceSourceHeap;
+    Microsoft::WRL::ComPtr<ID3D12Resource>
+        m_SmokeAppearanceSourceRateBuffer;
+    Microsoft::WRL::ComPtr<ID3D12Resource>
+        m_SmokeAppearanceSourceUploadBuffer;
+    Microsoft::WRL::ComPtr<ID3D12Resource>
+        m_SmokeAppearanceSourceReadback;
+    D3D12_RESOURCE_STATES m_SmokeAppearanceSourceRateState =
+        D3D12_RESOURCE_STATE_COPY_DEST;
+    bool m_SmokeAppearanceSourceUploaded = false;
+    bool m_SmokeAppearanceSourceAuditIssued = false;
+    UINT64 m_SmokeAppearanceSourceRateBytes = 0;
+    double m_SmokeAppearanceStoredRateIntegral = 0.0;
+    std::uint64_t m_SmokeAppearanceSourceRateHash =
+        14695981039346656037ull;
+    std::uint64_t m_SmokeAppearanceSourceReadbackHash =
+        14695981039346656037ull;
+    std::uint64_t m_SmokeAppearanceSourceShaderHash =
+        14695981039346656037ull;
+    unsigned m_SmokeAppearanceSourceUploadMismatchCount = 0;
+    bool m_SmokeAppearanceSourceUploadVerified = false;
+
+    // Descriptor layout: source SRV, then density/temperature UAVs for scalar
+    // buffers 0 and 1. The UAV pairs are contiguous descriptor tables.
+    static constexpr UINT SmokeAppearanceSourceSrvDescriptor = 0;
+    static constexpr UINT SmokeAppearanceScalar0UavDescriptor = 1;
+    static constexpr UINT SmokeAppearanceScalar1UavDescriptor = 3;
+    static constexpr UINT SmokeAppearanceSourceDescriptorCount = 5;
+
+    // The four footprints contain density-before, temperature-before,
+    // density-after and temperature-after, respectively.
+    std::array<D3D12_PLACED_SUBRESOURCE_FOOTPRINT, 4>
+        m_SmokeAppearanceSourceAuditFootprints{};
+    UINT64 m_SmokeAppearanceSourceAuditBytes = 0;
+    std::array<SmokeAppearanceSourceAuditSlot, NumFrameResources>
+        m_SmokeAppearanceSourceAuditReadbacks;
+    std::vector<SmokeAppearanceSourceAuditRecord>
+        m_SmokeAppearanceSourceAuditRecords;
+    std::vector<SmokeAppearanceSnapshotRecord>
+        m_SmokeAppearanceSnapshots;
+    std::vector<float> m_SmokeAppearanceSourceRates;
+    std::string m_SmokeAppearanceConfigurationIdentity;
+    std::uint64_t m_SmokeAppearanceConfigurationHash =
+        14695981039346656037ull;
+    UINT64 m_SmokeAppearanceDiscardedMessageBaseline = 0;
+    int m_SmokeAppearanceSavedPressureIterations = 20;
+    int m_SmokeAppearanceSavedBenchmarkIterations = 20;
 
     struct GpuSmokeSample
     {

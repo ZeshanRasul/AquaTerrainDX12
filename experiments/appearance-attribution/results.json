@@ -1,0 +1,278 @@
+{
+  "status": "rendering, static-source, standalone-injection, accounting and 32^3 coupled source binding/schedule controls pass; pressure keeps G0 open",
+  "device": "NVIDIA GeForce RTX 5090",
+  "driver_raw": 9007199255733668,
+  "render_controls": {
+    "capture_valid": true,
+    "primary_step": 0.01,
+    "render_controls_pass": true,
+    "analytic_valid": true,
+    "worst_primary_refinement": 0.0014182751776850768,
+    "worst_legacy_step_002_refinement": 0.0033127197825898952,
+    "worst_step_001_refinement": 0.0014182751776850768,
+    "worst_spatial": 0.0009951158724929364,
+    "scope": "E0 rendering controls only; accounting and source controls are recorded separately; pressure validity and G1 remain untested"
+  },
+  "source_controls": {
+    "passed": true,
+    "worst_integral_relative_error": 3.324357369244302e-08,
+    "worst_rendered_refinement": 0.00019341221126107966,
+    "comparisons": [
+      {
+        "scene": "A",
+        "n": 32,
+        "view": 0,
+        "roi_pixels": 1272,
+        "mae": 0.00018743739562964289,
+        "passed": true
+      },
+      {
+        "scene": "A",
+        "n": 64,
+        "view": 0,
+        "roi_pixels": 1272,
+        "mae": 5.989788838152615e-05,
+        "passed": true
+      },
+      {
+        "scene": "A",
+        "n": 128,
+        "view": 0,
+        "roi_pixels": 1272,
+        "mae": 3.005104994623916e-05,
+        "passed": true
+      },
+      {
+        "scene": "A",
+        "n": 32,
+        "view": 1,
+        "roi_pixels": 1272,
+        "mae": 0.0001874222601734617,
+        "passed": true
+      },
+      {
+        "scene": "A",
+        "n": 64,
+        "view": 1,
+        "roi_pixels": 1272,
+        "mae": 5.9894561392706146e-05,
+        "passed": true
+      },
+      {
+        "scene": "A",
+        "n": 128,
+        "view": 1,
+        "roi_pixels": 1272,
+        "mae": 3.0049691035312678e-05,
+        "passed": true
+      },
+      {
+        "scene": "A",
+        "n": 32,
+        "view": 2,
+        "roi_pixels": 1579,
+        "mae": 0.00015936353072250396,
+        "passed": true
+      },
+      {
+        "scene": "A",
+        "n": 64,
+        "view": 2,
+        "roi_pixels": 1579,
+        "mae": 6.843383286556464e-05,
+        "passed": true
+      },
+      {
+        "scene": "A",
+        "n": 128,
+        "view": 2,
+        "roi_pixels": 1579,
+        "mae": 2.8305185075195777e-05,
+        "passed": true
+      },
+      {
+        "scene": "B",
+        "n": 32,
+        "view": 0,
+        "roi_pixels": 2567,
+        "mae": 0.00017627252880404048,
+        "passed": true
+      },
+      {
+        "scene": "B",
+        "n": 64,
+        "view": 0,
+        "roi_pixels": 2567,
+        "mae": 7.198729494642458e-05,
+        "passed": true
+      },
+      {
+        "scene": "B",
+        "n": 128,
+        "view": 0,
+        "roi_pixels": 2567,
+        "mae": 2.8366656167803455e-05,
+        "passed": true
+      },
+      {
+        "scene": "B",
+        "n": 32,
+        "view": 1,
+        "roi_pixels": 2568,
+        "mae": 0.00017614525705111732,
+        "passed": true
+      },
+      {
+        "scene": "B",
+        "n": 64,
+        "view": 1,
+        "roi_pixels": 2568,
+        "mae": 7.198430667413729e-05,
+        "passed": true
+      },
+      {
+        "scene": "B",
+        "n": 128,
+        "view": 1,
+        "roi_pixels": 2568,
+        "mae": 2.819281129450813e-05,
+        "passed": true
+      },
+      {
+        "scene": "B",
+        "n": 32,
+        "view": 2,
+        "roi_pixels": 3139,
+        "mae": 0.00019341221126107966,
+        "passed": true
+      },
+      {
+        "scene": "B",
+        "n": 64,
+        "view": 2,
+        "roi_pixels": 3139,
+        "mae": 7.094316096699287e-05,
+        "passed": true
+      },
+      {
+        "scene": "B",
+        "n": 128,
+        "view": 2,
+        "roi_pixels": 3139,
+        "mae": 2.660167259029159e-05,
+        "passed": true
+      }
+    ],
+    "scope": "Static source tables only; standalone and coupled GPU integration are recorded separately"
+  },
+  "source_injection": {
+    "passed": true,
+    "configurations": 26,
+    "reset_repeats_per_configuration": 3,
+    "density_temperature_match_cpu_bitwise": true,
+    "repeats_bitwise": true,
+    "optimization_differences": [],
+    "worst_ideal_relative_error": 7.243820120069963e-07,
+    "ideal_relative_error_limit": 2e-06,
+    "d3d12_validation_errors": 0,
+    "manifest_output_hash_mismatches": 0,
+    "manifest_source_hash_mismatches": 0,
+    "superseded_v1_failure": "All six O3 120-step accumulated fields differed bitwise from debug; repaired once by declaring the accumulation increment precise.",
+    "scope": "Standalone normalized GPU source injection only; coupled binding/schedule is recorded separately and pressure remains unvalidated"
+  },
+  "coupled_source_bridge": {
+    "source_binding_schedule_passed": true,
+    "scenes": [
+      "A",
+      "B"
+    ],
+    "resolution": 32,
+    "steps": 121,
+    "emitter_steps": 120,
+    "pressure_iterations": 256,
+    "source_audit_steps": [
+      1,
+      120,
+      121
+    ],
+    "source_audit_records_passed": 6,
+    "source_audit_mismatched_cells": 0,
+    "source_audit_nonfinite_cells": 0,
+    "source_audit_negative_cells": 0,
+    "snapshots_per_run": 12,
+    "snapshot_integrity_valid": true,
+    "configuration_and_source_hashes_valid": true,
+    "d3d12_infoqueue_messages_per_run": 1,
+    "d3d12_validation_errors_per_run": 0,
+    "d3d12_discarded_messages_per_run": 0,
+    "pressure_selection_complete": false,
+    "bridge_pressure_observation": {
+      "registered_duration_met": false,
+      "scene_A_primary_pass": false,
+      "scene_B_primary_pass": false,
+      "scene_A_worst_relative_residual": 0.025533833717596797,
+      "scene_B_worst_relative_residual": 0.0372387314789811,
+      "scene_A_worst_scaled_max_divergence": 1.3188025049737373e-05,
+      "scene_B_worst_scaled_max_divergence": 2.3630759359016817e-05
+    },
+    "invalidated_runs": [
+      "runs/coupled-source-schedule-v1_2-A-n32-i256",
+      "runs/coupled-source-schedule-v1_2-B-n32-i256",
+      "runs/pressure-selection-v1"
+    ],
+    "invalidation_reason": "Density could remain in COPY_SOURCE when rebound as a UAV; temperature lacked a UAV dependency barrier; the runs also predated direct InfoQueue capture and registered per-step density/configuration hashes.",
+    "scope": "Coupled source binding and the 120-on/one-off emission schedule at 32^3 only; pressure selection, 64^3/128^3 transfer, G0 and G1 remain open"
+  },
+  "capture_invariance_files": 351,
+  "gpu_uploads_bitwise_verified": 39,
+  "runs": {
+    "e0-upload-verified": {
+      "path": "runs/e0-upload-verified",
+      "manifest_sha256": "110be55dfb17af6c70987d7e1cefe6696c879c79dd27f6994f20303e87811186"
+    },
+    "e0-source-upload-verified": {
+      "path": "runs/e0-source-upload-verified",
+      "manifest_sha256": "7f4a572f4881f4dee240f548520ad0f7d2d0ba33ee7fa26c0b4bb1e4ea7b87bf"
+    },
+    "source-injection-v1": {
+      "path": "runs/source-injection-v1",
+      "passed": false,
+      "manifest_sha256": "db5854fae664e5c045270d397b09c7791d54915e94bef57fd59acf5edc90e7ea",
+      "analysis_sha256": "1e3fc1d56fcfdee6882817a60b63e7d569f00ecbe50ed776312695fcfc75cc9c"
+    },
+    "source-injection-v1_1": {
+      "path": "runs/source-injection-v1_1",
+      "passed": true,
+      "manifest_sha256": "76ec58f7cbf55e5dd2bc2443a1c7b2b96008fb444d1c99702ca3db2dd58235de",
+      "analysis_sha256": "339062337ae98960725639dc70fb7d3252a7feb293b98e7e74945a2108b749ca"
+    },
+    "coupled-source-schedule-v1_3-A-n32-i256": {
+      "path": "runs/coupled-source-schedule-v1_3-A-n32-i256",
+      "source_binding_schedule_passed": true,
+      "configuration_fnv1a64": "9415485975120296889",
+      "analysis_sha256": "bc1acfe46b8720a2a4b76bf1d76330b3991077cb18051a26eeccaffd62434221",
+      "provenance_sha256": "cc3391479d11650d43dbf390eedde475b0e6ed70dbecb0dbe80b0859581b9c26"
+    },
+    "coupled-source-schedule-v1_3-B-n32-i256": {
+      "path": "runs/coupled-source-schedule-v1_3-B-n32-i256",
+      "source_binding_schedule_passed": true,
+      "configuration_fnv1a64": "11418890183680235939",
+      "analysis_sha256": "e46e5e926a5b965e1a170dfea3f08ae805c26cfe8a3041e95e854cd702c72f98",
+      "provenance_sha256": "e73983d2e4bd074b516295455a9668bc7ceaba59a80a354a3471d369ec5eca20"
+    },
+    "coupled-source-schedule-v1_2": {
+      "invalid": true,
+      "scope": "Retained implementation-debugging artifacts; no trajectory or pressure result is evidence"
+    },
+    "pressure-selection-v1": {
+      "path": "runs/pressure-selection-v1",
+      "invalid": true,
+      "scope": "Retained implementation-debugging artifacts; restart the registered ladder in fresh roots"
+    }
+  },
+  "frozen_files_sha256": {
+    "src\\Renderer\\SmokeMassAudit.cpp": "d9ce81a807f48f2d29d672826472238db50918006438c789e736e9595237101c",
+    "diagnostics\\Run-SmokeMassAudit.ps1": "ac902d8aece60a6ea73da8109e676f4edc752fa3c28e8a76a6046bd6eecada74",
+    "src\\Shaders\\pixel_smoke.hlsl": "79a1f6bfbb5cd642ede5ee0a34dba197ae8d86cb6ed56e4dead74fb92514b013"
+  }
+}

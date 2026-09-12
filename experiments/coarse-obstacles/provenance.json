@@ -1,0 +1,245 @@
+{
+  "jobs": [
+    {
+      "tag": "r32-wall10-cfl0",
+      "resolution": 32,
+      "mode": 10,
+      "cfl": 0,
+      "steps": 8
+    },
+    {
+      "tag": "r32-wall10-cfl0.5",
+      "resolution": 32,
+      "mode": 10,
+      "cfl": 0.5,
+      "steps": 24
+    },
+    {
+      "tag": "r32-wall10-cfl2",
+      "resolution": 32,
+      "mode": 10,
+      "cfl": 2,
+      "steps": 6
+    },
+    {
+      "tag": "r32-wall10-cfl4",
+      "resolution": 32,
+      "mode": 10,
+      "cfl": 4,
+      "steps": 3
+    },
+    {
+      "tag": "r32-wall11-cfl0",
+      "resolution": 32,
+      "mode": 11,
+      "cfl": 0,
+      "steps": 8
+    },
+    {
+      "tag": "r32-wall11-cfl0.5",
+      "resolution": 32,
+      "mode": 11,
+      "cfl": 0.5,
+      "steps": 24
+    },
+    {
+      "tag": "r32-wall11-cfl2",
+      "resolution": 32,
+      "mode": 11,
+      "cfl": 2,
+      "steps": 6
+    },
+    {
+      "tag": "r32-wall11-cfl4",
+      "resolution": 32,
+      "mode": 11,
+      "cfl": 4,
+      "steps": 3
+    },
+    {
+      "tag": "r32-wall12-cfl0",
+      "resolution": 32,
+      "mode": 12,
+      "cfl": 0,
+      "steps": 8
+    },
+    {
+      "tag": "r32-wall12-cfl0.5",
+      "resolution": 32,
+      "mode": 12,
+      "cfl": 0.5,
+      "steps": 24
+    },
+    {
+      "tag": "r32-wall12-cfl2",
+      "resolution": 32,
+      "mode": 12,
+      "cfl": 2,
+      "steps": 6
+    },
+    {
+      "tag": "r32-wall12-cfl4",
+      "resolution": 32,
+      "mode": 12,
+      "cfl": 4,
+      "steps": 3
+    },
+    {
+      "tag": "r32-wall13-cfl0",
+      "resolution": 32,
+      "mode": 13,
+      "cfl": 0,
+      "steps": 8
+    },
+    {
+      "tag": "r32-wall13-cfl0.5",
+      "resolution": 32,
+      "mode": 13,
+      "cfl": 0.5,
+      "steps": 24
+    },
+    {
+      "tag": "r32-wall13-cfl2",
+      "resolution": 32,
+      "mode": 13,
+      "cfl": 2,
+      "steps": 6
+    },
+    {
+      "tag": "r32-wall13-cfl4",
+      "resolution": 32,
+      "mode": 13,
+      "cfl": 4,
+      "steps": 3
+    },
+    {
+      "tag": "r64-wall10-cfl0",
+      "resolution": 64,
+      "mode": 10,
+      "cfl": 0,
+      "steps": 8
+    },
+    {
+      "tag": "r64-wall10-cfl0.5",
+      "resolution": 64,
+      "mode": 10,
+      "cfl": 0.5,
+      "steps": 48
+    },
+    {
+      "tag": "r64-wall10-cfl2",
+      "resolution": 64,
+      "mode": 10,
+      "cfl": 2,
+      "steps": 12
+    },
+    {
+      "tag": "r64-wall10-cfl4",
+      "resolution": 64,
+      "mode": 10,
+      "cfl": 4,
+      "steps": 6
+    },
+    {
+      "tag": "r64-wall11-cfl0",
+      "resolution": 64,
+      "mode": 11,
+      "cfl": 0,
+      "steps": 8
+    },
+    {
+      "tag": "r64-wall11-cfl0.5",
+      "resolution": 64,
+      "mode": 11,
+      "cfl": 0.5,
+      "steps": 48
+    },
+    {
+      "tag": "r64-wall11-cfl2",
+      "resolution": 64,
+      "mode": 11,
+      "cfl": 2,
+      "steps": 12
+    },
+    {
+      "tag": "r64-wall11-cfl4",
+      "resolution": 64,
+      "mode": 11,
+      "cfl": 4,
+      "steps": 6
+    },
+    {
+      "tag": "r64-wall12-cfl0",
+      "resolution": 64,
+      "mode": 12,
+      "cfl": 0,
+      "steps": 8
+    },
+    {
+      "tag": "r64-wall12-cfl0.5",
+      "resolution": 64,
+      "mode": 12,
+      "cfl": 0.5,
+      "steps": 48
+    },
+    {
+      "tag": "r64-wall12-cfl2",
+      "resolution": 64,
+      "mode": 12,
+      "cfl": 2,
+      "steps": 12
+    },
+    {
+      "tag": "r64-wall12-cfl4",
+      "resolution": 64,
+      "mode": 12,
+      "cfl": 4,
+      "steps": 6
+    },
+    {
+      "tag": "r64-wall13-cfl0",
+      "resolution": 64,
+      "mode": 13,
+      "cfl": 0,
+      "steps": 8
+    },
+    {
+      "tag": "r64-wall13-cfl0.5",
+      "resolution": 64,
+      "mode": 13,
+      "cfl": 0.5,
+      "steps": 48
+    },
+    {
+      "tag": "r64-wall13-cfl2",
+      "resolution": 64,
+      "mode": 13,
+      "cfl": 2,
+      "steps": 12
+    },
+    {
+      "tag": "r64-wall13-cfl4",
+      "resolution": 64,
+      "mode": 13,
+      "cfl": 4,
+      "steps": 6
+    }
+  ],
+  "utc": "2026-09-12T05:10:16.6862660Z",
+  "velocity": "prescribed, blocked faces zero, not divergence-free",
+  "experiment": "coarse_obstacle_kinematic_v1",
+  "executable_sha256": "5014AF836FF7FB73397F0126B8DD18C459B90F22FED4C725ED9007D6F9C8B823",
+  "source_sha256": {
+    "src/Renderer/SmokeAdvectionReference.cpp": "E99CEF91E615F8C00FE4A5A628BA7324D3D9F6EA044EC9F061C29F2AA2600CAC",
+    "src/Shaders/coarse_obstacle_test.hlsl": "3D2C69B7586B11E3DBB5A4CDB9F63A1C2713C7B2FD42B600E598C5B88060D772",
+    "src/Shaders/3d_smoke_compute.hlsl": "4306179B667A27BC7778D3C53EA6AF5E9F5B1E30A2542904A2B9035B9DAC3D65",
+    "src/Renderer/Renderer.h": "1DB3232A159171907B7666696A98E457C9463E4B614DBA3215165C94EB740CC0",
+    "src/Shaders/projection_experiment.hlsl": "0AD7D0C0C06D9C0F363C761BE9BA1CE4CDD6F7B76D1E1CA2596AC97F58CF8278",
+    "src/Renderer/SmokeTransportProbe.cpp": "2C61DCB8FB2FD712C6CFE72C08801B6132AD33AF7E7BC171A225DC68CDA7A962",
+    "diagnostics/Run-CoarseObstacles.ps1": "DDC909762E898FC2AEFB8F9EB5432DDFA4DE4E55517728A7F0BC25CAABCBD80F",
+    "src/Shaders/transport_probe.hlsl": "7FA455BF770C4B1BA426D5EF7E4F7245A083B3881BDCCE10305C09D97CDC9B38",
+    "src/Renderer/SmokeProjectionExperiment.cpp": "631E16EBAF4B02437EE37AE24118D378BA9D0915BE38F3046A2F39671B708B66"
+  },
+  "trials": 3,
+  "timing_claim": "none"
+}

@@ -4,8 +4,10 @@
 #include "imgui/imgui.h"
 #include "imgui/backends/imgui_impl_win32.h"
 #include "imgui/backends/imgui_impl_dx12.h"
+#include <d3d12sdklayers.h>
 #include <chrono>
 #include <cstring>
+#include <stdexcept>
 
 const int gNumFrameResources = 3;
 
@@ -68,9 +70,29 @@ Renderer::Renderer(HWND& windowHandle, UINT width, UINT height, Camera& cam)
 
 bool Renderer::InitializeD3D12(HWND& windowHandle)
 {
+    bool enableDebugLayer = false;
 #if defined(DEBUG) || defined(_DEBUG)
-	CreateDebugController();
+    enableDebugLayer = true;
 #endif
+	// The coupled appearance harness is a correctness run even in a Release
+	// build, so it must retain the API validation used by the standalone E0
+	// executables.
+	wchar_t appearanceValidation[8]{};
+	if (GetEnvironmentVariableW(
+		L"AQUA_SMOKE_APPEARANCE", appearanceValidation,
+		static_cast<DWORD>(std::size(appearanceValidation))) > 0)
+		enableDebugLayer = true;
+	if (enableDebugLayer) CreateDebugController();
+    wchar_t traceMode[8]{};
+    GetEnvironmentVariableW(L"AQUA_SMOKE_APPEARANCE_DEVICE_TRACE", traceMode, 8);
+    m_SmokeAppearanceDeviceTrace = std::wstring(traceMode) != L"0";
+    if (appearanceValidation[0] && m_SmokeAppearanceDeviceTrace)
+    {
+        Microsoft::WRL::ComPtr<ID3D12DeviceRemovedExtendedDataSettings> dred;
+        ThrowIfFailed(D3D12GetDebugInterface(IID_PPV_ARGS(&dred)));
+        dred->SetAutoBreadcrumbsEnablement(D3D12_DRED_ENABLEMENT_FORCED_ON);
+        dred->SetPageFaultEnablement(D3D12_DRED_ENABLEMENT_FORCED_ON);
+    }
 
 	ThrowIfFailed(CreateDXGIFactory1(IID_PPV_ARGS(&m_DxgiFactory)));
 
@@ -180,7 +202,10 @@ bool Renderer::InitializeD3D12(HWND& windowHandle)
 	ImGui_ImplDX12_InitInfo init_info = {};
 	init_info.Device = m_Device.Get();
 	init_info.CommandQueue = m_CommandQueue.Get();
-	init_info.NumFramesInFlight = SwapChainBufferCount;
+	// ImGui upload buffers must follow the fenced CPU frame-resource ring,
+	// not the independently sized swap chain. Otherwise frame three can
+	// overwrite/release frame one's buffers before its GPU fence completes.
+	init_info.NumFramesInFlight = NumFrameResources;
 	init_info.RTVFormat = m_BackBufferFormat; // Or your render target format.
 
 	//Allocating SRV descriptors (for textures) is up to the application, so we provide callbacks.
@@ -217,6 +242,7 @@ void Renderer::Update(GameTimer& gt, Camera& cam)
 		CloseHandle(eventHandle);
 	}
 
+    if (m_SmokeAppearanceExperiment) TraceSmokeAppearanceDevice("frame-resource-ready");
 	CollectSmokeGpuDiagnostics();
     static bool auditEnvironmentChecked = false;
     if (!auditEnvironmentChecked)
@@ -242,6 +268,14 @@ void Renderer::Update(GameTimer& gt, Camera& cam)
             else if (which == L"translation") rc = SmokeReferenceCase::Translation;
             else if (which == L"rotation") rc = SmokeReferenceCase::Rotation;
             StartSmokeAdvectionReference(rc, true);
+        }
+        wchar_t appearance[32]{};
+        if (GetEnvironmentVariableW(L"AQUA_SMOKE_APPEARANCE", appearance, 32))
+        {
+            if (m_SmokeMassAudit || m_SmokeReferenceCase != SmokeReferenceCase::None)
+                throw std::runtime_error(
+                    "AQUA_SMOKE_APPEARANCE cannot be combined with audit/reference automation");
+            StartSmokeAppearanceExperiment(true);
         }
     }
 	cam.UpdateViewMatrix();
@@ -762,8 +796,10 @@ void Renderer::Draw()
 	ThrowIfFailed(m_CommandList->Close());
 
 	ID3D12CommandList* cmdLists[] = { m_CommandList.Get() };
+	if (m_SmokeAppearanceExperiment) TraceSmokeAppearanceDevice("before-execute");
 	m_CommandQueue->ExecuteCommandLists(_countof(cmdLists), cmdLists);
 
+	if (m_SmokeAppearanceExperiment) TraceSmokeAppearanceDevice("after-execute");
 	ThrowIfFailed(m_SwapChain->Present(0, 0));
 	m_CurrentBackBuffer = (m_CurrentBackBuffer + 1) % SwapChainBufferCount;
 
@@ -4883,9 +4919,17 @@ void Renderer::DispatchSmokeSourceTest(
 	const bool emit = m_SmokeGpuBenchmarkRunning ?
 		m_SmokeGpuBenchmarkSubmitted < m_SmokeGpuBenchmarkConfig.emitterSteps : m_SmokeGpuEmitterEnabled;
 	// Injection updates the current scalar state in place.
-	scalarOutputs(m_GpuScalarReadIndex);
-	commandList->SetPipelineState(m_SmokeInjectPSO.Get());
-	if (emit) commandList->Dispatch(gx, gy, gz);
+	if (m_SmokeAppearanceExperiment)
+	{
+		DispatchSmokeAppearanceSource(
+			commandList, constants, m_GpuScalarReadIndex, emit);
+	}
+	else
+	{
+		scalarOutputs(m_GpuScalarReadIndex);
+		commandList->SetPipelineState(m_SmokeInjectPSO.Get());
+		if (emit) commandList->Dispatch(gx, gy, gz);
+	}
     if (audit) CaptureSmokeMassAudit(commandList, m_GpuDensity[m_GpuScalarReadIndex], 1);
 	commandList->EndQuery(m_SmokeGpuQueries.Get(), D3D12_QUERY_TYPE_TIMESTAMP,
 		queryBase + SmokeTimestampSourceEnd);
@@ -4937,6 +4981,15 @@ void Renderer::DispatchSmokeSourceTest(
 	commandList->Dispatch(gx, gy, gz);
 	commandList->EndQuery(m_SmokeGpuQueries.Get(), D3D12_QUERY_TYPE_TIMESTAMP,
 		queryBase + SmokeTimestampDivergenceEnd);
+	const bool pressureTriage = m_SmokeAppearanceExperiment &&
+		m_SmokePressureTriageStep == m_SmokeGpuBenchmarkSubmitted + 1;
+	if (pressureTriage)
+	{
+		CaptureSmokePressureTriage(commandList, m_GpuDivergence, 0);
+		CaptureSmokePressureTriage(commandList, m_GpuU[m_GpuVelocityReadIndex], 1);
+		CaptureSmokePressureTriage(commandList, m_GpuV[m_GpuVelocityReadIndex], 2);
+		CaptureSmokePressureTriage(commandList, m_GpuW[m_GpuVelocityReadIndex], 3);
+	}
 
 	commandList->SetPipelineState(m_SmokeClearPressurePSO.Get());
 	commandList->Dispatch(gx, gy, gz);
@@ -4944,6 +4997,16 @@ void Renderer::DispatchSmokeSourceTest(
 	srv(m_GpuDivergence);
 	bind(SmokeBindingDivergenceReadRoot, m_GpuDivergence.srv);
 	UINT readIndex = 0, writeIndex = 1;
+	if (m_OfflinePressureMode)
+	{
+		ExchangeOfflinePressure(commandList, false);
+		ID3D12DescriptorHeap* heaps[] = {m_SmokeGpuDescriptorHeap.Get()};
+		commandList->SetDescriptorHeaps(1, heaps);
+		commandList->SetComputeRootSignature(m_SmokeBindingRootSignature.Get());
+		commandList->SetComputeRoot32BitConstants(SmokeBindingConstantsRoot, SmokeConstantCount, &constants, 0);
+		bind(SmokeBindingDivergenceReadRoot, m_GpuDivergence.srv);
+	}
+	if (pressureTriage) CaptureSmokePressureTriage(commandList, m_GpuPressure[0], 4);
 	commandList->SetPipelineState(m_SmokeApplyPressurePSO.Get());
 	commandList->EndQuery(
 		m_SmokeGpuQueries.Get(),
@@ -4960,6 +5023,13 @@ void Renderer::DispatchSmokeSourceTest(
 		bind(SmokeBindingPressureWriteRoot, m_GpuPressure[writeIndex].uav);
 		commandList->Dispatch(gx, gy, gz);
 		std::swap(readIndex, writeIndex);
+		if (pressureTriage)
+		{
+			constexpr UINT checkpoints[] = {256, 1024, 4096, 8192, 16384, 32768, 65536};
+			for (unsigned checkpoint = 0; checkpoint < 7; ++checkpoint)
+				if (i + 1 == checkpoints[checkpoint])
+					CaptureSmokePressureTriage(commandList, m_GpuPressure[readIndex], 5 + checkpoint);
+		}
 	}
 
 	commandList->EndQuery(
@@ -4971,7 +5041,7 @@ void Renderer::DispatchSmokeSourceTest(
 	bind(SmokeBindingPressureReadRoot, m_GpuPressure[readIndex].srv);
 	velocityOutputs(m_GpuVelocityReadIndex);
 	commandList->SetPipelineState(m_SmokeSubtractPressureGradientPSO.Get());
-	commandList->Dispatch(fx, fy, fz);
+	if (m_OfflinePressureMode != 2) commandList->Dispatch(fx, fy, fz);
 	commandList->EndQuery(m_SmokeGpuQueries.Get(), D3D12_QUERY_TYPE_TIMESTAMP,
 		queryBase + SmokeTimestampPressureGradientEnd);
 
@@ -5091,6 +5161,14 @@ void Renderer::DispatchSmokeSourceTest(
 		m_SmokeGpuQueries.Get(),
 		D3D12_QUERY_TYPE_TIMESTAMP,
 		queryBase + SmokeTimestampDiagnosticsEnd);
+	if (m_OfflinePressureMode) ExchangeOfflinePressure(commandList, true);
+	if (pressureTriage)
+	{
+		CaptureSmokePressureTriage(commandList, m_GpuDivergence, 12);
+		CaptureSmokePressureTriage(commandList, m_GpuU[m_GpuVelocityReadIndex], 13);
+		CaptureSmokePressureTriage(commandList, m_GpuV[m_GpuVelocityReadIndex], 14);
+		CaptureSmokePressureTriage(commandList, m_GpuW[m_GpuVelocityReadIndex], 15);
+	}
 
 	transitionDiagnostics(D3D12_RESOURCE_STATE_COPY_SOURCE);
 	commandList->CopyBufferRegion(

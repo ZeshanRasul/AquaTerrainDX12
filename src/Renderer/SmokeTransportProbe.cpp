@@ -13,7 +13,7 @@ void Renderer::CreateTransportProbe()
     auto gpuDesc=CD3DX12_RESOURCE_DESC::Buffer(m_TransportProbeBytes,D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
     ThrowIfFailed(m_Device->CreateCommittedResource(&gpuHeap,D3D12_HEAP_FLAG_NONE,&gpuDesc,D3D12_RESOURCE_STATE_UNORDERED_ACCESS,nullptr,IID_PPV_ARGS(&m_TransportProbeBuffer)));
     auto cpuHeap=CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_READBACK);
-    auto cpuDesc=CD3DX12_RESOURCE_DESC::Buffer(m_TransportProbeBytes*m_ProjectionAdvectionSteps);
+    auto cpuDesc=CD3DX12_RESOURCE_DESC::Buffer(m_TransportProbeBytes*std::min(m_ProjectionAdvectionSteps,2u));
     for(auto& buffer:m_TransportProbeReadbacks)
         ThrowIfFailed(m_Device->CreateCommittedResource(&cpuHeap,D3D12_HEAP_FLAG_NONE,&cpuDesc,D3D12_RESOURCE_STATE_COPY_DEST,nullptr,IID_PPV_ARGS(&buffer)));
     const char* entries[]={"TraceTransportCS","RecordTransportOutputCS","AdvectFloatDensityCS"};
@@ -32,6 +32,8 @@ void Renderer::CreateTransportProbe()
 
 void Renderer::DispatchTransportProbe(ID3D12GraphicsCommandList* list,unsigned step,bool after)
 {
+    const unsigned first=m_ProjectionAdvectionSteps>2?m_ProjectionAdvectionSteps-2:0;
+    if(step<first)return; // Long-horizon test retains the final two traces only.
     auto srv=[&](SmokeGpuTexture& t){if(t.state!=D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE){
         auto b=CD3DX12_RESOURCE_BARRIER::Transition(t.resource.Get(),t.state,D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
         list->ResourceBarrier(1,&b);t.state=D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;}};
@@ -45,7 +47,7 @@ void Renderer::DispatchTransportProbe(ID3D12GraphicsCommandList* list,unsigned s
     {
         auto copy=CD3DX12_RESOURCE_BARRIER::Transition(m_TransportProbeBuffer.Get(),D3D12_RESOURCE_STATE_UNORDERED_ACCESS,D3D12_RESOURCE_STATE_COPY_SOURCE);
         list->ResourceBarrier(1,&copy);
-        list->CopyBufferRegion(m_TransportProbeReadbacks[m_CurrentFrameResourceIndex].Get(),step*m_TransportProbeBytes,m_TransportProbeBuffer.Get(),0,m_TransportProbeBytes);
+        list->CopyBufferRegion(m_TransportProbeReadbacks[m_CurrentFrameResourceIndex].Get(),(step-first)*m_TransportProbeBytes,m_TransportProbeBuffer.Get(),0,m_TransportProbeBytes);
         auto restore=CD3DX12_RESOURCE_BARRIER::Transition(m_TransportProbeBuffer.Get(),D3D12_RESOURCE_STATE_COPY_SOURCE,D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
         list->ResourceBarrier(1,&restore);
     }
@@ -56,20 +58,21 @@ void Renderer::RecordTransportProbe(unsigned trial)
     std::filesystem::create_directories(m_SmokeReferenceOutput);
     auto& buffer=m_TransportProbeReadbacks[m_CurrentFrameResourceIndex];void* mapped=nullptr;
     D3D12_RANGE range{0,static_cast<SIZE_T>(buffer->GetDesc().Width)};ThrowIfFailed(buffer->Map(0,&range,&mapped));
-    for(unsigned step=0;step<m_ProjectionAdvectionSteps;++step)
+    const unsigned first=m_ProjectionAdvectionSteps>2?m_ProjectionAdvectionSteps-2:0;
+    for(unsigned step=first;step<m_ProjectionAdvectionSteps;++step)
     {
-        auto* bytes=static_cast<const unsigned char*>(mapped)+step*m_TransportProbeBytes;
+        auto* bytes=static_cast<const unsigned char*>(mapped)+(step-first)*m_TransportProbeBytes;
         std::uint64_t hash=14695981039346656037ull;
         for(UINT64 i=0;i<m_TransportProbeBytes;++i)hash=(hash^bytes[i])*1099511628211ull;
         auto* values=reinterpret_cast<const float*>(bytes);
         for(UINT64 i=0;i<m_TransportProbeBytes/sizeof(float);++i)if(!std::isfinite(values[i]))++m_ProjectionFailures;
         if(trial==1)
         {
-            m_TransportProbeHashes[step]=hash;
+            m_TransportProbeHashes[step-first]=hash;
             std::ofstream output(m_SmokeReferenceOutput/("trace-step"+std::to_string(step+1)+".f32"),std::ios::binary);
             output.exceptions(std::ios::failbit|std::ios::badbit);output.write(reinterpret_cast<const char*>(bytes),m_TransportProbeBytes);
         }
-        else if(hash!=m_TransportProbeHashes[step])++m_ProjectionFailures;
+        else if(hash!=m_TransportProbeHashes[step-first])++m_ProjectionFailures;
     }
     D3D12_RANGE writes{0,0};buffer->Unmap(0,&writes);
 }

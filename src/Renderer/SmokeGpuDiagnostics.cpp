@@ -171,7 +171,7 @@ void Renderer::CollectSmokeGpuDiagnostics()
                     for (std::size_t i = 0; i < n.x; ++i)
                     {
                         const double d = row[i];
-                        if (m_SmokeMassAudit)
+                        if (m_SmokeMassAudit || m_SmokeAppearanceExperiment)
                         {
                             const auto* bytes = reinterpret_cast<const unsigned char*>(row + i);
                             for (unsigned b = 0; b < sizeof(float); ++b)
@@ -193,6 +193,8 @@ void Renderer::CollectSmokeGpuDiagnostics()
                 sample.centre.z /= sample.densitySum;
             }
             m_SmokeGpuBenchmarkSamples.push_back(sample);
+            if (m_SmokeAppearanceExperiment)
+                RecordSmokeAppearanceStep(mapped, sample.step);
             if (m_SmokeMassAudit && m_SmokeAuditProbes)
                 CollectSmokeMassAudit(m_CurrentFrameResourceIndex, sample.step, sample.emit, sample.densitySum, sample.densityHash);
             if (m_SmokeReferenceCase != SmokeReferenceCase::None)
@@ -208,8 +210,10 @@ void Renderer::CollectSmokeGpuDiagnostics()
         m_SmokeGpuBenchmarkSamples.size() == m_SmokeGpuBenchmarkSubmitted)
     {
         const bool reference = m_SmokeReferenceCase != SmokeReferenceCase::None;
+        const bool appearance = m_SmokeAppearanceExperiment;
         if (reference) SaveSmokeAdvectionReference();
         else if (m_SmokeMassAudit) SaveSmokeMassAudit();
+        else if (appearance) SaveSmokeAppearanceExperiment();
         else SaveSmokeGpuBenchmark();
         m_SmokeGpuBenchmarkRunning = false;
         m_SmokeGpuPaused = true;
@@ -217,8 +221,11 @@ void Renderer::CollectSmokeGpuDiagnostics()
         m_ShowSmokeVolume = m_SmokeGpuRestoreVolume;
         if (m_SmokeMassAuditAutomatic) PostQuitMessage(m_SmokeAuditFailures ? 2 : 0);
         if (reference && m_SmokeReferenceAutomatic) PostQuitMessage(m_ProjectionExperiment && m_ProjectionFailures ? 2 : 0);
+        if (appearance && m_SmokeAppearanceAutomatic)
+            PostQuitMessage(m_SmokeAppearanceFailures ? 2 : 0);
         m_SmokeMassAudit = false;
         m_SmokeReferenceCase = SmokeReferenceCase::None;
+        m_SmokeAppearanceExperiment = false;
     }
 }
 

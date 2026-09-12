@@ -1,0 +1,5969 @@
+{
+  "devices": [
+    [
+      "NVIDIA GeForce RTX 3070 Laptop GPU",
+      9007199255730126
+    ]
+  ],
+  "source_checks": [
+    {
+      "path": "src/Shaders/smoke_obstacle.hlsl",
+      "same_as_5090": false,
+      "normalized_text_equal": true
+    },
+    {
+      "path": "src/Renderer/SmokeTransportProbe.cpp",
+      "same_as_5090": false,
+      "normalized_text_equal": true
+    },
+    {
+      "path": "diagnostics/analyze_projection.py",
+      "same_as_5090": false,
+      "normalized_text_equal": true
+    },
+    {
+      "path": "src/Renderer/SmokeAdvectionReference.cpp",
+      "same_as_5090": false,
+      "normalized_text_equal": true
+    },
+    {
+      "path": "src/Shaders/transport_probe.hlsl",
+      "same_as_5090": false,
+      "normalized_text_equal": true
+    },
+    {
+      "path": "src/Renderer/SmokeGpuDiagnostics.cpp",
+      "same_as_5090": false,
+      "normalized_text_equal": true
+    },
+    {
+      "path": "diagnostics/analyze_transport_probe.py",
+      "same_as_5090": false,
+      "normalized_text_equal": true
+    },
+    {
+      "path": "src/Renderer/Renderer.h",
+      "same_as_5090": false,
+      "normalized_text_equal": true
+    },
+    {
+      "path": "diagnostics/Run-SmokeDensitySampling.ps1",
+      "same_as_5090": false,
+      "normalized_text_equal": true
+    },
+    {
+      "path": "src/Shaders/projection_experiment.hlsl",
+      "same_as_5090": false,
+      "normalized_text_equal": true
+    },
+    {
+      "path": "src/Renderer/SmokeProjectionExperiment.cpp",
+      "same_as_5090": false,
+      "normalized_text_equal": true
+    },
+    {
+      "path": "src/Shaders/3d_smoke_compute.hlsl",
+      "same_as_5090": false,
+      "normalized_text_equal": true
+    },
+    {
+      "path": "diagnostics/analyze_density_sampling.py",
+      "same_as_5090": false,
+      "normalized_text_equal": true
+    },
+    {
+      "path": "src/Renderer/Renderer.cpp",
+      "same_as_5090": true,
+      "normalized_text_equal": true
+    }
+  ],
+  "executable_hash_matches": false,
+  "hardware_exact_zero_comparisons": 5,
+  "float_exact_zero_comparisons": 0,
+  "max_reference_refinement_l1": 4.264190523424879e-07,
+  "max_independent_reference_l1": 2.628981296276521e-07,
+  "per_run": [
+    {
+      "tag": "sharp-r32-s0-d1-i-1-f0",
+      "sampling": 0,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "u",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "v",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "w",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r32-s0-d1-i-1-f1",
+      "sampling": 1,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "u",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "v",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "w",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r32-s0-d1-i512-f0",
+      "sampling": 0,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 26577,
+          "max_abs": 9.059906005859375e-06
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 27839,
+          "max_abs": 1.0728836059570312e-06
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 32032,
+          "max_abs": 4.3511390686035156e-05
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 23230,
+          "max_abs": 3.129243850708008e-07
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 22740,
+          "max_abs": 3.650784492492676e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 22998,
+          "max_abs": 2.5704503059387207e-07
+        },
+        {
+          "field": "density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 4193,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 4195,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r32-s0-d1-i512-f1",
+      "sampling": 1,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 26577,
+          "max_abs": 9.059906005859375e-06
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 27839,
+          "max_abs": 1.0728836059570312e-06
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 32032,
+          "max_abs": 4.3511390686035156e-05
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 23230,
+          "max_abs": 3.129243850708008e-07
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 22740,
+          "max_abs": 3.650784492492676e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 22998,
+          "max_abs": 2.5704503059387207e-07
+        },
+        {
+          "field": "density",
+          "bitwise_equal": false,
+          "changed_values": 23,
+          "max_abs": 3.4570693969726562e-06
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 4196,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 4267,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r32-s0-d1-i4096-f0",
+      "sampling": 0,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 26577,
+          "max_abs": 9.059906005859375e-06
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 29481,
+          "max_abs": 1.5497207641601562e-06
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 32050,
+          "max_abs": 3.9609274608665146e-05
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 24748,
+          "max_abs": 3.725290298461914e-07
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 23873,
+          "max_abs": 4.3585896492004395e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 23702,
+          "max_abs": 3.178914624868412e-07
+        },
+        {
+          "field": "density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 4584,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 4584,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r32-s0-d1-i4096-f1",
+      "sampling": 1,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 26577,
+          "max_abs": 9.059906005859375e-06
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 29481,
+          "max_abs": 1.5497207641601562e-06
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 32050,
+          "max_abs": 3.9609274608665146e-05
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 24748,
+          "max_abs": 3.725290298461914e-07
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 23873,
+          "max_abs": 4.3585896492004395e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 23702,
+          "max_abs": 3.178914624868412e-07
+        },
+        {
+          "field": "density",
+          "bitwise_equal": false,
+          "changed_values": 8,
+          "max_abs": 3.0994415283203125e-06
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 4586,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 4620,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r32-s0-d1-i8192-f0",
+      "sampling": 0,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 26577,
+          "max_abs": 9.059906005859375e-06
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 29481,
+          "max_abs": 1.5497207641601562e-06
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 32050,
+          "max_abs": 3.9609274608665146e-05
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 24748,
+          "max_abs": 3.725290298461914e-07
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 23873,
+          "max_abs": 4.3585896492004395e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 23702,
+          "max_abs": 3.178914624868412e-07
+        },
+        {
+          "field": "density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 4584,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 4584,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r32-s0-d1-i8192-f1",
+      "sampling": 1,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 26577,
+          "max_abs": 9.059906005859375e-06
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 29481,
+          "max_abs": 1.5497207641601562e-06
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 32050,
+          "max_abs": 3.9609274608665146e-05
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 24748,
+          "max_abs": 3.725290298461914e-07
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 23873,
+          "max_abs": 4.3585896492004395e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 23702,
+          "max_abs": 3.178914624868412e-07
+        },
+        {
+          "field": "density",
+          "bitwise_equal": false,
+          "changed_values": 8,
+          "max_abs": 3.0994415283203125e-06
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 4586,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 4620,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r32-s0.75-d1-i-1-f0",
+      "sampling": 0,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "u",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "v",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "w",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r32-s0.75-d1-i-1-f1",
+      "sampling": 1,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "u",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "v",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "w",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r32-s0.75-d1-i512-f0",
+      "sampling": 0,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 26577,
+          "max_abs": 9.059906005859375e-06
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 27839,
+          "max_abs": 1.0728836059570312e-06
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 32032,
+          "max_abs": 4.3511390686035156e-05
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 23230,
+          "max_abs": 3.129243850708008e-07
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 22740,
+          "max_abs": 3.650784492492676e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 22998,
+          "max_abs": 2.5704503059387207e-07
+        },
+        {
+          "field": "density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 4196,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 4199,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r32-s0.75-d1-i512-f1",
+      "sampling": 1,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 26577,
+          "max_abs": 9.059906005859375e-06
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 27839,
+          "max_abs": 1.0728836059570312e-06
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 32032,
+          "max_abs": 4.3511390686035156e-05
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 23230,
+          "max_abs": 3.129243850708008e-07
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 22740,
+          "max_abs": 3.650784492492676e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 22998,
+          "max_abs": 2.5704503059387207e-07
+        },
+        {
+          "field": "density",
+          "bitwise_equal": false,
+          "changed_values": 37,
+          "max_abs": 3.4570693969726562e-06
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 4202,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 4322,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r32-s0.75-d1-i4096-f0",
+      "sampling": 0,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 26577,
+          "max_abs": 9.059906005859375e-06
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 29481,
+          "max_abs": 1.5497207641601562e-06
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 32050,
+          "max_abs": 3.9609274608665146e-05
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 24748,
+          "max_abs": 3.725290298461914e-07
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 23873,
+          "max_abs": 4.3585896492004395e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 23702,
+          "max_abs": 3.178914624868412e-07
+        },
+        {
+          "field": "density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 4586,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 4586,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r32-s0.75-d1-i4096-f1",
+      "sampling": 1,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 26577,
+          "max_abs": 9.059906005859375e-06
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 29481,
+          "max_abs": 1.5497207641601562e-06
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 32050,
+          "max_abs": 3.9609274608665146e-05
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 24748,
+          "max_abs": 3.725290298461914e-07
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 23873,
+          "max_abs": 4.3585896492004395e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 23702,
+          "max_abs": 3.178914624868412e-07
+        },
+        {
+          "field": "density",
+          "bitwise_equal": false,
+          "changed_values": 16,
+          "max_abs": 1.564621925354004e-06
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 4590,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 4658,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r32-s0.75-d1-i8192-f0",
+      "sampling": 0,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 26577,
+          "max_abs": 9.059906005859375e-06
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 29481,
+          "max_abs": 1.5497207641601562e-06
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 32050,
+          "max_abs": 3.9609274608665146e-05
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 24748,
+          "max_abs": 3.725290298461914e-07
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 23873,
+          "max_abs": 4.3585896492004395e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 23702,
+          "max_abs": 3.178914624868412e-07
+        },
+        {
+          "field": "density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 4586,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 4586,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r32-s0.75-d1-i8192-f1",
+      "sampling": 1,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 26577,
+          "max_abs": 9.059906005859375e-06
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 29481,
+          "max_abs": 1.5497207641601562e-06
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 32050,
+          "max_abs": 3.9609274608665146e-05
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 24748,
+          "max_abs": 3.725290298461914e-07
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 23873,
+          "max_abs": 4.3585896492004395e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 23702,
+          "max_abs": 3.178914624868412e-07
+        },
+        {
+          "field": "density",
+          "bitwise_equal": false,
+          "changed_values": 16,
+          "max_abs": 1.564621925354004e-06
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 4590,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 4658,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r32-s0-d2-i-1-f0",
+      "sampling": 0,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "u",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "v",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "w",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r32-s0-d2-i-1-f1",
+      "sampling": 1,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "u",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "v",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "w",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r32-s0-d2-i512-f0",
+      "sampling": 0,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 26577,
+          "max_abs": 9.059906005859375e-06
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 27839,
+          "max_abs": 5.364418029785156e-07
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 32032,
+          "max_abs": 4.3511390686035156e-05
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 23230,
+          "max_abs": 3.129243850708008e-07
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 22740,
+          "max_abs": 3.650784492492676e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 22998,
+          "max_abs": 2.5704503059387207e-07
+        },
+        {
+          "field": "density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 8083,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 8098,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r32-s0-d2-i512-f1",
+      "sampling": 1,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 26577,
+          "max_abs": 9.059906005859375e-06
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 27839,
+          "max_abs": 5.364418029785156e-07
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 32032,
+          "max_abs": 4.3511390686035156e-05
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 23230,
+          "max_abs": 3.129243850708008e-07
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 22740,
+          "max_abs": 3.650784492492676e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 22998,
+          "max_abs": 2.5704503059387207e-07
+        },
+        {
+          "field": "density",
+          "bitwise_equal": false,
+          "changed_values": 76,
+          "max_abs": 3.5762786865234375e-06
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 8094,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 8343,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r32-s0-d2-i4096-f0",
+      "sampling": 0,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 26577,
+          "max_abs": 9.059906005859375e-06
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 29481,
+          "max_abs": 7.748603820800781e-07
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 32050,
+          "max_abs": 3.9609274608665146e-05
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 24748,
+          "max_abs": 3.725290298461914e-07
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 23873,
+          "max_abs": 4.3585896492004395e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 23702,
+          "max_abs": 3.178914624868412e-07
+        },
+        {
+          "field": "density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 9420,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 9430,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r32-s0-d2-i4096-f1",
+      "sampling": 1,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 26577,
+          "max_abs": 9.059906005859375e-06
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 29481,
+          "max_abs": 7.748603820800781e-07
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 32050,
+          "max_abs": 3.9609274608665146e-05
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 24748,
+          "max_abs": 3.725290298461914e-07
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 23873,
+          "max_abs": 4.3585896492004395e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 23702,
+          "max_abs": 3.178914624868412e-07
+        },
+        {
+          "field": "density",
+          "bitwise_equal": false,
+          "changed_values": 37,
+          "max_abs": 1.6689300537109375e-06
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 9428,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 9572,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r32-s0-d2-i8192-f0",
+      "sampling": 0,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 26577,
+          "max_abs": 9.059906005859375e-06
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 29481,
+          "max_abs": 7.748603820800781e-07
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 32050,
+          "max_abs": 3.9609274608665146e-05
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 24748,
+          "max_abs": 3.725290298461914e-07
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 23873,
+          "max_abs": 4.3585896492004395e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 23702,
+          "max_abs": 3.178914624868412e-07
+        },
+        {
+          "field": "density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 9420,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 9430,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r32-s0-d2-i8192-f1",
+      "sampling": 1,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 26577,
+          "max_abs": 9.059906005859375e-06
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 29481,
+          "max_abs": 7.748603820800781e-07
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 32050,
+          "max_abs": 3.9609274608665146e-05
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 24748,
+          "max_abs": 3.725290298461914e-07
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 23873,
+          "max_abs": 4.3585896492004395e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 23702,
+          "max_abs": 3.178914624868412e-07
+        },
+        {
+          "field": "density",
+          "bitwise_equal": false,
+          "changed_values": 37,
+          "max_abs": 1.6689300537109375e-06
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 9428,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 9572,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r32-s0.5-d0.5-i-1-f0",
+      "sampling": 0,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "u",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "v",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "w",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r32-s0.5-d0.5-i-1-f1",
+      "sampling": 1,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "u",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "v",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "w",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r32-s0.5-d0.5-i512-f0",
+      "sampling": 0,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 26577,
+          "max_abs": 9.059906005859375e-06
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 27839,
+          "max_abs": 2.1457672119140625e-06
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 32032,
+          "max_abs": 4.3511390686035156e-05
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 23230,
+          "max_abs": 3.129243850708008e-07
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 22740,
+          "max_abs": 3.650784492492676e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 22998,
+          "max_abs": 2.5704503059387207e-07
+        },
+        {
+          "field": "density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 2014,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 2018,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r32-s0.5-d0.5-i512-f1",
+      "sampling": 1,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 26577,
+          "max_abs": 9.059906005859375e-06
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 27839,
+          "max_abs": 2.1457672119140625e-06
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 32032,
+          "max_abs": 4.3511390686035156e-05
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 23230,
+          "max_abs": 3.129243850708008e-07
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 22740,
+          "max_abs": 3.650784492492676e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 22998,
+          "max_abs": 2.5704503059387207e-07
+        },
+        {
+          "field": "density",
+          "bitwise_equal": false,
+          "changed_values": 4,
+          "max_abs": 5.762558430433273e-09
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 2014,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 2022,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r32-s0.5-d0.5-i4096-f0",
+      "sampling": 0,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 26577,
+          "max_abs": 9.059906005859375e-06
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 29481,
+          "max_abs": 3.0994415283203125e-06
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 32050,
+          "max_abs": 3.9609274608665146e-05
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 24748,
+          "max_abs": 3.725290298461914e-07
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 23873,
+          "max_abs": 4.3585896492004395e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 23702,
+          "max_abs": 3.178914624868412e-07
+        },
+        {
+          "field": "density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 2027,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 2029,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r32-s0.5-d0.5-i4096-f1",
+      "sampling": 1,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 26577,
+          "max_abs": 9.059906005859375e-06
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 29481,
+          "max_abs": 3.0994415283203125e-06
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 32050,
+          "max_abs": 3.9609274608665146e-05
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 24748,
+          "max_abs": 3.725290298461914e-07
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 23873,
+          "max_abs": 4.3585896492004395e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 23702,
+          "max_abs": 3.178914624868412e-07
+        },
+        {
+          "field": "density",
+          "bitwise_equal": false,
+          "changed_values": 14,
+          "max_abs": 3.6135315895080566e-06
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 2030,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 2082,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r32-s0.5-d0.5-i8192-f0",
+      "sampling": 0,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 26577,
+          "max_abs": 9.059906005859375e-06
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 29481,
+          "max_abs": 3.0994415283203125e-06
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 32050,
+          "max_abs": 3.9609274608665146e-05
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 24748,
+          "max_abs": 3.725290298461914e-07
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 23873,
+          "max_abs": 4.3585896492004395e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 23702,
+          "max_abs": 3.178914624868412e-07
+        },
+        {
+          "field": "density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 2027,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 2029,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r32-s0.5-d0.5-i8192-f1",
+      "sampling": 1,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 26577,
+          "max_abs": 9.059906005859375e-06
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 29481,
+          "max_abs": 3.0994415283203125e-06
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 32050,
+          "max_abs": 3.9609274608665146e-05
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 24748,
+          "max_abs": 3.725290298461914e-07
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 23873,
+          "max_abs": 4.3585896492004395e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 23702,
+          "max_abs": 3.178914624868412e-07
+        },
+        {
+          "field": "density",
+          "bitwise_equal": false,
+          "changed_values": 14,
+          "max_abs": 3.6135315895080566e-06
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 2030,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 2082,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "smooth-r32-s0-d1-i-1-f0",
+      "sampling": 0,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "u",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "v",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "w",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        }
+      ]
+    },
+    {
+      "tag": "smooth-r32-s0-d1-i-1-f1",
+      "sampling": 1,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "u",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "v",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "w",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        }
+      ]
+    },
+    {
+      "tag": "smooth-r32-s0-d1-i512-f0",
+      "sampling": 0,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 26577,
+          "max_abs": 9.059906005859375e-06
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 27839,
+          "max_abs": 1.0728836059570312e-06
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 32032,
+          "max_abs": 4.3511390686035156e-05
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 23230,
+          "max_abs": 3.129243850708008e-07
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 22740,
+          "max_abs": 3.650784492492676e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 22998,
+          "max_abs": 2.5704503059387207e-07
+        },
+        {
+          "field": "density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 5395,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 5390,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "smooth-r32-s0-d1-i512-f1",
+      "sampling": 1,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 26577,
+          "max_abs": 9.059906005859375e-06
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 27839,
+          "max_abs": 1.0728836059570312e-06
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 32032,
+          "max_abs": 4.3511390686035156e-05
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 23230,
+          "max_abs": 3.129243850708008e-07
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 22740,
+          "max_abs": 3.650784492492676e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 22998,
+          "max_abs": 2.5704503059387207e-07
+        },
+        {
+          "field": "density",
+          "bitwise_equal": false,
+          "changed_values": 1951,
+          "max_abs": 5.960464477539062e-07
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 6592,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 15234,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "smooth-r32-s0-d1-i4096-f0",
+      "sampling": 0,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 26577,
+          "max_abs": 9.059906005859375e-06
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 29481,
+          "max_abs": 1.5497207641601562e-06
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 32050,
+          "max_abs": 3.9609274608665146e-05
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 24748,
+          "max_abs": 3.725290298461914e-07
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 23873,
+          "max_abs": 4.3585896492004395e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 23702,
+          "max_abs": 3.178914624868412e-07
+        },
+        {
+          "field": "density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 6258,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 6258,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "smooth-r32-s0-d1-i4096-f1",
+      "sampling": 1,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 26577,
+          "max_abs": 9.059906005859375e-06
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 29481,
+          "max_abs": 1.5497207641601562e-06
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 32050,
+          "max_abs": 3.9609274608665146e-05
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 24748,
+          "max_abs": 3.725290298461914e-07
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 23873,
+          "max_abs": 4.3585896492004395e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 23702,
+          "max_abs": 3.178914624868412e-07
+        },
+        {
+          "field": "density",
+          "bitwise_equal": false,
+          "changed_values": 2427,
+          "max_abs": 3.2782554626464844e-07
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 7832,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 18753,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "smooth-r32-s0-d1-i8192-f0",
+      "sampling": 0,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 26577,
+          "max_abs": 9.059906005859375e-06
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 29481,
+          "max_abs": 1.5497207641601562e-06
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 32050,
+          "max_abs": 3.9609274608665146e-05
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 24748,
+          "max_abs": 3.725290298461914e-07
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 23873,
+          "max_abs": 4.3585896492004395e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 23702,
+          "max_abs": 3.178914624868412e-07
+        },
+        {
+          "field": "density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 6258,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 6258,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "smooth-r32-s0-d1-i8192-f1",
+      "sampling": 1,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 26577,
+          "max_abs": 9.059906005859375e-06
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 29481,
+          "max_abs": 1.5497207641601562e-06
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 32050,
+          "max_abs": 3.9609274608665146e-05
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 24748,
+          "max_abs": 3.725290298461914e-07
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 23873,
+          "max_abs": 4.3585896492004395e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 23702,
+          "max_abs": 3.178914624868412e-07
+        },
+        {
+          "field": "density",
+          "bitwise_equal": false,
+          "changed_values": 2427,
+          "max_abs": 3.2782554626464844e-07
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 7832,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 18753,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r64-s0-d1-i-1-f0",
+      "sampling": 0,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "u",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "v",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "w",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r64-s0-d1-i-1-f1",
+      "sampling": 1,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "u",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "v",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "w",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r64-s0-d1-i2048-f0",
+      "sampling": 0,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 225697,
+          "max_abs": 6.341934204101562e-05
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 227503,
+          "max_abs": 1.1920928955078125e-06
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 257835,
+          "max_abs": 0.00022334232926368713
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 208802,
+          "max_abs": 8.23289155960083e-07
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 202381,
+          "max_abs": 7.674098014831543e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 180736,
+          "max_abs": 7.636845111846924e-07
+        },
+        {
+          "field": "density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 68155,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 68204,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r64-s0-d1-i2048-f1",
+      "sampling": 1,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 225697,
+          "max_abs": 6.341934204101562e-05
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 227503,
+          "max_abs": 1.1920928955078125e-06
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 257835,
+          "max_abs": 0.00022334232926368713
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 208802,
+          "max_abs": 8.23289155960083e-07
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 202381,
+          "max_abs": 7.674098014831543e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 180736,
+          "max_abs": 7.636845111846924e-07
+        },
+        {
+          "field": "density",
+          "bitwise_equal": false,
+          "changed_values": 146,
+          "max_abs": 7.409602403640747e-06
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 68175,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 68638,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r64-s0-d1-i4096-f0",
+      "sampling": 0,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 225697,
+          "max_abs": 6.341934204101562e-05
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 230634,
+          "max_abs": 1.9073486328125e-06
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 258025,
+          "max_abs": 0.00017023086547851562
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 214041,
+          "max_abs": 1.1436641216278076e-06
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 206283,
+          "max_abs": 9.5367431640625e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 185977,
+          "max_abs": 1.0170042514801025e-06
+        },
+        {
+          "field": "density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 77463,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 77493,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r64-s0-d1-i4096-f1",
+      "sampling": 1,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 225697,
+          "max_abs": 6.341934204101562e-05
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 230634,
+          "max_abs": 1.9073486328125e-06
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 258025,
+          "max_abs": 0.00017023086547851562
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 214041,
+          "max_abs": 1.1436641216278076e-06
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 206283,
+          "max_abs": 9.5367431640625e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 185977,
+          "max_abs": 1.0170042514801025e-06
+        },
+        {
+          "field": "density",
+          "bitwise_equal": false,
+          "changed_values": 74,
+          "max_abs": 7.212162017822266e-06
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 77475,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 77728,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r64-s0-d1-i8192-f0",
+      "sampling": 0,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 225697,
+          "max_abs": 6.341934204101562e-05
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 232625,
+          "max_abs": 1.9073486328125e-06
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 257993,
+          "max_abs": 0.00019318263366585597
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 215724,
+          "max_abs": 1.1436641216278076e-06
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 208095,
+          "max_abs": 9.387731552124023e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 186601,
+          "max_abs": 1.0170042514801025e-06
+        },
+        {
+          "field": "density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 78929,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 78975,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r64-s0-d1-i8192-f1",
+      "sampling": 1,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 225697,
+          "max_abs": 6.341934204101562e-05
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 232625,
+          "max_abs": 1.9073486328125e-06
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 257993,
+          "max_abs": 0.00019318263366585597
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 215724,
+          "max_abs": 1.1436641216278076e-06
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 208095,
+          "max_abs": 9.387731552124023e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 186601,
+          "max_abs": 1.0170042514801025e-06
+        },
+        {
+          "field": "density",
+          "bitwise_equal": false,
+          "changed_values": 100,
+          "max_abs": 7.212162017822266e-06
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 78945,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 79285,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r64-s0.25-d1-i-1-f0",
+      "sampling": 0,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "u",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "v",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "w",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r64-s0.25-d1-i-1-f1",
+      "sampling": 1,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "u",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "v",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "w",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r64-s0.25-d1-i2048-f0",
+      "sampling": 0,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 225697,
+          "max_abs": 6.341934204101562e-05
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 227503,
+          "max_abs": 1.1920928955078125e-06
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 257835,
+          "max_abs": 0.00022334232926368713
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 208802,
+          "max_abs": 8.23289155960083e-07
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 202381,
+          "max_abs": 7.674098014831543e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 180736,
+          "max_abs": 7.636845111846924e-07
+        },
+        {
+          "field": "density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 68161,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 68206,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r64-s0.25-d1-i2048-f1",
+      "sampling": 1,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 225697,
+          "max_abs": 6.341934204101562e-05
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 227503,
+          "max_abs": 1.1920928955078125e-06
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 257835,
+          "max_abs": 0.00022334232926368713
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 208802,
+          "max_abs": 8.23289155960083e-07
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 202381,
+          "max_abs": 7.674098014831543e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 180736,
+          "max_abs": 7.636845111846924e-07
+        },
+        {
+          "field": "density",
+          "bitwise_equal": false,
+          "changed_values": 182,
+          "max_abs": 7.409602403640747e-06
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 68187,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 68771,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r64-s0.25-d1-i4096-f0",
+      "sampling": 0,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 225697,
+          "max_abs": 6.341934204101562e-05
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 230634,
+          "max_abs": 1.9073486328125e-06
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 258025,
+          "max_abs": 0.00017023086547851562
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 214041,
+          "max_abs": 1.1436641216278076e-06
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 206283,
+          "max_abs": 9.5367431640625e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 185977,
+          "max_abs": 1.0170042514801025e-06
+        },
+        {
+          "field": "density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 77464,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 77490,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r64-s0.25-d1-i4096-f1",
+      "sampling": 1,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 225697,
+          "max_abs": 6.341934204101562e-05
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 230634,
+          "max_abs": 1.9073486328125e-06
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 258025,
+          "max_abs": 0.00017023086547851562
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 214041,
+          "max_abs": 1.1436641216278076e-06
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 206283,
+          "max_abs": 9.5367431640625e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 185977,
+          "max_abs": 1.0170042514801025e-06
+        },
+        {
+          "field": "density",
+          "bitwise_equal": false,
+          "changed_values": 73,
+          "max_abs": 7.212162017822266e-06
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 77477,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 77734,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r64-s0.25-d1-i8192-f0",
+      "sampling": 0,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 225697,
+          "max_abs": 6.341934204101562e-05
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 232625,
+          "max_abs": 1.9073486328125e-06
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 257993,
+          "max_abs": 0.00019318263366585597
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 215724,
+          "max_abs": 1.1436641216278076e-06
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 208095,
+          "max_abs": 9.387731552124023e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 186601,
+          "max_abs": 1.0170042514801025e-06
+        },
+        {
+          "field": "density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 78937,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 78978,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r64-s0.25-d1-i8192-f1",
+      "sampling": 1,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 225697,
+          "max_abs": 6.341934204101562e-05
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 232625,
+          "max_abs": 1.9073486328125e-06
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 257993,
+          "max_abs": 0.00019318263366585597
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 215724,
+          "max_abs": 1.1436641216278076e-06
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 208095,
+          "max_abs": 9.387731552124023e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 186601,
+          "max_abs": 1.0170042514801025e-06
+        },
+        {
+          "field": "density",
+          "bitwise_equal": false,
+          "changed_values": 126,
+          "max_abs": 7.212162017822266e-06
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 78961,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 79425,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r64-s0-d2-i-1-f0",
+      "sampling": 0,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "u",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "v",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "w",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r64-s0-d2-i-1-f1",
+      "sampling": 1,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "u",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "v",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "w",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r64-s0-d2-i2048-f0",
+      "sampling": 0,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 225697,
+          "max_abs": 6.341934204101562e-05
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 227503,
+          "max_abs": 5.960464477539062e-07
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 257835,
+          "max_abs": 0.00022334232926368713
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 208802,
+          "max_abs": 8.23289155960083e-07
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 202381,
+          "max_abs": 7.674098014831543e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 180736,
+          "max_abs": 7.636845111846924e-07
+        },
+        {
+          "field": "density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 120269,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 120363,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r64-s0-d2-i2048-f1",
+      "sampling": 1,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 225697,
+          "max_abs": 6.341934204101562e-05
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 227503,
+          "max_abs": 5.960464477539062e-07
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 257835,
+          "max_abs": 0.00022334232926368713
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 208802,
+          "max_abs": 8.23289155960083e-07
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 202381,
+          "max_abs": 7.674098014831543e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 180736,
+          "max_abs": 7.636845111846924e-07
+        },
+        {
+          "field": "density",
+          "bitwise_equal": false,
+          "changed_values": 348,
+          "max_abs": 7.197260856628418e-06
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 120316,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 121406,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r64-s0-d2-i4096-f0",
+      "sampling": 0,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 225697,
+          "max_abs": 6.341934204101562e-05
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 230634,
+          "max_abs": 9.5367431640625e-07
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 258025,
+          "max_abs": 0.00017023086547851562
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 214041,
+          "max_abs": 1.1436641216278076e-06
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 206283,
+          "max_abs": 9.5367431640625e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 185977,
+          "max_abs": 1.0170042514801025e-06
+        },
+        {
+          "field": "density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 137607,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 137718,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r64-s0-d2-i4096-f1",
+      "sampling": 1,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 225697,
+          "max_abs": 6.341934204101562e-05
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 230634,
+          "max_abs": 9.5367431640625e-07
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 258025,
+          "max_abs": 0.00017023086547851562
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 214041,
+          "max_abs": 1.1436641216278076e-06
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 206283,
+          "max_abs": 9.5367431640625e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 185977,
+          "max_abs": 1.0170042514801025e-06
+        },
+        {
+          "field": "density",
+          "bitwise_equal": false,
+          "changed_values": 335,
+          "max_abs": 7.189810276031494e-06
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 137664,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 138736,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r64-s0-d2-i8192-f0",
+      "sampling": 0,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 225697,
+          "max_abs": 6.341934204101562e-05
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 232625,
+          "max_abs": 9.5367431640625e-07
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 257993,
+          "max_abs": 0.00019318263366585597
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 215724,
+          "max_abs": 1.1436641216278076e-06
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 208095,
+          "max_abs": 9.387731552124023e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 186601,
+          "max_abs": 1.0170042514801025e-06
+        },
+        {
+          "field": "density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 138074,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 138212,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r64-s0-d2-i8192-f1",
+      "sampling": 1,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 225697,
+          "max_abs": 6.341934204101562e-05
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 232625,
+          "max_abs": 9.5367431640625e-07
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 257993,
+          "max_abs": 0.00019318263366585597
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 215724,
+          "max_abs": 1.1436641216278076e-06
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 208095,
+          "max_abs": 9.387731552124023e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 186601,
+          "max_abs": 1.0170042514801025e-06
+        },
+        {
+          "field": "density",
+          "bitwise_equal": false,
+          "changed_values": 271,
+          "max_abs": 7.189810276031494e-06
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 138116,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 139015,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r64-s0.5-d0.5-i-1-f0",
+      "sampling": 0,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "u",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "v",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "w",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r64-s0.5-d0.5-i-1-f1",
+      "sampling": 1,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "u",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "v",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "w",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r64-s0.5-d0.5-i2048-f0",
+      "sampling": 0,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 225697,
+          "max_abs": 6.341934204101562e-05
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 227503,
+          "max_abs": 2.384185791015625e-06
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 257835,
+          "max_abs": 0.00022334232926368713
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 208802,
+          "max_abs": 8.23289155960083e-07
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 202381,
+          "max_abs": 7.674098014831543e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 180736,
+          "max_abs": 7.636845111846924e-07
+        },
+        {
+          "field": "density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 37913,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 37943,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r64-s0.5-d0.5-i2048-f1",
+      "sampling": 1,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 225697,
+          "max_abs": 6.341934204101562e-05
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 227503,
+          "max_abs": 2.384185791015625e-06
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 257835,
+          "max_abs": 0.00022334232926368713
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 208802,
+          "max_abs": 8.23289155960083e-07
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 202381,
+          "max_abs": 7.674098014831543e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 180736,
+          "max_abs": 7.636845111846924e-07
+        },
+        {
+          "field": "density",
+          "bitwise_equal": false,
+          "changed_values": 114,
+          "max_abs": 7.212162017822266e-06
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 37925,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 38248,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r64-s0.5-d0.5-i4096-f0",
+      "sampling": 0,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 225697,
+          "max_abs": 6.341934204101562e-05
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 230634,
+          "max_abs": 3.814697265625e-06
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 258025,
+          "max_abs": 0.00017023086547851562
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 214041,
+          "max_abs": 1.1436641216278076e-06
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 206283,
+          "max_abs": 9.5367431640625e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 185977,
+          "max_abs": 1.0170042514801025e-06
+        },
+        {
+          "field": "density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 43812,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 43841,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r64-s0.5-d0.5-i4096-f1",
+      "sampling": 1,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 225697,
+          "max_abs": 6.341934204101562e-05
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 230634,
+          "max_abs": 3.814697265625e-06
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 258025,
+          "max_abs": 0.00017023086547851562
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 214041,
+          "max_abs": 1.1436641216278076e-06
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 206283,
+          "max_abs": 9.5367431640625e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 185977,
+          "max_abs": 1.0170042514801025e-06
+        },
+        {
+          "field": "density",
+          "bitwise_equal": false,
+          "changed_values": 32,
+          "max_abs": 3.2782554626464844e-07
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 43812,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 43876,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r64-s0.5-d0.5-i8192-f0",
+      "sampling": 0,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 225697,
+          "max_abs": 6.341934204101562e-05
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 232625,
+          "max_abs": 3.814697265625e-06
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 257993,
+          "max_abs": 0.00019318263366585597
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 215724,
+          "max_abs": 1.1436641216278076e-06
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 208095,
+          "max_abs": 9.387731552124023e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 186601,
+          "max_abs": 1.0170042514801025e-06
+        },
+        {
+          "field": "density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 43743,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 43775,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "sharp-r64-s0.5-d0.5-i8192-f1",
+      "sampling": 1,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 225697,
+          "max_abs": 6.341934204101562e-05
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 232625,
+          "max_abs": 3.814697265625e-06
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 257993,
+          "max_abs": 0.00019318263366585597
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 215724,
+          "max_abs": 1.1436641216278076e-06
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 208095,
+          "max_abs": 9.387731552124023e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 186601,
+          "max_abs": 1.0170042514801025e-06
+        },
+        {
+          "field": "density",
+          "bitwise_equal": false,
+          "changed_values": 89,
+          "max_abs": 6.794929504394531e-06
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 43760,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 44065,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "smooth-r64-s0-d1-i-1-f0",
+      "sampling": 0,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "u",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "v",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "w",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        }
+      ]
+    },
+    {
+      "tag": "smooth-r64-s0-d1-i-1-f1",
+      "sampling": 1,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "u",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "v",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "w",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        }
+      ]
+    },
+    {
+      "tag": "smooth-r64-s0-d1-i2048-f0",
+      "sampling": 0,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 225697,
+          "max_abs": 6.341934204101562e-05
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 227503,
+          "max_abs": 1.1920928955078125e-06
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 257835,
+          "max_abs": 0.00022334232926368713
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 208802,
+          "max_abs": 8.23289155960083e-07
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 202381,
+          "max_abs": 7.674098014831543e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 180736,
+          "max_abs": 7.636845111846924e-07
+        },
+        {
+          "field": "density",
+          "bitwise_equal": false,
+          "changed_values": 18,
+          "max_abs": 0.0002578422427177429
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 89267,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 89366,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "smooth-r64-s0-d1-i2048-f1",
+      "sampling": 1,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 225697,
+          "max_abs": 6.341934204101562e-05
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 227503,
+          "max_abs": 1.1920928955078125e-06
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 257835,
+          "max_abs": 0.00022334232926368713
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 208802,
+          "max_abs": 8.23289155960083e-07
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 202381,
+          "max_abs": 7.674098014831543e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 180736,
+          "max_abs": 7.636845111846924e-07
+        },
+        {
+          "field": "density",
+          "bitwise_equal": false,
+          "changed_values": 33633,
+          "max_abs": 8.642673492431641e-07
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 110289,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 261576,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "smooth-r64-s0-d1-i4096-f0",
+      "sampling": 0,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 225697,
+          "max_abs": 6.341934204101562e-05
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 230634,
+          "max_abs": 1.9073486328125e-06
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 258025,
+          "max_abs": 0.00017023086547851562
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 214041,
+          "max_abs": 1.1436641216278076e-06
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 206283,
+          "max_abs": 9.5367431640625e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 185977,
+          "max_abs": 1.0170042514801025e-06
+        },
+        {
+          "field": "density",
+          "bitwise_equal": false,
+          "changed_values": 36,
+          "max_abs": 1.3378667063079774e-08
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 105179,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 105389,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "smooth-r64-s0-d1-i4096-f1",
+      "sampling": 1,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 225697,
+          "max_abs": 6.341934204101562e-05
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 230634,
+          "max_abs": 1.9073486328125e-06
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 258025,
+          "max_abs": 0.00017023086547851562
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 214041,
+          "max_abs": 1.1436641216278076e-06
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 206283,
+          "max_abs": 9.5367431640625e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 185977,
+          "max_abs": 1.0170042514801025e-06
+        },
+        {
+          "field": "density",
+          "bitwise_equal": false,
+          "changed_values": 36050,
+          "max_abs": 7.748603820800781e-07
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 128669,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 290417,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "smooth-r64-s0-d1-i8192-f0",
+      "sampling": 0,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 225697,
+          "max_abs": 6.341934204101562e-05
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 232625,
+          "max_abs": 1.9073486328125e-06
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 257993,
+          "max_abs": 0.00019318263366585597
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 215724,
+          "max_abs": 1.1436641216278076e-06
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 208095,
+          "max_abs": 9.387731552124023e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 186601,
+          "max_abs": 1.0170042514801025e-06
+        },
+        {
+          "field": "density",
+          "bitwise_equal": false,
+          "changed_values": 34,
+          "max_abs": 2.376327756792307e-08
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 107505,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 107668,
+          "max_abs": 1.0
+        }
+      ]
+    },
+    {
+      "tag": "smooth-r64-s0-d1-i8192-f1",
+      "sampling": 1,
+      "files": [
+        {
+          "field": "initial_density",
+          "bitwise_equal": true,
+          "changed_values": 0,
+          "max_abs": 0.0
+        },
+        {
+          "field": "div_before",
+          "bitwise_equal": false,
+          "changed_values": 225697,
+          "max_abs": 6.341934204101562e-05
+        },
+        {
+          "field": "pressure",
+          "bitwise_equal": false,
+          "changed_values": 232625,
+          "max_abs": 1.9073486328125e-06
+        },
+        {
+          "field": "div_after",
+          "bitwise_equal": false,
+          "changed_values": 257993,
+          "max_abs": 0.00019318263366585597
+        },
+        {
+          "field": "u",
+          "bitwise_equal": false,
+          "changed_values": 215724,
+          "max_abs": 1.1436641216278076e-06
+        },
+        {
+          "field": "v",
+          "bitwise_equal": false,
+          "changed_values": 208095,
+          "max_abs": 9.387731552124023e-07
+        },
+        {
+          "field": "w",
+          "bitwise_equal": false,
+          "changed_values": 186601,
+          "max_abs": 1.0170042514801025e-06
+        },
+        {
+          "field": "density",
+          "bitwise_equal": false,
+          "changed_values": 37201,
+          "max_abs": 5.960464477539062e-07
+        },
+        {
+          "field": "trace-step1",
+          "bitwise_equal": false,
+          "changed_values": 131623,
+          "max_abs": 1.0
+        },
+        {
+          "field": "trace-step2",
+          "bitwise_equal": false,
+          "changed_values": 298307,
+          "max_abs": 1.0
+        }
+      ]
+    }
+  ],
+  "summary_comparisons": [
+    {
+      "config": [
+        "sharp",
+        32,
+        0,
+        1,
+        1,
+        "hardware"
+      ],
+      "laptop_l1": 0.0,
+      "desktop_l1": 0.0,
+      "absolute_l1_difference": 0.0,
+      "laptop_changed_cells": 0,
+      "desktop_changed_cells": 0
+    },
+    {
+      "config": [
+        "sharp",
+        32,
+        0,
+        1,
+        2,
+        "hardware"
+      ],
+      "laptop_l1": 0.0,
+      "desktop_l1": 0.0,
+      "absolute_l1_difference": 0.0,
+      "laptop_changed_cells": 0,
+      "desktop_changed_cells": 0
+    },
+    {
+      "config": [
+        "sharp",
+        32,
+        0,
+        1,
+        1,
+        "float"
+      ],
+      "laptop_l1": 6.361931791839262e-05,
+      "desktop_l1": 6.361505567475396e-05,
+      "absolute_l1_difference": 4.2622436386650095e-09,
+      "laptop_changed_cells": 374,
+      "desktop_changed_cells": 374
+    },
+    {
+      "config": [
+        "sharp",
+        32,
+        0,
+        1,
+        2,
+        "float"
+      ],
+      "laptop_l1": 0.00012730780977937992,
+      "desktop_l1": 0.0001272988703259314,
+      "absolute_l1_difference": 8.93945344850977e-09,
+      "laptop_changed_cells": 836,
+      "desktop_changed_cells": 836
+    },
+    {
+      "config": [
+        "sharp",
+        32,
+        0.75,
+        1,
+        1,
+        "hardware"
+      ],
+      "laptop_l1": 9.312721177127957e-05,
+      "desktop_l1": 9.312721177127957e-05,
+      "absolute_l1_difference": 0.0,
+      "laptop_changed_cells": 8,
+      "desktop_changed_cells": 8
+    },
+    {
+      "config": [
+        "sharp",
+        32,
+        0.75,
+        1,
+        2,
+        "hardware"
+      ],
+      "laptop_l1": 0.00017738853479984235,
+      "desktop_l1": 0.00017738853479984235,
+      "absolute_l1_difference": 0.0,
+      "laptop_changed_cells": 32,
+      "desktop_changed_cells": 32
+    },
+    {
+      "config": [
+        "sharp",
+        32,
+        0.75,
+        1,
+        1,
+        "float"
+      ],
+      "laptop_l1": 6.777795326813561e-05,
+      "desktop_l1": 6.777899190162738e-05,
+      "absolute_l1_difference": 1.0386334917665031e-09,
+      "laptop_changed_cells": 320,
+      "desktop_changed_cells": 320
+    },
+    {
+      "config": [
+        "sharp",
+        32,
+        0.75,
+        1,
+        2,
+        "float"
+      ],
+      "laptop_l1": 0.0001353371450914748,
+      "desktop_l1": 0.00013533651588141634,
+      "absolute_l1_difference": 6.292100584591627e-10,
+      "laptop_changed_cells": 712,
+      "desktop_changed_cells": 712
+    },
+    {
+      "config": [
+        "sharp",
+        32,
+        0,
+        2,
+        1,
+        "hardware"
+      ],
+      "laptop_l1": 0.0001398014818957081,
+      "desktop_l1": 0.0001398014818957081,
+      "absolute_l1_difference": 0.0,
+      "laptop_changed_cells": 16,
+      "desktop_changed_cells": 16
+    },
+    {
+      "config": [
+        "sharp",
+        32,
+        0,
+        2,
+        2,
+        "hardware"
+      ],
+      "laptop_l1": 0.00026295102188349,
+      "desktop_l1": 0.00026295102188349,
+      "absolute_l1_difference": 0.0,
+      "laptop_changed_cells": 72,
+      "desktop_changed_cells": 72
+    },
+    {
+      "config": [
+        "sharp",
+        32,
+        0,
+        2,
+        1,
+        "float"
+      ],
+      "laptop_l1": 0.000125787783226704,
+      "desktop_l1": 0.00012578354697299318,
+      "absolute_l1_difference": 4.2362537108309e-09,
+      "laptop_changed_cells": 374,
+      "desktop_changed_cells": 374
+    },
+    {
+      "config": [
+        "sharp",
+        32,
+        0,
+        2,
+        2,
+        "float"
+      ],
+      "laptop_l1": 0.0002517117690347127,
+      "desktop_l1": 0.00025170325787060615,
+      "absolute_l1_difference": 8.511164106557011e-09,
+      "laptop_changed_cells": 836,
+      "desktop_changed_cells": 836
+    },
+    {
+      "config": [
+        "sharp",
+        32,
+        0.5,
+        0.5,
+        1,
+        "hardware"
+      ],
+      "laptop_l1": 0.0,
+      "desktop_l1": 0.0,
+      "absolute_l1_difference": 0.0,
+      "laptop_changed_cells": 0,
+      "desktop_changed_cells": 0
+    },
+    {
+      "config": [
+        "sharp",
+        32,
+        0.5,
+        0.5,
+        2,
+        "hardware"
+      ],
+      "laptop_l1": 0.0,
+      "desktop_l1": 0.0,
+      "absolute_l1_difference": 0.0,
+      "laptop_changed_cells": 0,
+      "desktop_changed_cells": 0
+    },
+    {
+      "config": [
+        "sharp",
+        32,
+        0.5,
+        0.5,
+        1,
+        "float"
+      ],
+      "laptop_l1": 3.391008694597304e-05,
+      "desktop_l1": 3.389304502591378e-05,
+      "absolute_l1_difference": 1.704192005925803e-08,
+      "laptop_changed_cells": 322,
+      "desktop_changed_cells": 322
+    },
+    {
+      "config": [
+        "sharp",
+        32,
+        0.5,
+        0.5,
+        2,
+        "float"
+      ],
+      "laptop_l1": 6.775396384400474e-05,
+      "desktop_l1": 6.772063322562204e-05,
+      "absolute_l1_difference": 3.3330618382705645e-08,
+      "laptop_changed_cells": 719,
+      "desktop_changed_cells": 719
+    },
+    {
+      "config": [
+        "smooth",
+        32,
+        0,
+        1,
+        1,
+        "hardware"
+      ],
+      "laptop_l1": 2.5207908891098686e-05,
+      "desktop_l1": 2.5207908891098686e-05,
+      "absolute_l1_difference": 0.0,
+      "laptop_changed_cells": 356,
+      "desktop_changed_cells": 356
+    },
+    {
+      "config": [
+        "smooth",
+        32,
+        0,
+        1,
+        2,
+        "hardware"
+      ],
+      "laptop_l1": 5.0255279627773043e-05,
+      "desktop_l1": 5.0255279627773043e-05,
+      "absolute_l1_difference": 0.0,
+      "laptop_changed_cells": 1264,
+      "desktop_changed_cells": 1264
+    },
+    {
+      "config": [
+        "smooth",
+        32,
+        0,
+        1,
+        1,
+        "float"
+      ],
+      "laptop_l1": 5.750015384845365e-05,
+      "desktop_l1": 5.749504254618944e-05,
+      "absolute_l1_difference": 5.1113022642097815e-09,
+      "laptop_changed_cells": 32756,
+      "desktop_changed_cells": 32757
+    },
+    {
+      "config": [
+        "smooth",
+        32,
+        0,
+        1,
+        2,
+        "float"
+      ],
+      "laptop_l1": 0.00011483491083178018,
+      "desktop_l1": 0.00011482443305615441,
+      "absolute_l1_difference": 1.0477775625765602e-08,
+      "laptop_changed_cells": 32761,
+      "desktop_changed_cells": 32762
+    },
+    {
+      "config": [
+        "sharp",
+        64,
+        0,
+        1,
+        1,
+        "hardware"
+      ],
+      "laptop_l1": 0.0,
+      "desktop_l1": 0.0,
+      "absolute_l1_difference": 0.0,
+      "laptop_changed_cells": 0,
+      "desktop_changed_cells": 0
+    },
+    {
+      "config": [
+        "sharp",
+        64,
+        0,
+        1,
+        2,
+        "hardware"
+      ],
+      "laptop_l1": 1.10310698567955e-05,
+      "desktop_l1": 1.10310698567955e-05,
+      "absolute_l1_difference": 0.0,
+      "laptop_changed_cells": 80,
+      "desktop_changed_cells": 80
+    },
+    {
+      "config": [
+        "sharp",
+        64,
+        0,
+        1,
+        1,
+        "float"
+      ],
+      "laptop_l1": 6.242813229081938e-05,
+      "desktop_l1": 6.24273862760049e-05,
+      "absolute_l1_difference": 7.460148144714093e-10,
+      "laptop_changed_cells": 1280,
+      "desktop_changed_cells": 1280
+    },
+    {
+      "config": [
+        "sharp",
+        64,
+        0,
+        1,
+        2,
+        "float"
+      ],
+      "laptop_l1": 0.00012451759643266401,
+      "desktop_l1": 0.00012451938045746476,
+      "absolute_l1_difference": 1.784024800745342e-09,
+      "laptop_changed_cells": 2696,
+      "desktop_changed_cells": 2696
+    },
+    {
+      "config": [
+        "sharp",
+        64,
+        0.25,
+        1,
+        1,
+        "hardware"
+      ],
+      "laptop_l1": 2.0041686708353376e-05,
+      "desktop_l1": 2.0041686708353376e-05,
+      "absolute_l1_difference": 0.0,
+      "laptop_changed_cells": 15,
+      "desktop_changed_cells": 15
+    },
+    {
+      "config": [
+        "sharp",
+        64,
+        0.25,
+        1,
+        2,
+        "hardware"
+      ],
+      "laptop_l1": 3.45411942512174e-05,
+      "desktop_l1": 3.45411942512174e-05,
+      "absolute_l1_difference": 0.0,
+      "laptop_changed_cells": 75,
+      "desktop_changed_cells": 75
+    },
+    {
+      "config": [
+        "sharp",
+        64,
+        0.25,
+        1,
+        1,
+        "float"
+      ],
+      "laptop_l1": 6.0169284878593046e-05,
+      "desktop_l1": 6.015998318022048e-05,
+      "absolute_l1_difference": 9.301698372562442e-09,
+      "laptop_changed_cells": 1288,
+      "desktop_changed_cells": 1288
+    },
+    {
+      "config": [
+        "sharp",
+        64,
+        0.25,
+        1,
+        2,
+        "float"
+      ],
+      "laptop_l1": 0.00012005590564426249,
+      "desktop_l1": 0.00012003970486831,
+      "absolute_l1_difference": 1.6200775952498613e-08,
+      "laptop_changed_cells": 2715,
+      "desktop_changed_cells": 2715
+    },
+    {
+      "config": [
+        "sharp",
+        64,
+        0,
+        2,
+        1,
+        "hardware"
+      ],
+      "laptop_l1": 0.00010582412572991512,
+      "desktop_l1": 0.00010582412572991512,
+      "absolute_l1_difference": 0.0,
+      "laptop_changed_cells": 78,
+      "desktop_changed_cells": 78
+    },
+    {
+      "config": [
+        "sharp",
+        64,
+        0,
+        2,
+        2,
+        "hardware"
+      ],
+      "laptop_l1": 0.00021589182696589754,
+      "desktop_l1": 0.00021589182696589754,
+      "absolute_l1_difference": 0.0,
+      "laptop_changed_cells": 426,
+      "desktop_changed_cells": 426
+    },
+    {
+      "config": [
+        "sharp",
+        64,
+        0,
+        2,
+        1,
+        "float"
+      ],
+      "laptop_l1": 0.00012350365246729144,
+      "desktop_l1": 0.00012351033276026993,
+      "absolute_l1_difference": 6.6802929784843656e-09,
+      "laptop_changed_cells": 1280,
+      "desktop_changed_cells": 1280
+    },
+    {
+      "config": [
+        "sharp",
+        64,
+        0,
+        2,
+        2,
+        "float"
+      ],
+      "laptop_l1": 0.00024647113441024086,
+      "desktop_l1": 0.00024649899475300354,
+      "absolute_l1_difference": 2.7860342762680863e-08,
+      "laptop_changed_cells": 2696,
+      "desktop_changed_cells": 2696
+    },
+    {
+      "config": [
+        "sharp",
+        64,
+        0.5,
+        0.5,
+        1,
+        "hardware"
+      ],
+      "laptop_l1": 1.8786045725235294e-05,
+      "desktop_l1": 1.8786045725235294e-05,
+      "absolute_l1_difference": 0.0,
+      "laptop_changed_cells": 15,
+      "desktop_changed_cells": 15
+    },
+    {
+      "config": [
+        "sharp",
+        64,
+        0.5,
+        0.5,
+        2,
+        "hardware"
+      ],
+      "laptop_l1": 3.596903931907819e-05,
+      "desktop_l1": 3.596903931907819e-05,
+      "absolute_l1_difference": 0.0,
+      "laptop_changed_cells": 75,
+      "desktop_changed_cells": 75
+    },
+    {
+      "config": [
+        "sharp",
+        64,
+        0.5,
+        0.5,
+        1,
+        "float"
+      ],
+      "laptop_l1": 2.970367479259214e-05,
+      "desktop_l1": 2.9690386560178817e-05,
+      "absolute_l1_difference": 1.3288232413324153e-08,
+      "laptop_changed_cells": 1346,
+      "desktop_changed_cells": 1346
+    },
+    {
+      "config": [
+        "sharp",
+        64,
+        0.5,
+        0.5,
+        2,
+        "float"
+      ],
+      "laptop_l1": 5.9367846076090254e-05,
+      "desktop_l1": 5.934226822608617e-05,
+      "absolute_l1_difference": 2.557785000408707e-08,
+      "laptop_changed_cells": 2835,
+      "desktop_changed_cells": 2835
+    },
+    {
+      "config": [
+        "smooth",
+        64,
+        0,
+        1,
+        1,
+        "hardware"
+      ],
+      "laptop_l1": 3.979276641147249e-05,
+      "desktop_l1": 3.973482586848626e-05,
+      "absolute_l1_difference": 5.7940542986229904e-08,
+      "laptop_changed_cells": 9139,
+      "desktop_changed_cells": 9143
+    },
+    {
+      "config": [
+        "smooth",
+        64,
+        0,
+        1,
+        2,
+        "hardware"
+      ],
+      "laptop_l1": 7.927342510665879e-05,
+      "desktop_l1": 7.915918451862632e-05,
+      "absolute_l1_difference": 1.1424058803246673e-07,
+      "laptop_changed_cells": 31347,
+      "desktop_changed_cells": 31351
+    },
+    {
+      "config": [
+        "smooth",
+        64,
+        0,
+        1,
+        1,
+        "float"
+      ],
+      "laptop_l1": 5.170666749290388e-05,
+      "desktop_l1": 5.1708923001873744e-05,
+      "absolute_l1_difference": 2.2555089698619683e-09,
+      "laptop_changed_cells": 262012,
+      "desktop_changed_cells": 262001
+    },
+    {
+      "config": [
+        "smooth",
+        64,
+        0,
+        1,
+        2,
+        "float"
+      ],
+      "laptop_l1": 0.00010332931801679203,
+      "desktop_l1": 0.00010333394855596535,
+      "absolute_l1_difference": 4.630539173318881e-09,
+      "laptop_changed_cells": 262086,
+      "desktop_changed_cells": 262090
+    }
+  ]
+}

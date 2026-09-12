@@ -1,0 +1,14 @@
+[
+  {
+    "case": "late_input_chain",
+    "rejected": true
+  },
+  {
+    "case": "late_actual_output",
+    "rejected": true
+  },
+  {
+    "case": "late_float_model",
+    "rejected": true
+  }
+]

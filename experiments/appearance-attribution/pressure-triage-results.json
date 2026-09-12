@@ -1,0 +1,551 @@
+{
+  "protocol": "same-state pressure triage v1",
+  "analyzer_sha256": "d1318d37a32331b510e4c7b9f48bf1c0184fecec0c3dfbca7f66a96c93fcb33d",
+  "numpy_version": "2.3.5",
+  "controls": [
+    {
+      "n": 4,
+      "kind": "constant",
+      "pressure_rms_error": 0.0,
+      "relative_residual": 0.0,
+      "rhs_mean": 0.0
+    },
+    {
+      "n": 4,
+      "kind": "mode",
+      "pressure_rms_error": 9.71445146547012e-17,
+      "relative_residual": 2.2475128581839903e-16,
+      "rhs_mean": -4.440892098500626e-16
+    },
+    {
+      "n": 4,
+      "kind": "random",
+      "pressure_rms_error": 5.531053743423223e-16,
+      "relative_residual": 4.023209251940377e-16,
+      "rhs_mean": -1.7763568394002505e-15
+    },
+    {
+      "n": 8,
+      "kind": "constant",
+      "pressure_rms_error": 0.0,
+      "relative_residual": 0.0,
+      "rhs_mean": 0.0
+    },
+    {
+      "n": 8,
+      "kind": "mode",
+      "pressure_rms_error": 2.257107904539558e-16,
+      "relative_residual": 2.9154129760737778e-15,
+      "rhs_mean": 8.881784197001252e-16
+    },
+    {
+      "n": 8,
+      "kind": "random",
+      "pressure_rms_error": 1.1721461321189203e-15,
+      "relative_residual": 1.0713326113689708e-15,
+      "rhs_mean": 8.881784197001252e-16
+    },
+    {
+      "n": 32,
+      "kind": "constant",
+      "pressure_rms_error": 0.0,
+      "relative_residual": 0.0,
+      "rhs_mean": 0.0
+    },
+    {
+      "n": 32,
+      "kind": "mode",
+      "pressure_rms_error": 1.8326623818144544e-16,
+      "relative_residual": 2.2253998219499767e-14,
+      "rhs_mean": 0.0
+    },
+    {
+      "n": 32,
+      "kind": "random",
+      "pressure_rms_error": 6.1009329194976295e-15,
+      "relative_residual": 6.738521646792938e-15,
+      "rhs_mean": 1.5543122344752192e-15
+    }
+  ],
+  "off_on_identical_raw_fields": 7,
+  "runs": [
+    {
+      "run": "experiments\\appearance-attribution\\runs\\pressure-triage-v1\\n032-A-s001",
+      "scene": "A",
+      "resolution": 32,
+      "step": 1,
+      "harness_valid": true,
+      "provenance_valid": true,
+      "prefix_rows_identical": 2,
+      "matching_snapshots": [
+        "density-step-000.f32"
+      ],
+      "rhs_rms": 0.009438177141650775,
+      "rhs_mean": -3.834432581563754e-12,
+      "incompatible_rhs_ratio": 4.062683422885085e-10,
+      "rounded_rhs_difference_ratio": 2.7694422607310247e-08,
+      "solver64_relative_residual": 4.574885408263909e-15,
+      "checkpoints": [
+        {
+          "iterations": 0,
+          "relative_residual": 1.0,
+          "relative_residual_rounded_rhs": 1.0
+        },
+        {
+          "iterations": 256,
+          "relative_residual": 0.006725667367729758,
+          "relative_residual_rounded_rhs": 0.0067256660064475195
+        },
+        {
+          "iterations": 1024,
+          "relative_residual": 0.0012443620617446818,
+          "relative_residual_rounded_rhs": 0.0012443616325663698
+        },
+        {
+          "iterations": 4096,
+          "relative_residual": 3.991655850592415e-05,
+          "relative_residual_rounded_rhs": 3.991624587019788e-05
+        },
+        {
+          "iterations": 8192,
+          "relative_residual": 6.903261195432024e-07,
+          "relative_residual_rounded_rhs": 6.941494995266595e-07
+        },
+        {
+          "iterations": 16384,
+          "relative_residual": 5.714587647667564e-07,
+          "relative_residual_rounded_rhs": 5.704956645026051e-07
+        },
+        {
+          "iterations": 32768,
+          "relative_residual": 5.714587647667564e-07,
+          "relative_residual_rounded_rhs": 5.704956645026051e-07
+        },
+        {
+          "iterations": 65536,
+          "relative_residual": 5.714587647667564e-07,
+          "relative_residual_rounded_rhs": 5.704956645026051e-07
+        }
+      ],
+      "pre_divergence_reconstruction_rms": 4.117914126937734e-12,
+      "post_divergence_reconstruction_rms": 2.1230887257880738e-12,
+      "identity_rms": 1.1783742188470503e-11,
+      "identity_relative_to_pre_divergence": 7.491112783992184e-08,
+      "captured_compact_ratio": 5.724124300093776e-07,
+      "direct_residual_vs_compact_ratio_difference": 9.536652426211782e-10,
+      "float32_projection_replay_bitwise": true,
+      "float32_projection_replay_max_error": 0.0,
+      "gauge_free_pressure_error_rms": 4.604239605458333e-11,
+      "variants": {
+        "captured_gpu": {
+          "relative_divergence": 5.748837559972894e-07,
+          "scaled_max_divergence": 4.268562022943789e-11
+        },
+        "captured_pressure_project64": {
+          "relative_divergence": 5.744094844996045e-07,
+          "scaled_max_divergence": 4.4154154627952434e-11
+        },
+        "reference64_project64": {
+          "relative_divergence": 2.617508365972863e-08,
+          "scaled_max_divergence": 3.879445809679099e-12
+        },
+        "reference64_project64_store_velocity32": {
+          "relative_divergence": 6.72428029755651e-08,
+          "scaled_max_divergence": 7.761021874353828e-12
+        },
+        "reference_pressure32_project64": {
+          "relative_divergence": 2.2190154077375546e-07,
+          "scaled_max_divergence": 1.4829291809282363e-11
+        },
+        "reference_pressure32_project32": {
+          "relative_divergence": 2.4177231879518137e-07,
+          "scaled_max_divergence": 1.406685212106476e-11
+        },
+        "captured_pressure_project32": {
+          "relative_divergence": 5.748837559972894e-07,
+          "scaled_max_divergence": 4.268562022943789e-11
+        }
+      },
+      "capture_sha256": {
+        "capture.json": "fa7a4c247e8a7196f43414d621fd20740760b9263bd489261f1efae4fbdf0b6a",
+        "div_after.f32": "7c44eeeb65f7e87216e810666869b957f304b6d4b4200e13557c1ef2e54df780",
+        "div_before.f32": "aca59f66075aff15eb55650c3a8448cd686d3015ceecea919c68fd51cf144d31",
+        "p00000.f32": "fa43239bcee7b97ca62f007cc68487560a39e19f74f3dde7486db3f98df8e471",
+        "p00256.f32": "db04116f0b28d40c6fe95ad7c6ebda1276dea03fbabf9775e2486a7843e36624",
+        "p01024.f32": "68eb00ad631794f5297e265f1f808ee77ca1254e991a1638c1644cfdb5c7e241",
+        "p04096.f32": "26568208d1885d4f9a63c5f9ee0191b9159b75c110247bbd7a3cc907d45a3e31",
+        "p08192.f32": "d8aa2c0482e897de435189c75a6cab3aa29c4e42b9187660a23d1cc247095030",
+        "p16384.f32": "70c7671c307c5d5b7af6417552be98406bbc9c48d1777a4303835f766611d3c3",
+        "p32768.f32": "70c7671c307c5d5b7af6417552be98406bbc9c48d1777a4303835f766611d3c3",
+        "p65536.f32": "70c7671c307c5d5b7af6417552be98406bbc9c48d1777a4303835f766611d3c3",
+        "u_after.f32": "acddd501762be01f2fda5d8ba585028e9748c22fc85e0234bc5095b72b12bf10",
+        "u_before.f32": "74518f204d46de660dff3ed003e92476bad8c691ba392453fc1c7532cc856018",
+        "v_after.f32": "684d607e7aba75d676f31b265001fab5d6ff551201c98693f9444a86aa1e6113",
+        "v_before.f32": "b65ca165ca1981e1fa1c48c616c03ab9ab078952fc95de9253dd7cec813f2ded",
+        "w_after.f32": "d4eff4a00036e628265b9e52860975aa034ea8dba76af2228c7eebf3908fa6fb",
+        "w_before.f32": "74518f204d46de660dff3ed003e92476bad8c691ba392453fc1c7532cc856018"
+      }
+    },
+    {
+      "run": "experiments\\appearance-attribution\\runs\\pressure-triage-v1\\n128-A-s001",
+      "scene": "A",
+      "resolution": 128,
+      "step": 1,
+      "harness_valid": true,
+      "provenance_valid": true,
+      "prefix_rows_identical": 2,
+      "matching_snapshots": [
+        "density-step-000.f32"
+      ],
+      "rhs_rms": 0.0204285100007194,
+      "rhs_mean": 9.333158718172408e-13,
+      "incompatible_rhs_ratio": 4.5686928306781724e-11,
+      "rounded_rhs_difference_ratio": 2.8249489485921637e-08,
+      "solver64_relative_residual": 4.293889599493799e-14,
+      "checkpoints": [
+        {
+          "iterations": 0,
+          "relative_residual": 1.0,
+          "relative_residual_rounded_rhs": 1.0
+        },
+        {
+          "iterations": 256,
+          "relative_residual": 0.08985389226371998,
+          "relative_residual_rounded_rhs": 0.08985389043832416
+        },
+        {
+          "iterations": 1024,
+          "relative_residual": 0.022266280728163373,
+          "relative_residual_rounded_rhs": 0.02226627998073332
+        },
+        {
+          "iterations": 4096,
+          "relative_residual": 0.0032571715857318603,
+          "relative_residual_rounded_rhs": 0.003257171152426132
+        },
+        {
+          "iterations": 8192,
+          "relative_residual": 0.001278789785528653,
+          "relative_residual_rounded_rhs": 0.0012787895481498413
+        },
+        {
+          "iterations": 16384,
+          "relative_residual": 0.0005995087060435918,
+          "relative_residual_rounded_rhs": 0.0005995085753845781
+        },
+        {
+          "iterations": 32768,
+          "relative_residual": 0.00019603623391517886,
+          "relative_residual_rounded_rhs": 0.00019603616402399726
+        },
+        {
+          "iterations": 65536,
+          "relative_residual": 2.1319979436476144e-05,
+          "relative_residual_rounded_rhs": 2.13199960820528e-05
+        }
+      ],
+      "pre_divergence_reconstruction_rms": 7.807980579406866e-12,
+      "post_divergence_reconstruction_rms": 4.826389993959055e-12,
+      "identity_rms": 3.794577773316641e-11,
+      "identity_relative_to_pre_divergence": 1.1144946670942827e-07,
+      "captured_compact_ratio": 2.1320397477097625e-05,
+      "direct_residual_vs_compact_ratio_difference": 4.180406214810274e-10,
+      "float32_projection_replay_bitwise": true,
+      "float32_projection_replay_max_error": 0.0,
+      "gauge_free_pressure_error_rms": 4.339631568299336e-08,
+      "variants": {
+        "captured_gpu": {
+          "relative_divergence": 2.1320212495143324e-05,
+          "scaled_max_divergence": 1.5946474602758758e-09
+        },
+        "captured_pressure_project64": {
+          "relative_divergence": 2.1319840985838552e-05,
+          "scaled_max_divergence": 1.5883945802542582e-09
+        },
+        "reference64_project64": {
+          "relative_divergence": 2.2932551672308963e-08,
+          "scaled_max_divergence": 1.5522307050832984e-11
+        },
+        "reference64_project64_store_velocity32": {
+          "relative_divergence": 9.967365987717577e-08,
+          "scaled_max_divergence": 5.0446642335088195e-11
+        },
+        "reference_pressure32_project64": {
+          "relative_divergence": 1.777943138813513e-06,
+          "scaled_max_divergence": 6.093390110533477e-10
+        },
+        "reference_pressure32_project32": {
+          "relative_divergence": 1.7755913538983342e-06,
+          "scaled_max_divergence": 6.092402160019772e-10
+        },
+        "captured_pressure_project32": {
+          "relative_divergence": 2.1320212495143324e-05,
+          "scaled_max_divergence": 1.5946474602758758e-09
+        }
+      },
+      "capture_sha256": {
+        "capture.json": "fa7a4c247e8a7196f43414d621fd20740760b9263bd489261f1efae4fbdf0b6a",
+        "div_after.f32": "fabdcb17900d17ba28c3751ab881e59338c042e3119e5995fb1d1e13f0afb6b0",
+        "div_before.f32": "da85fd80bcecb29cf924dff22c046d8086382c4f875f7b685d3570adfaa66934",
+        "p00000.f32": "2daeb1f36095b44b318410b3f4e8b5d989dcc7bb023d1426c492dab0a3053e74",
+        "p00256.f32": "c47e65722acab6cbf6d6fd7da0589ef2138d6ff7298d44d3525b3a798325a056",
+        "p01024.f32": "8d63a9ebc898def49b0f1c87cc4ecd2b663f7a71f161260b8b7e7a393b1572b5",
+        "p04096.f32": "cbfbbbc973f0115ae912e781398190fd35a470196515f8321577f0bc71538eb0",
+        "p08192.f32": "9726b2cc229080c0874cecf8a6e4867f989595167e4a4c1561998c626ca0a253",
+        "p16384.f32": "66abe7d5301007e41e427dc62c05724b2f7dcfc08b1168795f8055916ce2b24b",
+        "p32768.f32": "aa28d4ebbd0ab2857729bb9a1b0159ee5d7a2e30dd8910aea06923beb12b1f04",
+        "p65536.f32": "11e437fdc4680328b481885d4400329cebedc34048b8507cd55923c110e939b4",
+        "u_after.f32": "92e03687c1fc28bf03179e0c88c760e7aef7434375dd2f14b38846ebd10c8361",
+        "u_before.f32": "da94dbac4d762300c217ef3edbdc678cc360de504c7eca175af3b81e7c1b6972",
+        "v_after.f32": "6c6151ac037c274348d5cb154d6e5c48a54c64379205747fd29f9df639dea13a",
+        "v_before.f32": "d83b84c75c7cc3d3411d8dd9d1993c32cf4e93e3eb77e3ad6f537c4a98a28414",
+        "w_after.f32": "e116b478847b3761b4c21d6e02031a29273933a391bc061bc823fdb80ce7f18e",
+        "w_before.f32": "da94dbac4d762300c217ef3edbdc678cc360de504c7eca175af3b81e7c1b6972"
+      }
+    },
+    {
+      "run": "experiments\\appearance-attribution\\runs\\pressure-triage-v1\\n128-A-s114",
+      "scene": "A",
+      "resolution": 128,
+      "step": 114,
+      "harness_valid": true,
+      "provenance_valid": true,
+      "prefix_rows_identical": 114,
+      "matching_snapshots": [
+        "density-step-000.f32",
+        "density-step-012.f32",
+        "density-step-024.f32",
+        "density-step-036.f32",
+        "density-step-048.f32",
+        "density-step-060.f32",
+        "density-step-072.f32",
+        "density-step-084.f32",
+        "density-step-096.f32",
+        "density-step-108.f32"
+      ],
+      "rhs_rms": 2.7171294003800037,
+      "rhs_mean": -1.769327265537142e-12,
+      "incompatible_rhs_ratio": 6.511751944127846e-13,
+      "rounded_rhs_difference_ratio": 2.757108476501471e-08,
+      "solver64_relative_residual": 5.3139326982350054e-14,
+      "checkpoints": [
+        {
+          "iterations": 0,
+          "relative_residual": 1.0,
+          "relative_residual_rounded_rhs": 1.0
+        },
+        {
+          "iterations": 256,
+          "relative_residual": 0.09804063486924831,
+          "relative_residual_rounded_rhs": 0.09804063211392698
+        },
+        {
+          "iterations": 1024,
+          "relative_residual": 0.018347634313880527,
+          "relative_residual_rounded_rhs": 0.01834763409583547
+        },
+        {
+          "iterations": 4096,
+          "relative_residual": 0.002745296694688949,
+          "relative_residual_rounded_rhs": 0.002745297104747442
+        },
+        {
+          "iterations": 8192,
+          "relative_residual": 0.001540397849801044,
+          "relative_residual_rounded_rhs": 0.0015403980658419327
+        },
+        {
+          "iterations": 16384,
+          "relative_residual": 0.0008581910825723197,
+          "relative_residual_rounded_rhs": 0.0008581912131338463
+        },
+        {
+          "iterations": 32768,
+          "relative_residual": 0.00028279228353782725,
+          "relative_residual_rounded_rhs": 0.0002827924297517971
+        },
+        {
+          "iterations": 65536,
+          "relative_residual": 3.0406141663199414e-05,
+          "relative_residual_rounded_rhs": 3.040645345017245e-05
+        }
+      ],
+      "pre_divergence_reconstruction_rms": 3.2559033629755986e-09,
+      "post_divergence_reconstruction_rms": 3.009193497672182e-09,
+      "identity_rms": 9.807375463841722e-08,
+      "identity_relative_to_pre_divergence": 2.165677118868682e-06,
+      "captured_compact_ratio": 3.0483646182526574e-05,
+      "direct_residual_vs_compact_ratio_difference": 7.750451932716021e-08,
+      "float32_projection_replay_bitwise": true,
+      "float32_projection_replay_max_error": 0.0,
+      "gauge_free_pressure_error_rms": 8.306155435337098e-06,
+      "variants": {
+        "captured_gpu": {
+          "relative_divergence": 3.0483476488244148e-05,
+          "scaled_max_divergence": 2.0428561739622986e-07
+        },
+        "captured_pressure_project64": {
+          "relative_divergence": 3.0406292434543452e-05,
+          "scaled_max_divergence": 1.863089591403881e-07
+        },
+        "reference64_project64": {
+          "relative_divergence": 7.18972723525001e-08,
+          "scaled_max_divergence": 1.1897645785877578e-08
+        },
+        "reference64_project64_store_velocity32": {
+          "relative_divergence": 2.2075682413118417e-06,
+          "scaled_max_divergence": 1.2478558997436676e-07
+        },
+        "reference_pressure32_project64": {
+          "relative_divergence": 1.7802221469057478e-06,
+          "scaled_max_divergence": 7.79685112132569e-08
+        },
+        "reference_pressure32_project32": {
+          "relative_divergence": 2.842198159586012e-06,
+          "scaled_max_divergence": 1.3982256982791874e-07
+        },
+        "captured_pressure_project32": {
+          "relative_divergence": 3.0483476488244148e-05,
+          "scaled_max_divergence": 2.0428561739622986e-07
+        }
+      },
+      "capture_sha256": {
+        "capture.json": "866515263c3def73345d66962703177b8121bed60b7a1304b49b6eaa8a64ac54",
+        "div_after.f32": "fbf64d1c79e1660ad27986cc42539978659c7fb2a89dc1a125ba7a1bf6b0051e",
+        "div_before.f32": "9d2f2998c66ab1d264143101024e432ccf2db551453aaf2d6b0fc7cd535f1b1c",
+        "p00000.f32": "2daeb1f36095b44b318410b3f4e8b5d989dcc7bb023d1426c492dab0a3053e74",
+        "p00256.f32": "ccac52b990ca41cfd2e1d4adac86fd8002a75ebe18b403649e6f39c7c4625d79",
+        "p01024.f32": "f1638f012039b3a0c2f650c4d25b34a6017d189a8fd1f99e136950bfd4272677",
+        "p04096.f32": "ce2455bd1f5963b4d0f594c08a7b19a4cc0c215bd66bf6e918186b5b471e09fe",
+        "p08192.f32": "c8cd3944026db7206b632d98a25dadbd7de768d69f202530b65d6b230d9b6be3",
+        "p16384.f32": "8587bc77c3ec524f7c150b5f71f8f14345628b4539cfbaf30f524e1183f10102",
+        "p32768.f32": "68ac6204914c01016262cce861721d44f8e10b5881fe660d56d190fb65fad87b",
+        "p65536.f32": "ebc0ed0dc7e14d20c9affda30d002b88fbaeaa996a23400636b84177f7890b36",
+        "u_after.f32": "7cfe4ea9594e1de92fdd3d5b173580e77267ab8325a0061016622043927186c5",
+        "u_before.f32": "22129edd7ae626da5da6dd68564e70d1879d0cc3c3f0acc248cce9492b3146a3",
+        "v_after.f32": "f7204753858025cc72b5f52464054a0b495f7c956a96589d4fcaee877c8d0932",
+        "v_before.f32": "545f477feafe2a9cf2896909ab9be0562974633dcc403678ef69079979d3e81c",
+        "w_after.f32": "b1b4be211b12fda370609f67e5510b13262b917d6926f961aed69e03c1daca52",
+        "w_before.f32": "bc0bccb8f9a9d5eea832e608d0ebbdfb77bea06527a7e9290094254fc572bc3f"
+      }
+    },
+    {
+      "run": "experiments\\appearance-attribution\\runs\\pressure-triage-v1\\n128-B-s001",
+      "scene": "B",
+      "resolution": 128,
+      "step": 1,
+      "harness_valid": true,
+      "provenance_valid": true,
+      "prefix_rows_identical": 2,
+      "matching_snapshots": [
+        "density-step-000.f32"
+      ],
+      "rhs_rms": 0.02889883206260111,
+      "rhs_mean": 3.9041683522191234e-13,
+      "incompatible_rhs_ratio": 1.3509779024155203e-11,
+      "rounded_rhs_difference_ratio": 3.006209471999544e-08,
+      "solver64_relative_residual": 4.611684400503319e-14,
+      "checkpoints": [
+        {
+          "iterations": 0,
+          "relative_residual": 1.0,
+          "relative_residual_rounded_rhs": 1.0
+        },
+        {
+          "iterations": 256,
+          "relative_residual": 0.09004775166000607,
+          "relative_residual_rounded_rhs": 0.09004774846891767
+        },
+        {
+          "iterations": 1024,
+          "relative_residual": 0.02456554116770715,
+          "relative_residual_rounded_rhs": 0.02456554021401431
+        },
+        {
+          "iterations": 4096,
+          "relative_residual": 0.004332202842076613,
+          "relative_residual_rounded_rhs": 0.0043322025894054796
+        },
+        {
+          "iterations": 8192,
+          "relative_residual": 0.0017936575406995313,
+          "relative_residual_rounded_rhs": 0.0017936574932939436
+        },
+        {
+          "iterations": 16384,
+          "relative_residual": 0.0008472201178161213,
+          "relative_residual_rounded_rhs": 0.0008472201433500305
+        },
+        {
+          "iterations": 32768,
+          "relative_residual": 0.00027705363548047253,
+          "relative_residual_rounded_rhs": 0.000277053712597709
+        },
+        {
+          "iterations": 65536,
+          "relative_residual": 2.9854005710966563e-05,
+          "relative_residual_rounded_rhs": 2.985457614298507e-05
+        }
+      ],
+      "pre_divergence_reconstruction_rms": 1.1023226485897526e-11,
+      "post_divergence_reconstruction_rms": 6.615454323492426e-12,
+      "identity_rms": 5.427392148809283e-11,
+      "identity_relative_to_pre_divergence": 1.1268396980179345e-07,
+      "captured_compact_ratio": 2.9854547984785874e-05,
+      "direct_residual_vs_compact_ratio_difference": 5.422738193101579e-10,
+      "float32_projection_replay_bitwise": true,
+      "float32_projection_replay_max_error": 0.0,
+      "gauge_free_pressure_error_rms": 8.660292265847904e-08,
+      "variants": {
+        "captured_gpu": {
+          "relative_divergence": 2.985446081029342e-05,
+          "scaled_max_divergence": 2.0469695155480444e-09
+        },
+        "captured_pressure_project64": {
+          "relative_divergence": 2.985396092613566e-05,
+          "scaled_max_divergence": 2.0449313976190887e-09
+        },
+        "reference64_project64": {
+          "relative_divergence": 2.28865110965032e-08,
+          "scaled_max_divergence": 1.5522161037704794e-11
+        },
+        "reference64_project64_store_velocity32": {
+          "relative_divergence": 9.517848767497038e-08,
+          "scaled_max_divergence": 4.268562022943789e-11
+        },
+        "reference_pressure32_project64": {
+          "relative_divergence": 1.9129781326384884e-06,
+          "scaled_max_divergence": 5.472330874078193e-10
+        },
+        "reference_pressure32_project32": {
+          "relative_divergence": 1.915485107054449e-06,
+          "scaled_max_divergence": 5.432715301928459e-10
+        },
+        "captured_pressure_project32": {
+          "relative_divergence": 2.985446081029342e-05,
+          "scaled_max_divergence": 2.0469695155480444e-09
+        }
+      },
+      "capture_sha256": {
+        "capture.json": "fa7a4c247e8a7196f43414d621fd20740760b9263bd489261f1efae4fbdf0b6a",
+        "div_after.f32": "331f350ffae310c2f521af3c4773f391463624b0626fd9a5815d67ee2ddc3663",
+        "div_before.f32": "5aa304cf58845b55d013665b61c0697a7ff3a2042ceb0a46007965c7a8961c4c",
+        "p00000.f32": "2daeb1f36095b44b318410b3f4e8b5d989dcc7bb023d1426c492dab0a3053e74",
+        "p00256.f32": "3b163090509049cdcf9acb69e1dd78f764d385989414a9ad7bf8800118776b9c",
+        "p01024.f32": "534c9356ff98052195f888a827d5d6107d2bc89e8de0783f25da3b3de8d8d9dd",
+        "p04096.f32": "cc12c2a5d4b095af27ab5013f7cc54736cb3352262c37a924b6bc695f53302d3",
+        "p08192.f32": "49cae66758b5e11dcebea7f2293accedf1cf559de23a8e1039cbbfbb6fbf9c6c",
+        "p16384.f32": "1e0dfb9706a146e26d49d77841ff85d19253a7ad20efe5235578062903c4833b",
+        "p32768.f32": "f94923ba3b229a52cd37e6a3cd759571051b043365754427e2d24c0bfce8549b",
+        "p65536.f32": "53fb8d5d6399d3bd975c8f0cc800374de3d3fe4273a68f0796071c7eca708450",
+        "u_after.f32": "d52bde6da79e2b8d9931fe99cf3a15f4399d8334ed980530fd6805f18a52c8a4",
+        "u_before.f32": "da94dbac4d762300c217ef3edbdc678cc360de504c7eca175af3b81e7c1b6972",
+        "v_after.f32": "56716687388252c73ccca835ecbb85e41c71cd89abc8f7aad5813ea9a70ff0e7",
+        "v_before.f32": "3766f75170ccc94001f9e701e06f0ede5907c6bba9215411f45b3e5060b5a863",
+        "w_after.f32": "5949574fb75ae7b7c1fdf67967acde41bfc9907f8769beff3f8136b23c8d0287",
+        "w_before.f32": "da94dbac4d762300c217ef3edbdc678cc360de504c7eca175af3b81e7c1b6972"
+      }
+    }
+  ],
+  "scope": "Diagnostic only; old gate remains blocked; no G1 scoring"
+}

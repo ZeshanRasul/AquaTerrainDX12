@@ -1,0 +1,50 @@
+[
+  {
+    "case": {
+      "resolution": 32,
+      "shape": "sharp",
+      "shift": 0.0,
+      "dt_scale": 1.0
+    },
+    "iterations": -1,
+    "projection_and_departures_bitwise": true,
+    "selected_sample_matches_output": true,
+    "history_bitwise": true
+  },
+  {
+    "case": {
+      "resolution": 32,
+      "shape": "sharp",
+      "shift": 0.0,
+      "dt_scale": 1.0
+    },
+    "iterations": 512,
+    "projection_and_departures_bitwise": true,
+    "selected_sample_matches_output": true,
+    "history_bitwise": true
+  },
+  {
+    "case": {
+      "resolution": 32,
+      "shape": "sharp",
+      "shift": 0.0,
+      "dt_scale": 1.0
+    },
+    "iterations": 4096,
+    "projection_and_departures_bitwise": true,
+    "selected_sample_matches_output": true,
+    "history_bitwise": true
+  },
+  {
+    "case": {
+      "resolution": 32,
+      "shape": "sharp",
+      "shift": 0.0,
+      "dt_scale": 1.0
+    },
+    "iterations": 8192,
+    "projection_and_departures_bitwise": true,
+    "selected_sample_matches_output": true,
+    "history_bitwise": true
+  }
+]

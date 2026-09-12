@@ -24,7 +24,7 @@ void Renderer::ConfigureProjectionExperiment()
     if (GetEnvironmentVariableW(L"AQUA_SMOKE_PROJECTION_STEPS", text, 64)) m_ProjectionAdvectionSteps = std::stoul(text);
     if (GetEnvironmentVariableW(L"AQUA_SMOKE_PROJECTION_SHIFT", text, 64)) m_ProjectionShiftCells = std::stof(text);
     if (GetEnvironmentVariableW(L"AQUA_SMOKE_PROJECTION_DT_SCALE", text, 64)) m_ProjectionDtScale = std::stod(text);
-    if (m_ProjectionAdvectionSteps < 1 || m_ProjectionAdvectionSteps > 2 ||
+    if (m_ProjectionAdvectionSteps < 1 || m_ProjectionAdvectionSteps > 120 ||
         !std::isfinite(m_ProjectionShiftCells) || std::abs(m_ProjectionShiftCells) > 2 ||
         !std::isfinite(m_ProjectionDtScale) || m_ProjectionDtScale < 0.25 || m_ProjectionDtScale > 4)
         throw std::runtime_error("Invalid plateau perturbation");
@@ -34,6 +34,20 @@ void Renderer::ConfigureProjectionExperiment()
     m_SmokeReferenceVelocityMode = m_ProjectionIterations < 0 ? 4 : 3;
     m_SmokeReferencePeriodic = 0;
     m_SmokeReferenceBlobSigma = m_ProjectionSharp ? -1.0f : 1.0f;
+    m_CoarseObstacleCase = 0;
+    if (GetEnvironmentVariableW(L"AQUA_SMOKE_COARSE_OBSTACLE", text, 64))
+    {
+        m_CoarseObstacleCase = std::stoul(text);
+        if (m_CoarseObstacleCase < 10 || m_CoarseObstacleCase > 16 ||
+            (m_CoarseObstacleCase<=13 && m_ProjectionIterations!=-1) ||
+            (m_CoarseObstacleCase>=14 && m_ProjectionIterations<0))
+            throw std::runtime_error("Invalid obstacle mode / pressure configuration");
+        m_SmokeReferenceVelocityMode = m_CoarseObstacleCase;
+        m_SmokeReferenceSpeed = 0.5f;
+        if (GetEnvironmentVariableW(L"AQUA_SMOKE_OBSTACLE_CFL", text, 64)) m_SmokeReferenceSpeed = std::stof(text);
+        if (!std::isfinite(m_SmokeReferenceSpeed) || m_SmokeReferenceSpeed < 0 || m_SmokeReferenceSpeed > 8)
+            throw std::runtime_error("Invalid obstacle Courant number");
+    }
     m_SmokeGpuBenchmarkLimiterMode = 0;
     m_SmokeGpuBenchmarkConfig.totalSteps = trials;
     m_SmokeGpuBenchmarkConfig.emitterSteps = 0;
@@ -45,8 +59,8 @@ void Renderer::ConfigureProjectionExperiment()
         Microsoft::WRL::ComPtr<ID3DBlob> code, errors;
         const UINT flags = D3DCOMPILE_ENABLE_STRICTNESS | (m_SmokeReferenceTiming ? D3DCOMPILE_OPTIMIZATION_LEVEL3 : D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION);
         // Initial conditions always use the same optimized initializer.
-        const auto result = D3DCompileFromFile(i == 0 ? L"Shaders/projection_experiment.hlsl" : L"Shaders/3d_smoke_compute.hlsl",
-            nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, entries[i], "cs_5_1", i == 0 ? D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_OPTIMIZATION_LEVEL3 : flags,
+        const auto result = D3DCompileFromFile(i == 0 ? (m_CoarseObstacleCase ? L"Shaders/coarse_obstacle_test.hlsl" : L"Shaders/projection_experiment.hlsl") : L"Shaders/3d_smoke_compute.hlsl",
+            nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, i==0 && m_CoarseObstacleCase ? "SetCoarseObstacleFieldsCS" : entries[i], "cs_5_1", i == 0 ? D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_OPTIMIZATION_LEVEL3 : flags,
             0, &code, &errors);
         if(errors) OutputDebugStringA(static_cast<const char*>(errors->GetBufferPointer()));
         ThrowIfFailed(result);
@@ -195,6 +209,7 @@ void Renderer::SaveProjectionExperiment()
     std::ofstream m(m_SmokeReferenceOutput/"manifest.json");m.exceptions(std::ios::failbit|std::ios::badbit);
     m<<std::setprecision(17)<<"{\n\"schema_version\":2,\n\"experiment\":\"projection_sensitivity_v2\",\n\"shape\":"<<std::quoted(m_ProjectionSharp?"sharp":"smooth")
         <<",\n\"advection_steps\":"<<m_ProjectionAdvectionSteps<<",\n\"shift_cells_diagonal\":"<<m_ProjectionShiftCells
+        <<",\n\"coarse_obstacle_case\":"<<m_CoarseObstacleCase<<",\n\"obstacle_cfl\":"<<m_SmokeReferenceSpeed
         <<",\n\"dt_scale\":"<<m_ProjectionDtScale<<",\n\"velocity_evolution\":\"project_once_then_hold_fixed\""
         <<",\n\"transport_probe\":"<<(m_TransportProbeEnabled?"true":"false")
         <<",\n\"density_sampling_float\":"<<(m_DensitySamplingFloat?"true":"false")

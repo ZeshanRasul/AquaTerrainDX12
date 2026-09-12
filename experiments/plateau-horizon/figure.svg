@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="500" viewBox="0 0 980 500"><rect width="980" height="500" fill="white"/><g font-family="Arial, sans-serif" fill="#213343">
+<text x="30" y="35" font-size="22">Pressure sensitivity after repeated density transport</text>
+<text x="30" y="61" font-size="14">Frozen projected velocity · sharp box · dt = 1/60 · RTX 5090</text>
+<text x="75" y="95" font-size="18">32³ grid</text>
+<path d="M75 370.0 h360" stroke="#dde3e8"/>
+<text x="67" y="374.0" text-anchor="end" font-size="11">0.000%</text>
+<path d="M75 306.25 h360" stroke="#dde3e8"/>
+<text x="67" y="310.25" text-anchor="end" font-size="11">0.195%</text>
+<path d="M75 242.5 h360" stroke="#dde3e8"/>
+<text x="67" y="246.5" text-anchor="end" font-size="11">0.389%</text>
+<path d="M75 178.75 h360" stroke="#dde3e8"/>
+<text x="67" y="182.75" text-anchor="end" font-size="11">0.584%</text>
+<path d="M75 115.0 h360" stroke="#dde3e8"/>
+<text x="67" y="119.0" text-anchor="end" font-size="11">0.779%</text>
+<text x="75.0" y="393" text-anchor="middle" font-size="12">2</text>
+<text x="196.89154147112265" y="393" text-anchor="middle" font-size="12">8</text>
+<text x="318.7830829422453" y="393" text-anchor="middle" font-size="12">32</text>
+<text x="435.0" y="393" text-anchor="middle" font-size="12">120</text>
+<polyline points="75.0,370.0 196.89154147112265,369.98632456036756 318.7830829422453,362.44395539069023 435.0,306.8033177041292" fill="none" stroke="#2266aa" stroke-width="2"/>
+<circle cx="75.0" cy="370.0" r="4" fill="#2266aa"/>
+<circle cx="196.89154147112265" cy="369.98632456036756" r="4" fill="#2266aa"/>
+<circle cx="318.7830829422453" cy="362.44395539069023" r="4" fill="#2266aa"/>
+<circle cx="435.0" cy="306.8033177041292" r="4" fill="#2266aa"/>
+<polyline points="75.0,365.8324138797942 196.89154147112265,353.347366210111 318.7830829422453,304.697514165346 435.0,138.18181818181822" fill="none" stroke="#c05b25" stroke-width="2"/>
+<circle cx="75.0" cy="365.8324138797942" r="4" fill="#c05b25"/>
+<circle cx="196.89154147112265" cy="353.347366210111" r="4" fill="#c05b25"/>
+<circle cx="318.7830829422453" cy="304.697514165346" r="4" fill="#c05b25"/>
+<circle cx="435.0" cy="138.18181818181822" r="4" fill="#c05b25"/>
+<text x="255.0" y="423" text-anchor="middle" font-size="13">Advection steps (log spacing)</text>
+<text x="550" y="95" font-size="18">64³ grid</text>
+<path d="M550 370.0 h360" stroke="#dde3e8"/>
+<text x="542" y="374.0" text-anchor="end" font-size="11">0.000%</text>
+<path d="M550 306.25 h360" stroke="#dde3e8"/>
+<text x="542" y="310.25" text-anchor="end" font-size="11">0.187%</text>
+<path d="M550 242.5 h360" stroke="#dde3e8"/>
+<text x="542" y="246.5" text-anchor="end" font-size="11">0.374%</text>
+<path d="M550 178.74999999999997 h360" stroke="#dde3e8"/>
+<text x="542" y="182.74999999999997" text-anchor="end" font-size="11">0.561%</text>
+<path d="M550 115.0 h360" stroke="#dde3e8"/>
+<text x="542" y="119.0" text-anchor="end" font-size="11">0.749%</text>
+<text x="550.0" y="393" text-anchor="middle" font-size="12">2</text>
+<text x="671.8915414711227" y="393" text-anchor="middle" font-size="12">8</text>
+<text x="793.7830829422453" y="393" text-anchor="middle" font-size="12">32</text>
+<text x="910.0" y="393" text-anchor="middle" font-size="12">120</text>
+<polyline points="550.0,369.62421267094845 671.8915414711227,362.93163810370675 793.7830829422453,323.8847483773782 910.0,222.1420476851382" fill="none" stroke="#2266aa" stroke-width="2"/>
+<circle cx="550.0" cy="369.62421267094845" r="4" fill="#2266aa"/>
+<circle cx="671.8915414711227" cy="362.93163810370675" r="4" fill="#2266aa"/>
+<circle cx="793.7830829422453" cy="323.8847483773782" r="4" fill="#2266aa"/>
+<circle cx="910.0" cy="222.1420476851382" r="4" fill="#2266aa"/>
+<polyline points="550.0,365.75809001259887 671.8915414711227,353.21905317301423 793.7830829422453,304.76227335795204 910.0,138.18181818181822" fill="none" stroke="#c05b25" stroke-width="2"/>
+<circle cx="550.0" cy="365.75809001259887" r="4" fill="#c05b25"/>
+<circle cx="671.8915414711227" cy="353.21905317301423" r="4" fill="#c05b25"/>
+<circle cx="793.7830829422453" cy="304.76227335795204" r="4" fill="#c05b25"/>
+<circle cx="910.0" cy="138.18181818181822" r="4" fill="#c05b25"/>
+<text x="730.0" y="423" text-anchor="middle" font-size="13">Advection steps (log spacing)</text>
+<text x="30" y="455" font-size="13" fill="#2266aa">Blue: hardware</text><text x="175" y="455" font-size="13" fill="#c05b25">Orange: explicit float</text>
+<text x="30" y="481" font-size="12">Normalized L1 to each path’s 8192-iteration reference. Separate vertical scales; no visual-error claim.</text></g></svg>

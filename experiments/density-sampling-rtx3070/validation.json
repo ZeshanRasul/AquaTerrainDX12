@@ -1,0 +1,482 @@
+[
+  {
+    "case": {
+      "resolution": 32,
+      "shape": "sharp",
+      "shift": 0,
+      "dt_scale": 1
+    },
+    "iterations": -1,
+    "projection_and_departures_bitwise": true,
+    "selected_sample_matches_output": true,
+    "history_bitwise": false
+  },
+  {
+    "case": {
+      "resolution": 32,
+      "shape": "sharp",
+      "shift": 0,
+      "dt_scale": 1
+    },
+    "iterations": 512,
+    "projection_and_departures_bitwise": true,
+    "selected_sample_matches_output": true,
+    "history_bitwise": false
+  },
+  {
+    "case": {
+      "resolution": 32,
+      "shape": "sharp",
+      "shift": 0,
+      "dt_scale": 1
+    },
+    "iterations": 4096,
+    "projection_and_departures_bitwise": true,
+    "selected_sample_matches_output": true,
+    "history_bitwise": false
+  },
+  {
+    "case": {
+      "resolution": 32,
+      "shape": "sharp",
+      "shift": 0,
+      "dt_scale": 1
+    },
+    "iterations": 8192,
+    "projection_and_departures_bitwise": true,
+    "selected_sample_matches_output": true,
+    "history_bitwise": false
+  },
+  {
+    "case": {
+      "resolution": 32,
+      "shape": "sharp",
+      "shift": 0.75,
+      "dt_scale": 1
+    },
+    "iterations": -1,
+    "projection_and_departures_bitwise": true,
+    "selected_sample_matches_output": true,
+    "history_bitwise": false
+  },
+  {
+    "case": {
+      "resolution": 32,
+      "shape": "sharp",
+      "shift": 0.75,
+      "dt_scale": 1
+    },
+    "iterations": 512,
+    "projection_and_departures_bitwise": true,
+    "selected_sample_matches_output": true,
+    "history_bitwise": false
+  },
+  {
+    "case": {
+      "resolution": 32,
+      "shape": "sharp",
+      "shift": 0.75,
+      "dt_scale": 1
+    },
+    "iterations": 4096,
+    "projection_and_departures_bitwise": true,
+    "selected_sample_matches_output": true,
+    "history_bitwise": false
+  },
+  {
+    "case": {
+      "resolution": 32,
+      "shape": "sharp",
+      "shift": 0.75,
+      "dt_scale": 1
+    },
+    "iterations": 8192,
+    "projection_and_departures_bitwise": true,
+    "selected_sample_matches_output": true,
+    "history_bitwise": false
+  },
+  {
+    "case": {
+      "resolution": 32,
+      "shape": "sharp",
+      "shift": 0,
+      "dt_scale": 2
+    },
+    "iterations": -1,
+    "projection_and_departures_bitwise": true,
+    "selected_sample_matches_output": true,
+    "history_bitwise": false
+  },
+  {
+    "case": {
+      "resolution": 32,
+      "shape": "sharp",
+      "shift": 0,
+      "dt_scale": 2
+    },
+    "iterations": 512,
+    "projection_and_departures_bitwise": true,
+    "selected_sample_matches_output": true,
+    "history_bitwise": false
+  },
+  {
+    "case": {
+      "resolution": 32,
+      "shape": "sharp",
+      "shift": 0,
+      "dt_scale": 2
+    },
+    "iterations": 4096,
+    "projection_and_departures_bitwise": true,
+    "selected_sample_matches_output": true,
+    "history_bitwise": false
+  },
+  {
+    "case": {
+      "resolution": 32,
+      "shape": "sharp",
+      "shift": 0,
+      "dt_scale": 2
+    },
+    "iterations": 8192,
+    "projection_and_departures_bitwise": true,
+    "selected_sample_matches_output": true,
+    "history_bitwise": false
+  },
+  {
+    "case": {
+      "resolution": 32,
+      "shape": "sharp",
+      "shift": 0.5,
+      "dt_scale": 0.5
+    },
+    "iterations": -1,
+    "projection_and_departures_bitwise": true,
+    "selected_sample_matches_output": true,
+    "history_bitwise": false
+  },
+  {
+    "case": {
+      "resolution": 32,
+      "shape": "sharp",
+      "shift": 0.5,
+      "dt_scale": 0.5
+    },
+    "iterations": 512,
+    "projection_and_departures_bitwise": true,
+    "selected_sample_matches_output": true,
+    "history_bitwise": false
+  },
+  {
+    "case": {
+      "resolution": 32,
+      "shape": "sharp",
+      "shift": 0.5,
+      "dt_scale": 0.5
+    },
+    "iterations": 4096,
+    "projection_and_departures_bitwise": true,
+    "selected_sample_matches_output": true,
+    "history_bitwise": false
+  },
+  {
+    "case": {
+      "resolution": 32,
+      "shape": "sharp",
+      "shift": 0.5,
+      "dt_scale": 0.5
+    },
+    "iterations": 8192,
+    "projection_and_departures_bitwise": true,
+    "selected_sample_matches_output": true,
+    "history_bitwise": false
+  },
+  {
+    "case": {
+      "resolution": 32,
+      "shape": "smooth",
+      "shift": 0,
+      "dt_scale": 1
+    },
+    "iterations": -1,
+    "projection_and_departures_bitwise": true,
+    "selected_sample_matches_output": true,
+    "history_bitwise": false
+  },
+  {
+    "case": {
+      "resolution": 32,
+      "shape": "smooth",
+      "shift": 0,
+      "dt_scale": 1
+    },
+    "iterations": 512,
+    "projection_and_departures_bitwise": true,
+    "selected_sample_matches_output": true,
+    "history_bitwise": false
+  },
+  {
+    "case": {
+      "resolution": 32,
+      "shape": "smooth",
+      "shift": 0,
+      "dt_scale": 1
+    },
+    "iterations": 4096,
+    "projection_and_departures_bitwise": true,
+    "selected_sample_matches_output": true,
+    "history_bitwise": false
+  },
+  {
+    "case": {
+      "resolution": 32,
+      "shape": "smooth",
+      "shift": 0,
+      "dt_scale": 1
+    },
+    "iterations": 8192,
+    "projection_and_departures_bitwise": true,
+    "selected_sample_matches_output": true,
+    "history_bitwise": false
+  },
+  {
+    "case": {
+      "resolution": 64,
+      "shape": "sharp",
+      "shift": 0,
+      "dt_scale": 1
+    },
+    "iterations": -1,
+    "projection_and_departures_bitwise": true,
+    "selected_sample_matches_output": true,
+    "history_bitwise": false
+  },
+  {
+    "case": {
+      "resolution": 64,
+      "shape": "sharp",
+      "shift": 0,
+      "dt_scale": 1
+    },
+    "iterations": 2048,
+    "projection_and_departures_bitwise": true,
+    "selected_sample_matches_output": true,
+    "history_bitwise": false
+  },
+  {
+    "case": {
+      "resolution": 64,
+      "shape": "sharp",
+      "shift": 0,
+      "dt_scale": 1
+    },
+    "iterations": 4096,
+    "projection_and_departures_bitwise": true,
+    "selected_sample_matches_output": true,
+    "history_bitwise": false
+  },
+  {
+    "case": {
+      "resolution": 64,
+      "shape": "sharp",
+      "shift": 0,
+      "dt_scale": 1
+    },
+    "iterations": 8192,
+    "projection_and_departures_bitwise": true,
+    "selected_sample_matches_output": true,
+    "history_bitwise": false
+  },
+  {
+    "case": {
+      "resolution": 64,
+      "shape": "sharp",
+      "shift": 0.25,
+      "dt_scale": 1
+    },
+    "iterations": -1,
+    "projection_and_departures_bitwise": true,
+    "selected_sample_matches_output": true,
+    "history_bitwise": false
+  },
+  {
+    "case": {
+      "resolution": 64,
+      "shape": "sharp",
+      "shift": 0.25,
+      "dt_scale": 1
+    },
+    "iterations": 2048,
+    "projection_and_departures_bitwise": true,
+    "selected_sample_matches_output": true,
+    "history_bitwise": false
+  },
+  {
+    "case": {
+      "resolution": 64,
+      "shape": "sharp",
+      "shift": 0.25,
+      "dt_scale": 1
+    },
+    "iterations": 4096,
+    "projection_and_departures_bitwise": true,
+    "selected_sample_matches_output": true,
+    "history_bitwise": false
+  },
+  {
+    "case": {
+      "resolution": 64,
+      "shape": "sharp",
+      "shift": 0.25,
+      "dt_scale": 1
+    },
+    "iterations": 8192,
+    "projection_and_departures_bitwise": true,
+    "selected_sample_matches_output": true,
+    "history_bitwise": false
+  },
+  {
+    "case": {
+      "resolution": 64,
+      "shape": "sharp",
+      "shift": 0,
+      "dt_scale": 2
+    },
+    "iterations": -1,
+    "projection_and_departures_bitwise": true,
+    "selected_sample_matches_output": true,
+    "history_bitwise": false
+  },
+  {
+    "case": {
+      "resolution": 64,
+      "shape": "sharp",
+      "shift": 0,
+      "dt_scale": 2
+    },
+    "iterations": 2048,
+    "projection_and_departures_bitwise": true,
+    "selected_sample_matches_output": true,
+    "history_bitwise": false
+  },
+  {
+    "case": {
+      "resolution": 64,
+      "shape": "sharp",
+      "shift": 0,
+      "dt_scale": 2
+    },
+    "iterations": 4096,
+    "projection_and_departures_bitwise": true,
+    "selected_sample_matches_output": true,
+    "history_bitwise": false
+  },
+  {
+    "case": {
+      "resolution": 64,
+      "shape": "sharp",
+      "shift": 0,
+      "dt_scale": 2
+    },
+    "iterations": 8192,
+    "projection_and_departures_bitwise": true,
+    "selected_sample_matches_output": true,
+    "history_bitwise": false
+  },
+  {
+    "case": {
+      "resolution": 64,
+      "shape": "sharp",
+      "shift": 0.5,
+      "dt_scale": 0.5
+    },
+    "iterations": -1,
+    "projection_and_departures_bitwise": true,
+    "selected_sample_matches_output": true,
+    "history_bitwise": false
+  },
+  {
+    "case": {
+      "resolution": 64,
+      "shape": "sharp",
+      "shift": 0.5,
+      "dt_scale": 0.5
+    },
+    "iterations": 2048,
+    "projection_and_departures_bitwise": true,
+    "selected_sample_matches_output": true,
+    "history_bitwise": false
+  },
+  {
+    "case": {
+      "resolution": 64,
+      "shape": "sharp",
+      "shift": 0.5,
+      "dt_scale": 0.5
+    },
+    "iterations": 4096,
+    "projection_and_departures_bitwise": true,
+    "selected_sample_matches_output": true,
+    "history_bitwise": false
+  },
+  {
+    "case": {
+      "resolution": 64,
+      "shape": "sharp",
+      "shift": 0.5,
+      "dt_scale": 0.5
+    },
+    "iterations": 8192,
+    "projection_and_departures_bitwise": true,
+    "selected_sample_matches_output": true,
+    "history_bitwise": false
+  },
+  {
+    "case": {
+      "resolution": 64,
+      "shape": "smooth",
+      "shift": 0,
+      "dt_scale": 1
+    },
+    "iterations": -1,
+    "projection_and_departures_bitwise": true,
+    "selected_sample_matches_output": true,
+    "history_bitwise": false
+  },
+  {
+    "case": {
+      "resolution": 64,
+      "shape": "smooth",
+      "shift": 0,
+      "dt_scale": 1
+    },
+    "iterations": 2048,
+    "projection_and_departures_bitwise": true,
+    "selected_sample_matches_output": true,
+    "history_bitwise": false
+  },
+  {
+    "case": {
+      "resolution": 64,
+      "shape": "smooth",
+      "shift": 0,
+      "dt_scale": 1
+    },
+    "iterations": 4096,
+    "projection_and_departures_bitwise": true,
+    "selected_sample_matches_output": true,
+    "history_bitwise": false
+  },
+  {
+    "case": {
+      "resolution": 64,
+      "shape": "smooth",
+      "shift": 0,
+      "dt_scale": 1
+    },
+    "iterations": 8192,
+    "projection_and_departures_bitwise": true,
+    "selected_sample_matches_output": true,
+    "history_bitwise": false
+  }
+]
